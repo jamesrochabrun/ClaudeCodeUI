@@ -6,16 +6,14 @@
 //
 
 import SwiftUI
+import ClaudeCodeSDK
 
 struct ContentView: View {
+  
+  @State var viewModel = ChatViewModel(claudeClient: ClaudeCodeClient(debug: true))
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+       ChatScreen(viewModel: viewModel)
     }
 }
 

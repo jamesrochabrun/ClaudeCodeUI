@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		7B3764FA2DE3D2FA00F32C87 /* ClaudeCodeSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 7B3764F92DE3D2FA00F32C87 /* ClaudeCodeSDK */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		7B3764DB2DE3D2B400F32C87 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7B3764FA2DE3D2FA00F32C87 /* ClaudeCodeSDK in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +83,7 @@
 				7B3764CE2DE3D2B200F32C87 /* ClaudeCodeUI */,
 				7B3764DD2DE3D2B400F32C87 /* ClaudeCodeUITests */,
 				7B3764E72DE3D2B400F32C87 /* ClaudeCodeUIUITests */,
+				7B3764F82DE3D2FA00F32C87 /* Frameworks */,
 				7B3764CD2DE3D2B200F32C87 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -90,6 +96,13 @@
 				7B3764E42DE3D2B400F32C87 /* ClaudeCodeUIUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		7B3764F82DE3D2FA00F32C87 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -112,6 +125,7 @@
 			);
 			name = ClaudeCodeUI;
 			packageProductDependencies = (
+				7B3764F92DE3D2FA00F32C87 /* ClaudeCodeSDK */,
 			);
 			productName = ClaudeCodeUI;
 			productReference = 7B3764CC2DE3D2B200F32C87 /* ClaudeCodeUI.app */;
@@ -195,6 +209,9 @@
 			);
 			mainGroup = 7B3764C32DE3D2B200F32C87;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				7B3764F72DE3D2CC00F32C87 /* XCRemoteSwiftPackageReference "ClaudeCodeSDK" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7B3764CD2DE3D2B200F32C87 /* Products */;
 			projectDirPath = "";
@@ -551,6 +568,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7B3764F72DE3D2CC00F32C87 /* XCRemoteSwiftPackageReference "ClaudeCodeSDK" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jamesrochabrun/ClaudeCodeSDK";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		7B3764F92DE3D2FA00F32C87 /* ClaudeCodeSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7B3764F72DE3D2CC00F32C87 /* XCRemoteSwiftPackageReference "ClaudeCodeSDK" */;
+			productName = ClaudeCodeSDK;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7B3764C42DE3D2B200F32C87 /* Project object */;
 }
