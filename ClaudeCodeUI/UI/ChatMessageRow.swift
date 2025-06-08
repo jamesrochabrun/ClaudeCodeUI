@@ -10,29 +10,41 @@ import SwiftUI
 
 struct ChatMessageRow: View {
   let message: ChatMessage
-  @Environment(\ .colorScheme) private var colorScheme
+  @Environment(\.colorScheme) private var colorScheme
+  
+  private var assistantUseHeader: some View {
+    HStack(spacing: 4) {
+      avatarView
+      Text(roleLabel)
+        .fontWeight(.medium)
+        .foregroundColor(roleLabelColor)
+      
+      Text(timeFormatter.string(from: message.timestamp))
+        .font(.caption2)
+        .foregroundColor(.secondary)
+    }
+    .font(.caption)
+    .padding(.horizontal, 4)
+    .background(
+      RoundedRectangle(cornerRadius: 8, style: .continuous)
+        .fill(.ultraThinMaterial)
+    )
+  }
   
   var body: some View {
-    HStack(alignment: .top, spacing: 10) {
-      if message.role != .user {
-        avatarView
-      }
-      
-      VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 2) {
-        if message.role != .user {
-          HStack(spacing: 4) {
-            Text(roleLabel)
-              .font(.caption)
-              .fontWeight(.medium)
-              .foregroundColor(roleLabelColor)
-            
-            Text(timeFormatter.string(from: message.timestamp))
-              .font(.caption2)
-              .foregroundColor(.secondary)
-          }
-        }
-        
+    ZStack(alignment: .topLeading) {
+      HStack(alignment: .top, spacing: 10) {
         messageContentView
+          .padding(.top, 10)
+          .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+              .fill(.clear) // Add back the background fill
+              .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                  .stroke(borderColor, lineWidth: 1)
+              )
+              .shadow(color: shadowColor, radius: 1, x: 0, y: 0.5)
+          )
           .contextMenu {
             Button(action: {
               NSPasteboard.general.clearContents()
@@ -42,19 +54,18 @@ struct ChatMessageRow: View {
             }
           }
       }
-      
-      if message.role == .user {
-        avatarView
+      if message.role != .user {
+        assistantUseHeader
+          .offset(x: 10, y: -8) // Use offset instead of padding
       }
     }
-    .padding(.horizontal, 12)
-    .padding(.vertical, 6)
+    .padding(.top, 10) // Add space for the offset header
     .animation(.easeInOut(duration: 0.2), value: message.isComplete)
   }
   
   @ViewBuilder
   private var messageContentView: some View {
-    Group {
+    VStack {
       if message.content.isEmpty && !message.isComplete {
         loadingView
       } else {
@@ -64,10 +75,11 @@ struct ChatMessageRow: View {
           .foregroundColor(contentTextColor)
       }
     }
-    .padding(.vertical, 8)
+    .padding(.vertical, message.role == .user ? 8 : 4)
     .padding(.horizontal, 12)
-    .background(backgroundShape)
-    .frame(maxWidth: 550, alignment: message.role == .user ? .trailing : .leading)
+    .padding(.top, message.role == .user ? 8 : 4)
+    .padding(.bottom, 8)
+    .frame(maxWidth: .infinity, alignment: message.role == .user ? .trailing : .leading)
   }
   
   @ViewBuilder
@@ -101,16 +113,9 @@ struct ChatMessageRow: View {
       } else {
         Image(systemName: avatarIcon)
           .foregroundStyle(messageTint.opacity(0.8))
+          .font(.caption)
       }
     }
-    .font(.system(size: 24))
-    .frame(width: 28, height: 28)
-  }
-  
-  private var backgroundShape: some View {
-    RoundedRectangle(cornerRadius: 12, style: .continuous)
-      .fill(backgroundColor)
-      .shadow(color: shadowColor, radius: 2, x: 0, y: 1)
   }
   
   private var avatarIcon: String {
@@ -152,8 +157,21 @@ struct ChatMessageRow: View {
   
   private var backgroundColor: Color {
     colorScheme == .dark
-    ? Color.gray.opacity(0.2)
-    : Color.gray.opacity(0.1)
+    ? Color.gray.opacity(0.15)
+    : Color.gray.opacity(0.08)
+  }
+  
+  private var borderColor: Color {
+    if message.role != .user {
+      Color.secondary.opacity(0.5)
+      //Color(red: 222, green: 209, blue: 177)
+    } else {
+      .clear
+    }
+   // Color(red: 195, green: 148, blue: 116)
+    //    colorScheme == .dark
+    //    ? Color.gray.opacity(0.3)
+    //    : Color.gray.opacity(0.2)
   }
   
   private var contentTextColor: Color {
@@ -161,7 +179,7 @@ struct ChatMessageRow: View {
   }
   
   private var shadowColor: Color {
-    colorScheme == .dark ? .clear : Color.black.opacity(0.05)
+    colorScheme == .dark ? .clear : Color.black.opacity(0.03)
   }
   
   private var timeFormatter: DateFormatter {
@@ -171,4 +189,15 @@ struct ChatMessageRow: View {
   }
   
   @State private var animationValues: [Bool] = [false, false, false]
+}
+
+#Preview {
+  List {
+    ChatMessageRow(message: .init(role: .toolUse, content: "$ ls-la"))
+    ChatMessageRow(message: .init(role: .user, content: "Hello"))
+    ChatMessageRow(message: .init(role: .toolError, content: """
+      {"type":"result","subtype":"success","cost_usd":0.0111402,"is_error":false,"duration_ms":1314}
+      """))
+    ChatMessageRow(message: .init(role: .toolResult, content: "$ ls-la"))
+  }
 }

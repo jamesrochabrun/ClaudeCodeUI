@@ -25,7 +25,7 @@ public class ChatViewModel {
   /// All messages in the conversation
   var messages: [ChatMessage] = []
   
-  let allowedTools = ["Task", "Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep" ]
+  let allowedTools = ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MulitEdit" ]
   /// Loading state
   public var isLoading: Bool = false
   
@@ -53,17 +53,9 @@ public class ChatViewModel {
     // Clear any previous errors
     error = nil
     
-    // Add a placeholder for assistant's response
+    // Store the message ID for potential assistant response
     let assistantId = UUID()
     currentMessageId = assistantId
-    
-    let placeholderMessage = ChatMessage(
-      id: assistantId,
-      role: .assistant,
-      content: "",
-      isComplete: false
-    )
-    messages.append(placeholderMessage)
     
     // Set loading state
     isLoading = true
@@ -136,9 +128,15 @@ public class ChatViewModel {
   private func processStreamResult(_ result: ClaudeCodeResult, messageId: UUID) async {
     switch result {
     case .stream(let publisher):
-      var contentBuffer = ""
       
       await withCheckedContinuation { continuation in
+        // Use a class to hold mutable state
+        class StreamState {
+          var contentBuffer = ""
+          var assistantMessageCreated = false
+        }
+        let state = StreamState()
+        
         publisher
           .receive(on: DispatchQueue.main)
           .sink(
@@ -147,8 +145,10 @@ public class ChatViewModel {
               
               switch completion {
               case .finished:
-                // Ensure message is marked as complete
-                self.updateAssistantMessage(messageId: messageId, content: contentBuffer, isComplete: true)
+                // Only update if we created an assistant message
+                if state.assistantMessageCreated {
+                  self.updateAssistantMessage(messageId: messageId, content: state.contentBuffer, isComplete: true)
+                }
                 self.isLoading = false
               case .failure(let error):
                 self.handleError(error)
@@ -175,8 +175,22 @@ public class ChatViewModel {
                   
                   switch content {
                   case .text(let textContent, _):
-                    contentBuffer = textContent
-                    self.updateAssistantMessage(messageId: messageId, content: contentBuffer, isComplete: isLoading)
+                    state.contentBuffer += textContent
+                    
+                    // Create assistant message on first text content
+                    if !state.assistantMessageCreated {
+                      let assistantMessage = ChatMessage(
+                        id: messageId,
+                        role: .assistant,
+                        content: state.contentBuffer,
+                        isComplete: false
+                      )
+                      self.messages.append(assistantMessage)
+                      state.assistantMessageCreated = true
+                    } else {
+                      // Update existing message
+                      self.updateAssistantMessage(messageId: messageId, content: state.contentBuffer, isComplete: false)
+                    }
                     
                   case .toolUse(let toolUse):
                     var toolMessage = "TOOL USE: \(toolUse.name). \n"
@@ -201,7 +215,7 @@ public class ChatViewModel {
                     self.addWebSearchResultMessage(content: webSearchMessage)
                   }
                 }
-                if contentBuffer.isEmpty {
+                if state.contentBuffer.isEmpty {
                   logger.error("No processable content found in assistant message")
                 }
                 
@@ -215,9 +229,8 @@ public class ChatViewModel {
                   switch content {
                   case .text(let textContent, _):
                     logger.debug("User text content: \(textContent)")
-                    // Update the assistant message with the user text content
-                    contentBuffer = "USER: \(textContent)"
-                    self.updateAssistantMessage(messageId: messageId, content: contentBuffer, isComplete: false)
+                    // Don't update assistant message with user content - this seems incorrect
+                    // Just log it for debugging
                     
                   case .toolResult(let toolResult):
                     
@@ -238,11 +251,8 @@ public class ChatViewModel {
                 self.currentSessionId = resultMessage.sessionId
                 logger.info("Completed response for session: \(resultMessage.sessionId)")
                 
-                // Ensure we have the final content in case we missed it
-                if let finalContent = resultMessage.result, !finalContent.isEmpty {
-                  contentBuffer = resultMessage.description()
-                  self.updateAssistantMessage(messageId: messageId, content: finalContent, isComplete: true)
-                }
+                // Don't override content buffer with result description
+                // The actual content should come from assistant messages
               }
             }
           )

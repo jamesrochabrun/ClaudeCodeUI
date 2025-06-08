@@ -63,12 +63,25 @@ struct ChatScreen: View {
           .padding()
       }
       
-      MessageInputView(
+      // Thinking indicator overlay
+      if viewModel.isLoading {
+        ThinkingIndicator(message: "")
+          .padding(.horizontal)
+          .padding(.bottom, 8)
+          .transition(.asymmetric(
+            insertion: .move(edge: .bottom).combined(with: .opacity),
+            removal: .move(edge: .bottom).combined(with: .opacity)
+          ))
+          .zIndex(1)
+      }
+      
+      ChatInputView(
         text: $messageText,
         chatViewModel: $viewModel,
         placeholder: "Type a message...")
     }
     .navigationTitle("Claude Code Chat")
+    .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
   }
 
   

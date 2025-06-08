@@ -1,5 +1,5 @@
 //
-//  MessageInputView.swift
+//  ChatInputView.swift
 //  ClaudeCodeUI
 //
 //  Created by Assistant on 6/7/2025.
@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct MessageInputView: View {
+struct ChatInputView: View {
   
   // MARK: - Properties
   
