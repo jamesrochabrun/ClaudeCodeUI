@@ -11,13 +11,13 @@ import SwiftUI
 struct ChatMessageRow: View {
   let message: ChatMessage
   @Environment(\ .colorScheme) private var colorScheme
-
+  
   var body: some View {
     HStack(alignment: .top, spacing: 10) {
       if message.role != .user {
         avatarView
       }
-
+      
       VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 2) {
         if message.role != .user {
           HStack(spacing: 4) {
@@ -25,13 +25,13 @@ struct ChatMessageRow: View {
               .font(.caption)
               .fontWeight(.medium)
               .foregroundColor(roleLabelColor)
-
+            
             Text(timeFormatter.string(from: message.timestamp))
               .font(.caption2)
               .foregroundColor(.secondary)
           }
         }
-
+        
         messageContentView
           .contextMenu {
             Button(action: {
@@ -42,7 +42,7 @@ struct ChatMessageRow: View {
             }
           }
       }
-
+      
       if message.role == .user {
         avatarView
       }
@@ -51,7 +51,7 @@ struct ChatMessageRow: View {
     .padding(.vertical, 6)
     .animation(.easeInOut(duration: 0.2), value: message.isComplete)
   }
-
+  
   @ViewBuilder
   private var messageContentView: some View {
     Group {
@@ -69,7 +69,7 @@ struct ChatMessageRow: View {
     .background(backgroundShape)
     .frame(maxWidth: 550, alignment: message.role == .user ? .trailing : .leading)
   }
-
+  
   @ViewBuilder
   private var loadingView: some View {
     HStack(spacing: 4) {
@@ -92,7 +92,7 @@ struct ChatMessageRow: View {
     .frame(height: 18)
     .frame(width: 36)
   }
-
+  
   @ViewBuilder
   private var avatarView: some View {
     Group {
@@ -106,13 +106,13 @@ struct ChatMessageRow: View {
     .font(.system(size: 24))
     .frame(width: 28, height: 28)
   }
-
+  
   private var backgroundShape: some View {
     RoundedRectangle(cornerRadius: 12, style: .continuous)
       .fill(backgroundColor)
       .shadow(color: shadowColor, radius: 2, x: 0, y: 1)
   }
-
+  
   private var avatarIcon: String {
     switch message.messageType {
     case .text: return "circle"
@@ -123,7 +123,7 @@ struct ChatMessageRow: View {
     case .webSearch: return "globe.circle.fill"
     }
   }
-
+  
   private var roleLabel: String {
     switch message.messageType {
     case .text: return message.role == .assistant ? "Claude Code" : "You"
@@ -134,11 +134,11 @@ struct ChatMessageRow: View {
     case .webSearch: return "Web Search"
     }
   }
-
+  
   private var roleLabelColor: Color {
     messageTint.opacity(0.9)
   }
-
+  
   private var messageTint: Color {
     switch message.messageType {
     case .text: return message.role == .assistant ? .purple : .blue
@@ -149,26 +149,26 @@ struct ChatMessageRow: View {
     case .webSearch: return .teal
     }
   }
-
+  
   private var backgroundColor: Color {
     colorScheme == .dark
-      ? Color.gray.opacity(0.2)
-      : Color.gray.opacity(0.1)
+    ? Color.gray.opacity(0.2)
+    : Color.gray.opacity(0.1)
   }
-
+  
   private var contentTextColor: Color {
     colorScheme == .dark ? .white : .primary
   }
-
+  
   private var shadowColor: Color {
     colorScheme == .dark ? .clear : Color.black.opacity(0.05)
   }
-
+  
   private var timeFormatter: DateFormatter {
     let formatter = DateFormatter()
     formatter.timeStyle = .short
     return formatter
   }
-
+  
   @State private var animationValues: [Bool] = [false, false, false]
 }

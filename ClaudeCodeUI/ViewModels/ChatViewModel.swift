@@ -101,9 +101,13 @@ public class ChatViewModel {
   // MARK: - Private Methods
   
   private func startNewConversation(prompt: String, messageId: UUID) async throws {
+    logger.debug("Starting new conversation with prompt: '\(prompt)' (length: \(prompt.count))")
+    
     var options = ClaudeCodeOptions()
     options.allowedTools = allowedTools
     options.verbose = true
+    
+    logger.debug("Calling runSinglePrompt with prompt: '\(prompt)'")
     
     let result = try await claudeClient.runSinglePrompt(
       prompt: prompt,
