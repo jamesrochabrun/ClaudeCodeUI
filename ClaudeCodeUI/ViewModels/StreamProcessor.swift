@@ -4,12 +4,12 @@
 //
 //  Created by Assistant on 6/8/2025.
 //
-
 import Foundation
 import Combine
 import ClaudeCodeSDK
 import SwiftAnthropic
 import os.log
+
 
 /// Processes Claude's streaming responses
 @MainActor
@@ -50,13 +50,23 @@ class StreamProcessor {
             switch completion {
             case .finished:
               self.logger.debug("Stream completed successfully")
-              if state.assistantMessageCreated {
-                self.messageStore.updateMessage(
-                  id: messageId,
-                  content: state.contentBuffer,
-                  isComplete: true
-                )
-                self.logger.debug("Updated assistant message as complete")
+              if state.assistantMessageCreated && !state.contentBuffer.isEmpty {
+                // Check if the content is just "(no content)"
+                if state.contentBuffer == "(no content)" {
+                  self.messageStore.removeMessage(id: messageId)
+                  self.logger.debug("Removed assistant message with only '(no content)' placeholder")
+                } else {
+                  self.messageStore.updateMessage(
+                    id: messageId,
+                    content: state.contentBuffer,
+                    isComplete: true
+                  )
+                  self.logger.debug("Updated assistant message as complete")
+                }
+              } else if state.assistantMessageCreated && state.contentBuffer.isEmpty {
+                // Remove empty assistant message
+                self.messageStore.removeMessage(id: messageId)
+                self.logger.debug("Removed empty assistant message")
               }
             case .failure(let error):
               self.logger.error("Stream failed: \(error.localizedDescription)")
@@ -117,22 +127,29 @@ class StreamProcessor {
     for content in message.message.content {
       switch content {
       case .text(let textContent, _):
+        logger.debug("Received text content: '\(textContent)' (length: \(textContent.count))")
+        
         state.contentBuffer += textContent
         
-        if !state.assistantMessageCreated {
-          let assistantMessage = MessageFactory.assistantMessage(
-            id: messageId,
-            content: state.contentBuffer,
-            isComplete: false
-          )
-          messageStore.addMessage(assistantMessage)
-          state.assistantMessageCreated = true
-        } else {
-          messageStore.updateMessage(
-            id: messageId,
-            content: state.contentBuffer,
-            isComplete: false
-          )
+        // Create/update assistant message
+        if !textContent.isEmpty {
+          if !state.assistantMessageCreated {
+            let assistantMessage = MessageFactory.assistantMessage(
+              id: messageId,
+              content: state.contentBuffer,
+              isComplete: false
+            )
+            messageStore.addMessage(assistantMessage)
+            state.assistantMessageCreated = true
+            logger.debug("Created assistant message with content: '\(state.contentBuffer.prefix(50))...'")
+          } else {
+            messageStore.updateMessage(
+              id: messageId,
+              content: state.contentBuffer,
+              isComplete: false
+            )
+            logger.debug("Updated assistant message with content: '\(state.contentBuffer.prefix(50))...'")
+          }
         }
         
       case .toolUse(let toolUse):
@@ -162,8 +179,8 @@ class StreamProcessor {
       }
     }
     
-    if state.contentBuffer.isEmpty {
-      logger.error("No processable content found in assistant message")
+    if state.contentBuffer.isEmpty && !state.assistantMessageCreated {
+      logger.debug("Assistant message contained no text content (likely only tool use)")
     }
   }
   
