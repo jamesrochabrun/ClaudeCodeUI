@@ -23,6 +23,7 @@ class StreamProcessor {
   private class StreamState {
     var contentBuffer = ""
     var assistantMessageCreated = false
+    var processedMessageIds = Set<String>()  // Track processed message IDs to avoid duplicates
   }
   
   init(messageStore: MessageStore, sessionManager: SessionManager) {
@@ -102,6 +103,17 @@ class StreamProcessor {
   }
   
   private func handleAssistantMessage(_ message: AssistantMessage, messageId: UUID, state: StreamState) {
+    // Check if we've already processed this exact message ID to avoid duplicates
+    if let messageId = message.message.id {
+      if state.processedMessageIds.contains(messageId) {
+        logger.debug("Skipping duplicate assistant message with ID: \(messageId)")
+        return
+      }
+      
+      // Mark this message as processed
+      state.processedMessageIds.insert(messageId)
+    }
+    
     for content in message.message.content {
       switch content {
       case .text(let textContent, _):
