@@ -20,20 +20,6 @@ struct ChatScreen: View {
   
   var body: some View {
     VStack {
-      // Top button bar
-      HStack {
-        Spacer()
-        Button(action: {
-          clearChat()
-        }) {
-          Image(systemName: "trash")
-            .font(.title2)
-        }
-        .disabled(viewModel.messages.isEmpty)
-      }
-      .padding(.horizontal)
-      .padding(.top, 8)
-      
       // Chat messages list
       ScrollViewReader { scrollView in
         List {
@@ -66,6 +52,7 @@ struct ChatScreen: View {
       // Thinking indicator overlay
       if viewModel.isLoading {
         ThinkingIndicator(message: "")
+          .background(.clear)
           .padding(.horizontal)
           .padding(.bottom, 8)
           .transition(.asymmetric(
@@ -81,6 +68,15 @@ struct ChatScreen: View {
         placeholder: "Type a message...")
     }
     .navigationTitle("Claude Code Chat")
+    .toolbar {
+      ToolbarItem(placement: .automatic) {
+        Button(action: clearChat) {
+          Image(systemName: "trash")
+            .font(.title2)
+        }
+        .disabled(viewModel.messages.isEmpty)
+      }
+    }
     .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
   }
 
