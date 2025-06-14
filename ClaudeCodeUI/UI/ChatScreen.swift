@@ -17,6 +17,7 @@ struct ChatScreen: View {
   
   @State private var viewModel: ChatViewModel
   @State private var messageText: String = ""
+  @State private var showingSettings = false
   
   var body: some View {
     VStack {
@@ -70,16 +71,27 @@ struct ChatScreen: View {
     .navigationTitle("Claude Code Chat")
     .toolbar {
       ToolbarItem(placement: .automatic) {
-        Button(action: clearChat) {
-          Image(systemName: "trash")
-            .font(.title2)
+        HStack {
+          Button(action: { showingSettings = true }) {
+            Image(systemName: "gearshape")
+              .font(.title2)
+          }
+          
+          Button(action: clearChat) {
+            Image(systemName: "trash")
+              .font(.title2)
+          }
+          .disabled(viewModel.messages.isEmpty)
         }
-        .disabled(viewModel.messages.isEmpty)
       }
+    }
+    .sheet(isPresented: $showingSettings) {
+      // Pass the settings storage from the dependency container
+      SettingsView(settingsStorage: DependencyContainer.shared.settingsStorage)
     }
     .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
   }
-
+  
   
   private func clearChat() {
     viewModel.clearConversation()
