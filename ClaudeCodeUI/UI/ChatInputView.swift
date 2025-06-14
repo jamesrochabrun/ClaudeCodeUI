@@ -14,7 +14,7 @@ struct ChatInputView: View {
   
   @Binding var text: String
   @Binding var viewModel: ChatViewModel
-
+  
   @FocusState private var isFocused: Bool
   let placeholder: String
   @State private var shouldSubmit = false
