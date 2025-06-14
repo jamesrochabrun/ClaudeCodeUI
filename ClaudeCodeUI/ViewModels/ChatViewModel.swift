@@ -11,14 +11,26 @@ import os.log
 
 @Observable
 @MainActor
-public class ChatViewModel {
+public final class ChatViewModel {
   
   // MARK: - Dependencies
   
   private let claudeClient: ClaudeCode
   private let messageStore = MessageStore()
-  private let sessionManager = SessionManager()
+  let sessionManager: SessionManager
   private let streamProcessor: StreamProcessor
+  private let sessionStorage: SessionStorageProtocol
+  private var firstMessageInSession: String?
+  
+  /// Sessions loading state
+  public var isLoadingSessions: Bool {
+    sessionManager.isLoadingSessions
+  }
+  
+  /// Sessions error state
+  public var sessionsError: Error? {
+    sessionManager.sessionsError
+  }
   
   private let logger = Logger(subsystem: "com.yourcompany.ClaudeChat", category: "ChatViewModel")
   private var currentMessageId: UUID?
@@ -28,6 +40,16 @@ public class ChatViewModel {
   /// All messages in the conversation
   var messages: [ChatMessage] {
     messageStore.messages
+  }
+  
+  /// All available sessions
+  var sessions: [StoredSession] {
+    sessionManager.sessions
+  }
+  
+  /// Current session ID
+  var currentSessionId: String? {
+    sessionManager.currentSessionId
   }
   
   /// Loading state
@@ -42,12 +64,19 @@ public class ChatViewModel {
   
   // MARK: - Initialization
   
-  public init(claudeClient: ClaudeCode) {
+  public init(claudeClient: ClaudeCode, sessionStorage: SessionStorageProtocol) {
     self.claudeClient = claudeClient
+    self.sessionStorage = sessionStorage
+    self.sessionManager = SessionManager(sessionStorage: sessionStorage)
     self.streamProcessor = StreamProcessor(
       messageStore: messageStore,
       sessionManager: sessionManager
     )
+    
+    // Load sessions on initialization
+    Task {
+      await loadSessions()
+    }
   }
   
   // MARK: - Public Methods
@@ -56,6 +85,11 @@ public class ChatViewModel {
   /// - Parameter text: The message text to send
   public func sendMessage(_ text: String) {
     guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+    
+    // Store first message if this is a new session
+    if sessionManager.currentSessionId == nil {
+      firstMessageInSession = text
+    }
     
     // Add user message
     let userMessage = MessageFactory.userMessage(content: text)
@@ -75,8 +109,10 @@ public class ChatViewModel {
     Task {
       do {
         if let sessionId = sessionManager.currentSessionId {
+          logger.debug("Continuing conversation with session: \(sessionId)")
           try await continueConversation(sessionId: sessionId, prompt: text, messageId: assistantId)
         } else {
+          logger.debug("No current session, starting new conversation")
           try await startNewConversation(prompt: text, messageId: assistantId)
         }
       } catch {
@@ -93,12 +129,91 @@ public class ChatViewModel {
     sessionManager.clearSession()
     currentMessageId = nil
     error = nil
+    firstMessageInSession = nil
   }
   
   /// Cancels any ongoing requests
   public func cancelRequest() {
     claudeClient.cancel()
     isLoading = false
+  }
+  
+  /// Loads all available sessions
+  public func loadSessions() async {
+    await sessionManager.fetchSessions()
+  }
+  
+  /// Selects an existing session (without resuming)
+  public func selectSession(id: String) {
+    guard let sessionId = sessions.first(where: { $0.id == id })?.id else { return }
+    
+    // Clear current messages
+    messageStore.clear()
+    
+    // Set the session ID
+    sessionManager.selectSession(id: sessionId)
+    
+    // We would load previous messages here if we had that capability
+    // For now, we're just switching to the session
+    
+    // Clear any errors
+    error = nil
+  }
+  
+  /// Resumes an existing session with optional initial prompt
+  public func resumeSession(id: String, initialPrompt: String? = nil) async {
+    // First ensure sessions are loaded
+    if sessions.isEmpty {
+      await loadSessions()
+    }
+    
+    // Verify the session exists
+    guard sessions.contains(where: { $0.id == id }) else {
+      logger.error("Session \(id) not found in stored sessions")
+      return
+    }
+    
+    logger.debug("Resuming session: \(id)")
+    
+    // Clear current messages
+    messageStore.clear()
+    
+    // Set the session ID BEFORE any async operations
+    sessionManager.selectSession(id: id)
+    
+    // Clear any errors
+    error = nil
+    
+    // Update last accessed time
+    sessionManager.updateLastAccessed(id: id)
+    
+    // Resume the conversation - even with empty prompt to load history
+    isLoading = true
+    let assistantId = UUID()
+    currentMessageId = assistantId
+    
+    // If we have an initial prompt, add it as a user message
+    if let prompt = initialPrompt {
+      let userMessage = MessageFactory.userMessage(content: prompt)
+      messageStore.addMessage(userMessage)
+    }
+    
+    do {
+      // Resume the conversation with or without a prompt
+      let options = createOptions()
+      let result = try await claudeClient.resumeConversation(
+        sessionId: id,
+        prompt: initialPrompt ?? "",
+        outputFormat: .streamJson,
+        options: options
+      )
+      
+      await processResult(result, messageId: assistantId)
+    } catch {
+      await MainActor.run {
+        self.handleError(error)
+      }
+    }
   }
   
   // MARK: - Private Methods
@@ -143,11 +258,13 @@ public class ChatViewModel {
     switch result {
     case .stream(let publisher):
       logger.debug("Processing stream result")
-      await streamProcessor.processStream(publisher, messageId: messageId)
+      await streamProcessor.processStream(publisher, messageId: messageId, firstMessageInSession: firstMessageInSession)
       logger.debug("Stream processing completed, setting isLoading to false")
       await MainActor.run {
         self.isLoading = false
         self.logger.debug("isLoading set to false")
+        // Clear first message after it's been saved
+        self.firstMessageInSession = nil
       }
       
     default:

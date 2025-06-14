@@ -18,6 +18,7 @@ struct ChatInputView: View {
   @FocusState private var isFocused: Bool
   let placeholder: String
   @State private var shouldSubmit = false
+  @State private var showingSessionsList = false
   
   // MARK: - Constants
   
@@ -39,7 +40,22 @@ struct ChatInputView: View {
   
   var body: some View {
     HStack {
+      // Sessions button
+      Button(action: {
+        showingSessionsList = true
+      }) {
+        Image(systemName: "list.bullet")
+          .foregroundColor(.gray)
+      }
+      .buttonStyle(.plain)
+      .padding(.leading, 8)
+      .popover(isPresented: $showingSessionsList) {
+        SessionsListView(viewModel: $viewModel)
+          .frame(width: 300, height: 400)
+      }
+      
       textArea
+      
       if viewModel.isLoading {
         Button(action: {
           viewModel.cancelRequest()
