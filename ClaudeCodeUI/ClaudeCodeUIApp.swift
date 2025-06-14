@@ -10,7 +10,7 @@ import SwiftUI
 @main
 struct ClaudeCodeUIApp: App {
   var body: some Scene {
-    WindowGroup {
+    WindowGroup(id: "main") {
       RootView()
         .toolbar(removing: .title)
         .containerBackground(
@@ -24,5 +24,19 @@ struct ClaudeCodeUIApp: App {
     .windowStyle(.hiddenTitleBar)
     //      .windowBackgroundDragBehavior(.enabled)
     //      .restorationBehavior(.disabled)
+    
+    WindowGroup("Session", id: "session", for: String.self) { $sessionId in
+      if let sessionId = sessionId {
+        RootView(sessionId: sessionId)
+          .toolbar(removing: .title)
+          .containerBackground(
+            .thinMaterial, for: .window
+          )
+          .toolbarBackgroundVisibility(
+            .hidden, for: .windowToolbar
+          )
+      }
+    }
+    .windowStyle(.hiddenTitleBar)
   }
 }

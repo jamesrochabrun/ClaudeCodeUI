@@ -10,7 +10,7 @@ import Foundation
 /// Manages the message collection with thread-safe operations
 @MainActor
 @Observable
-class MessageStore {
+final class MessageStore {
   private(set) var messages: [ChatMessage] = []
   
   func addMessage(_ message: ChatMessage) {
