@@ -25,12 +25,12 @@ struct ChatScreen: View {
       ScrollViewReader { scrollView in
         List {
           ForEach(viewModel.messages) { message in
-            ChatMessageRow(message: message)
+            ChatMessageRow(message: message, settingsStorage: viewModel.settingsStorage)
               .listRowSeparator(.hidden)
               .id(message.id)
           }
         }
-        .listStyle(PlainListStyle())
+        .listStyle(.plain)
         .listRowBackground(Color.clear)
         .scrollContentBackground(.hidden)
         .onChange(of: viewModel.messages) { _, newMessages in
@@ -86,8 +86,7 @@ struct ChatScreen: View {
       }
     }
     .sheet(isPresented: $showingSettings) {
-      // Pass the settings storage from the dependency container
-      SettingsView(settingsStorage: DependencyContainer.shared.settingsStorage)
+      SettingsView(chatViewModel: viewModel)
     }
     .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
   }

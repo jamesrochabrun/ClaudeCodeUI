@@ -15,11 +15,13 @@ public final class ChatViewModel {
   
   // MARK: - Dependencies
   
-  private let claudeClient: ClaudeCode
-  private let messageStore = MessageStore()
+  var claudeClient: ClaudeCode
   let sessionManager: SessionManager
+  let sessionStorage: SessionStorageProtocol
+  let settingsStorage: SettingsStorage
+  
   private let streamProcessor: StreamProcessor
-  private let sessionStorage: SessionStorageProtocol
+  private let messageStore = MessageStore()
   private var firstMessageInSession: String?
   
   /// Sessions loading state
@@ -58,15 +60,13 @@ public final class ChatViewModel {
   /// Error state
   public private(set) var error: Error?
   
-  /// Allowed tools for Claude
-  let allowedTools = ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MultiEdit"]
-  
   
   // MARK: - Initialization
   
-  public init(claudeClient: ClaudeCode, sessionStorage: SessionStorageProtocol) {
+  init(claudeClient: ClaudeCodeClient, sessionStorage: SessionStorageProtocol, settingsStorage: SettingsStorage) {
     self.claudeClient = claudeClient
     self.sessionStorage = sessionStorage
+    self.settingsStorage = settingsStorage
     self.sessionManager = SessionManager(sessionStorage: sessionStorage)
     self.streamProcessor = StreamProcessor(
       messageStore: messageStore,
@@ -249,8 +249,15 @@ public final class ChatViewModel {
   
   private func createOptions() -> ClaudeCodeOptions {
     var options = ClaudeCodeOptions()
-    options.allowedTools = allowedTools
-    options.verbose = true
+    options.allowedTools = settingsStorage.getAllowedTools()
+    options.verbose = settingsStorage.getVerboseMode()
+    options.maxTurns = settingsStorage.getMaxTurns()
+    if let systemPrompt = settingsStorage.getSystemPrompt() {
+      options.systemPrompt = systemPrompt
+    }
+    if let appendSystemPrompt = settingsStorage.getAppendSystemPrompt() {
+      options.appendSystemPrompt = appendSystemPrompt
+    }
     return options
   }
   
