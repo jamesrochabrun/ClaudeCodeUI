@@ -10,16 +10,16 @@ import ClaudeCodeSDK
 
 struct RootView: View {
   
-  @State private var dependencyContainer = DependencyContainer.shared
+  private let dependencyContainer: DependencyContainer = DependencyContainer()
   @State private var viewModel: ChatViewModel
   private let sessionId: String?
   
   init(sessionId: String? = nil) {
     self.sessionId = sessionId
-    let container = DependencyContainer.shared
-    let workingDirectory = container.settingsStorage.getProjectPath() ?? ""
-    let claudeClient = ClaudeCodeClient(workingDirectory: workingDirectory, debug: true)
-    _viewModel = State(initialValue: ChatViewModel(claudeClient: claudeClient, sessionStorage: container.sessionStorage))
+    let workingDirectory = dependencyContainer.settingsStorage.getProjectPath() ?? ""
+    let debugMode = dependencyContainer.settingsStorage.getDebugMode()
+    let claudeClient = ClaudeCodeClient(workingDirectory: workingDirectory, debug: debugMode)
+    viewModel = ChatViewModel(claudeClient: claudeClient, sessionStorage: dependencyContainer.sessionStorage, settingsStorage: dependencyContainer.settingsStorage)
   }
   
   var body: some View {
@@ -31,11 +31,6 @@ struct RootView: View {
           // Update last accessed time
           viewModel.sessionManager.updateLastAccessed(id: sessionId)
         }
-      }
-      .onChange(of: dependencyContainer.settingsStorage.projectPath) { _, newPath in
-        // Update the ClaudeCodeClient with new path
-        let claudeClient = ClaudeCodeClient(workingDirectory: newPath, debug: true)
-        viewModel = ChatViewModel(claudeClient: claudeClient, sessionStorage: dependencyContainer.sessionStorage)
       }
   }
 }

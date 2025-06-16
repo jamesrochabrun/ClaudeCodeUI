@@ -8,10 +8,16 @@
 import Foundation
 
 @MainActor
-protocol SettingsStorage: AnyObject {
+public protocol SettingsStorage: AnyObject {
   var projectPath: String { get set }
   var colorScheme: String { get set }
   var fontSize: Double { get set }
+  var debugMode: Bool { get set }
+  var verboseMode: Bool { get set }
+  var maxTurns: Int { get set }
+  var allowedTools: [String] { get set }
+  var systemPrompt: String { get set }
+  var appendSystemPrompt: String { get set }
   
   func setProjectPath(_ path: String)
   func getProjectPath() -> String?
@@ -26,6 +32,24 @@ protocol SettingsStorage: AnyObject {
   func saveSecureValue(_ value: String, forKey key: String)
   func getSecureValue(forKey key: String) -> String?
   func removeSecureValue(forKey key: String)
+  
+  func setDebugMode(_ enabled: Bool)
+  func getDebugMode() -> Bool
+  
+  func setVerboseMode(_ enabled: Bool)
+  func getVerboseMode() -> Bool
+  
+  func setMaxTurns(_ turns: Int)
+  func getMaxTurns() -> Int
+  
+  func setAllowedTools(_ tools: [String])
+  func getAllowedTools() -> [String]
+  
+  func setSystemPrompt(_ prompt: String)
+  func getSystemPrompt() -> String?
+  
+  func setAppendSystemPrompt(_ prompt: String)
+  func getAppendSystemPrompt() -> String?
   
   func resetAllSettings()
 }

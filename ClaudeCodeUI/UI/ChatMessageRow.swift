@@ -10,10 +10,19 @@ import SwiftUI
 
 struct ChatMessageRow: View {
   let message: ChatMessage
+  let settingsStorage: SettingsStorage
+  
+  init(
+    message: ChatMessage,
+    settingsStorage: SettingsStorage)
+  {
+    self.message = message
+    self.settingsStorage = settingsStorage
+  }
+  
   @Environment(\.colorScheme) private var colorScheme
   @State private var isHovered = false
   @State private var showTimestamp = false
-  @State private var settingsStorage = DependencyContainer.shared.settingsStorage
   
   var body: some View {
     HStack(alignment: .top, spacing: 12) {
@@ -285,47 +294,48 @@ struct ChatMessageRow: View {
   @State private var animationValues: [Bool] = [false, false, false]
 }
 
-#Preview {
-  ScrollView {
-    VStack(spacing: 8) {
-      ChatMessageRow(message: ChatMessage(
-        role: .user,
-        content: "Can you help me analyze this codebase?"
-      ))
-      
-      ChatMessageRow(message: ChatMessage(
-        role: .assistant,
-        content: "I'd be happy to help you analyze your codebase! Let me start by exploring the project structure.",
-        messageType: .text
-      ))
-      
-      ChatMessageRow(message: ChatMessage(
-        role: .assistant,
-        content: "find . -type f -name '*.swift' | head -20",
-        messageType: .toolUse,
-        toolName: "Bash"
-      ))
-      
-      ChatMessageRow(message: ChatMessage(
-        role: .assistant,
-        content: "./main.swift\n./Sources/App.swift\n./Sources/Models/User.swift\n./Sources/Views/ContentView.swift",
-        messageType: .toolResult
-      ))
-      
-      ChatMessageRow(message: ChatMessage(
-        role: .assistant,
-        content: "Error: Command not found",
-        messageType: .toolError
-      ))
-      
-      ChatMessageRow(message: ChatMessage(
-        role: .assistant,
-        content: "Analyzing the project structure...",
-        messageType: .thinking
-      ))
-    }
-    .padding()
-  }
-  .frame(width: 600, height: 800)
-  .background(Color(NSColor.windowBackgroundColor))
-}
+// TODO: Create mocks for settings storage
+//#Preview {
+//  ScrollView {
+//    VStack(spacing: 8) {
+//      ChatMessageRow(message: ChatMessage(
+//        role: .user,
+//        content: "Can you help me analyze this codebase?"
+//      ))
+//
+//      ChatMessageRow(message: ChatMessage(
+//        role: .assistant,
+//        content: "I'd be happy to help you analyze your codebase! Let me start by exploring the project structure.",
+//        messageType: .text
+//      ))
+//
+//      ChatMessageRow(message: ChatMessage(
+//        role: .assistant,
+//        content: "find . -type f -name '*.swift' | head -20",
+//        messageType: .toolUse,
+//        toolName: "Bash"
+//      ))
+//
+//      ChatMessageRow(message: ChatMessage(
+//        role: .assistant,
+//        content: "./main.swift\n./Sources/App.swift\n./Sources/Models/User.swift\n./Sources/Views/ContentView.swift",
+//        messageType: .toolResult
+//      ))
+//
+//      ChatMessageRow(message: ChatMessage(
+//        role: .assistant,
+//        content: "Error: Command not found",
+//        messageType: .toolError
+//      ))
+//
+//      ChatMessageRow(message: ChatMessage(
+//        role: .assistant,
+//        content: "Analyzing the project structure...",
+//        messageType: .thinking
+//      ))
+//    }
+//    .padding()
+//  }
+//  .frame(width: 600, height: 800)
+//  .background(Color(NSColor.windowBackgroundColor))
+//}
