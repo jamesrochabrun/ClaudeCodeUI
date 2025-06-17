@@ -19,6 +19,8 @@ struct ChatInputView: View {
   let placeholder: String
   @State private var shouldSubmit = false
   @State private var showingSessionsList = false
+  @State private var showingProjectPathAlert = false
+  @State private var showingSettings = false
   
   // MARK: - Constants
   
@@ -85,6 +87,18 @@ struct ChatInputView: View {
     )
     .padding(.horizontal, 12)
     .padding(.bottom, 12)
+    .alert("No Working Directory Selected", isPresented: $showingProjectPathAlert) {
+      Button("Open Settings") {
+        showingSettings = true
+      }
+      Button("Cancel", role: .cancel) {}
+    } message: {
+      Text("Please select a working directory before starting a conversation. This helps Claude understand the context of your project.")
+    }
+    .sheet(isPresented: $showingSettings) {
+      SettingsView(chatViewModel: viewModel)
+        .frame(width: 700, height: 550)
+    }
   }
   
   private var textArea: some View {
@@ -127,6 +141,12 @@ struct ChatInputView: View {
   private func sendMessage() {
     let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !text.isEmpty else { return }
+    
+    // Check if project path is set
+    if viewModel.projectPath.isEmpty {
+      showingProjectPathAlert = true
+      return
+    }
     
     // Remove focus first
     viewModel.sendMessage(text)

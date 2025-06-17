@@ -122,7 +122,8 @@ struct SessionsListView: View {
       
       HStack {
         Button("New Session") {
-          viewModel.clearConversation()
+          // Open a new window with a fresh session
+          openWindow(id: "main")
           dismiss()
         }
         .buttonStyle(.bordered)

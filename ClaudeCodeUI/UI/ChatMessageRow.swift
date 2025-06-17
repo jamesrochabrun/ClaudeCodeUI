@@ -21,6 +21,7 @@ struct ChatMessageRow: View {
   }
   
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.globalSettingsStorage) private var globalSettingsStorage
   @State private var isHovered = false
   @State private var showTimestamp = false
   
@@ -269,9 +270,9 @@ struct ChatMessageRow: View {
   private var messageFont: Font {
     switch message.messageType {
     case .text, .thinking, .webSearch:
-      return .system(size: settingsStorage.fontSize)
+      return .system(size: globalSettingsStorage.fontSize)
     case .toolUse, .toolResult, .toolError:
-      return .system(size: settingsStorage.fontSize - 1, design: .monospaced)
+      return .system(size: globalSettingsStorage.fontSize - 1, design: .monospaced)
     }
   }
   

@@ -19,6 +19,7 @@ public final class ChatViewModel {
   let sessionManager: SessionManager
   let sessionStorage: SessionStorageProtocol
   let settingsStorage: SettingsStorage
+  private let onSessionChange: ((String) -> Void)?
   
   private let streamProcessor: StreamProcessor
   private let messageStore = MessageStore()
@@ -60,23 +61,36 @@ public final class ChatViewModel {
   /// Error state
   public private(set) var error: Error?
   
+  /// Current project path (observable)
+  public private(set) var projectPath: String = ""
+  
   
   // MARK: - Initialization
   
-  init(claudeClient: ClaudeCodeClient, sessionStorage: SessionStorageProtocol, settingsStorage: SettingsStorage) {
+  init(claudeClient: ClaudeCodeClient, sessionStorage: SessionStorageProtocol, settingsStorage: SettingsStorage, onSessionChange: ((String) -> Void)? = nil) {
     self.claudeClient = claudeClient
     self.sessionStorage = sessionStorage
     self.settingsStorage = settingsStorage
+    self.onSessionChange = onSessionChange
     self.sessionManager = SessionManager(sessionStorage: sessionStorage)
     self.streamProcessor = StreamProcessor(
       messageStore: messageStore,
-      sessionManager: sessionManager
+      sessionManager: sessionManager,
+      onSessionChange: onSessionChange
     )
     
     // Load sessions on initialization
     Task {
       await loadSessions()
     }
+    
+    // Initialize project path
+    self.projectPath = settingsStorage.projectPath
+  }
+  
+  /// Updates the project path when settings change
+  public func refreshProjectPath() {
+    projectPath = settingsStorage.projectPath
   }
   
   // MARK: - Public Methods
@@ -147,6 +161,9 @@ public final class ChatViewModel {
   public func selectSession(id: String) {
     guard let sessionId = sessions.first(where: { $0.id == id })?.id else { return }
     
+    // Notify settings storage of session change
+    onSessionChange?(sessionId)
+    
     // Clear current messages
     messageStore.clear()
     
@@ -180,6 +197,9 @@ public final class ChatViewModel {
     
     // Set the session ID BEFORE any async operations
     sessionManager.selectSession(id: id)
+    
+    // Notify settings storage of session change
+    onSessionChange?(id)
     
     // Clear any errors
     error = nil

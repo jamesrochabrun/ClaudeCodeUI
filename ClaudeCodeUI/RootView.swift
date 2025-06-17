@@ -10,16 +10,33 @@ import ClaudeCodeSDK
 
 struct RootView: View {
   
-  private let dependencyContainer: DependencyContainer = DependencyContainer()
+  private let dependencyContainer: DependencyContainer
   @State private var viewModel: ChatViewModel
   private let sessionId: String?
   
   init(sessionId: String? = nil) {
     self.sessionId = sessionId
-    let workingDirectory = dependencyContainer.settingsStorage.getProjectPath() ?? ""
-    let debugMode = dependencyContainer.settingsStorage.getDebugMode()
+    
+    let container = DependencyContainer()
+    self.dependencyContainer = container
+    
+    // Set the current session for settings storage
+    if let sessionId = sessionId {
+      container.setCurrentSession(sessionId)
+    }
+    
+    let workingDirectory = container.settingsStorage.getProjectPath() ?? ""
+    let debugMode = container.settingsStorage.getDebugMode()
     let claudeClient = ClaudeCodeClient(workingDirectory: workingDirectory, debug: debugMode)
-    viewModel = ChatViewModel(claudeClient: claudeClient, sessionStorage: dependencyContainer.sessionStorage, settingsStorage: dependencyContainer.settingsStorage)
+    let vm = ChatViewModel(
+      claudeClient: claudeClient,
+      sessionStorage: container.sessionStorage,
+      settingsStorage: container.settingsStorage,
+      onSessionChange: { newSessionId in
+        container.setCurrentSession(newSessionId)
+      }
+    )
+    self._viewModel = State(initialValue: vm)
   }
   
   var body: some View {

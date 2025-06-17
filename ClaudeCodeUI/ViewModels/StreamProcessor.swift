@@ -17,6 +17,7 @@ final class StreamProcessor {
   private let logger = Logger(subsystem: "com.ClaudeCodeUI.ClaudeChat", category: "StreamProcessor")
   private let messageStore: MessageStore
   private let sessionManager: SessionManager
+  private let onSessionChange: ((String) -> Void)?
   private var cancellables = Set<AnyCancellable>()
   
   // Stream state holder
@@ -27,9 +28,10 @@ final class StreamProcessor {
     var currentLocalMessageId: UUID?
   }
   
-  init(messageStore: MessageStore, sessionManager: SessionManager) {
+  init(messageStore: MessageStore, sessionManager: SessionManager, onSessionChange: ((String) -> Void)? = nil) {
     self.messageStore = messageStore
     self.sessionManager = sessionManager
+    self.onSessionChange = onSessionChange
   }
   
   func processStream(
@@ -112,6 +114,8 @@ final class StreamProcessor {
       let firstMessage = firstMessageInSession ?? "New conversation"
       sessionManager.startNewSession(id: initMessage.sessionId, firstMessage: firstMessage)
       logger.debug("Started new session: \(initMessage.sessionId)")
+      // Notify settings storage of new session
+      onSessionChange?(initMessage.sessionId)
     } else {
       logger.debug("Continuing with new session ID: \(initMessage.sessionId)")
     }

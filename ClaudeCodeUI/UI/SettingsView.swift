@@ -127,27 +127,6 @@ struct SettingsView: View {
             }
           }
           
-          Section("Appearance") {
-            Picker("Color Scheme", selection: Binding(
-              get: { settingsStorage.colorScheme },
-              set: { settingsStorage.colorScheme = $0 }
-            )) {
-              Text("System").tag("system")
-              Text("Light").tag("light")
-              Text("Dark").tag("dark")
-            }
-            .pickerStyle(.segmented)
-            
-            VStack(alignment: .leading, spacing: 8) {
-              Text("Font Size: \(Int(settingsStorage.fontSize))pt")
-              Slider(value: Binding(
-                get: { settingsStorage.fontSize },
-                set: { settingsStorage.fontSize = $0 }
-              ), in: 10...20, step: 1)
-            }
-            .padding(.vertical, 4)
-          }
-          
           Section {
             Button("Reset All Settings") {
               settingsStorage.resetAllSettings()
@@ -169,8 +148,8 @@ struct SettingsView: View {
         }
         .padding()
       }
-      .navigationTitle("Settings")
-      .frame(width: 700, height: 600)
+      .navigationTitle("Session Settings")
+      .frame(width: 700, height: 550)
     }
     .sheet(isPresented: $showingToolsEditor) {
       ToolsSelectionView(selectedTools: $selectedTools, availableTools: availableTools) {
@@ -247,6 +226,9 @@ struct SettingsView: View {
     // Update configuration properties
     chatViewModel.claudeClient.configuration.workingDirectory = newWorkingDir
     chatViewModel.claudeClient.configuration.enableDebugLogging = debugMode
+    
+    // Update the observable project path in the view model
+    chatViewModel.refreshProjectPath()
   }
 }
 
