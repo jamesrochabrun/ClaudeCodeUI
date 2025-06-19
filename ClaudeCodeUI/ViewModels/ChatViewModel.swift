@@ -15,7 +15,7 @@ public final class ChatViewModel {
   
   // MARK: - Dependencies
   
-  var claudeClient: ClaudeCodeClient
+  var claudeClient: ClaudeCode
   let sessionManager: SessionManager
   let sessionStorage: SessionStorageProtocol
   let settingsStorage: SettingsStorage
@@ -67,7 +67,7 @@ public final class ChatViewModel {
   
   // MARK: - Initialization
   
-  init(claudeClient: ClaudeCodeClient, sessionStorage: SessionStorageProtocol, settingsStorage: SettingsStorage, onSessionChange: ((String) -> Void)? = nil) {
+  init(claudeClient: ClaudeCode, sessionStorage: SessionStorageProtocol, settingsStorage: SettingsStorage, onSessionChange: ((String) -> Void)? = nil) {
     self.claudeClient = claudeClient
     self.sessionStorage = sessionStorage
     self.settingsStorage = settingsStorage
