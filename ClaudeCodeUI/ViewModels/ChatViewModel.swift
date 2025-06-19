@@ -274,6 +274,12 @@ public final class ChatViewModel {
     if let appendSystemPrompt = settingsStorage.getAppendSystemPrompt() {
       options.appendSystemPrompt = appendSystemPrompt
     }
+    if let mcpConfigPath = settingsStorage.getMcpConfigPath() {
+      print("[MCP] Setting mcpConfigPath in options: \(mcpConfigPath)")
+      options.mcpConfigPath = mcpConfigPath
+    } else {
+      print("[MCP] No mcpConfigPath found in settings")
+    }
     return options
   }
   
