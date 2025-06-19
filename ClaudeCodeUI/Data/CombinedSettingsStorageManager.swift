@@ -36,11 +36,6 @@ public final class CombinedSettingsStorageManager: SettingsStorage {
     set { sessionStorage.projectPath = newValue }
   }
   
-  public var debugMode: Bool {
-    get { sessionStorage.debugMode }
-    set { sessionStorage.debugMode = newValue }
-  }
-  
   public var verboseMode: Bool {
     get { sessionStorage.verboseMode }
     set { sessionStorage.verboseMode = newValue }
@@ -96,14 +91,6 @@ public final class CombinedSettingsStorageManager: SettingsStorage {
   
   public func clearProjectPath() {
     sessionStorage.projectPath = ""
-  }
-  
-  public func setDebugMode(_ enabled: Bool) {
-    sessionStorage.debugMode = enabled
-  }
-  
-  public func getDebugMode() -> Bool {
-    sessionStorage.debugMode
   }
   
   public func setVerboseMode(_ enabled: Bool) {

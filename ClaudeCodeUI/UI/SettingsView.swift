@@ -60,14 +60,6 @@ struct SettingsView: View {
           }
           
           Section("ClaudeCode Configuration") {
-            Toggle("Debug Mode", isOn: Binding(
-              get: { settingsStorage.debugMode },
-              set: {
-                settingsStorage.debugMode = $0
-                updateClaudeClient()
-              }
-            ))
-            
             Toggle("Verbose Mode", isOn: Binding(
               get: { settingsStorage.verboseMode },
               set: { settingsStorage.verboseMode = $0 }
@@ -212,7 +204,6 @@ struct SettingsView: View {
   private func updateClaudeClient() {
     // Update the ClaudeCode client configuration directly
     let workingDirectory = settingsStorage.getProjectPath() ?? ""
-    let debugMode = settingsStorage.getDebugMode()
     
     // Check if working directory changed
     let currentWorkingDir = chatViewModel.claudeClient.configuration.workingDirectory
@@ -225,7 +216,6 @@ struct SettingsView: View {
     
     // Update configuration properties
     chatViewModel.claudeClient.configuration.workingDirectory = newWorkingDir
-    chatViewModel.claudeClient.configuration.enableDebugLogging = debugMode
     
     // Update the observable project path in the view model
     chatViewModel.refreshProjectPath()

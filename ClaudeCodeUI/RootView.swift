@@ -26,7 +26,13 @@ struct RootView: View {
     }
     
     let workingDirectory = container.settingsStorage.getProjectPath() ?? ""
-    let debugMode = container.settingsStorage.getDebugMode()
+    
+    #if DEBUG
+    let debugMode = true
+    #else
+    let debugMode = false
+    #endif
+    
     let claudeClient = ClaudeCodeClient(workingDirectory: workingDirectory, debug: debugMode)
     let vm = ChatViewModel(
       claudeClient: claudeClient,

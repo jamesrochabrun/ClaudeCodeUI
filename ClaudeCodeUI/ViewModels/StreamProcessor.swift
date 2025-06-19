@@ -37,7 +37,8 @@ final class StreamProcessor {
   func processStream(
     _ publisher: AnyPublisher<ResponseChunk, Error>,
     messageId: UUID,
-    firstMessageInSession: String? = nil
+    firstMessageInSession: String? = nil,
+    onError: ((Error) -> Void)? = nil
   ) async {
     await withCheckedContinuation { continuation in
       let state = StreamState()
@@ -53,32 +54,28 @@ final class StreamProcessor {
             
             switch completion {
             case .finished:
-              self.logger.debug("Stream completed successfully")
               if state.assistantMessageCreated && !state.contentBuffer.isEmpty {
                 let finalMessageId = state.currentLocalMessageId ?? messageId
                 // Check if the content is just "(no content)"
                 if state.contentBuffer == "(no content)" {
                   self.messageStore.removeMessage(id: finalMessageId)
-                  self.logger.debug("Removed assistant message with only '(no content)' placeholder")
                 } else {
                   self.messageStore.updateMessage(
                     id: finalMessageId,
                     content: state.contentBuffer,
                     isComplete: true
                   )
-                  self.logger.debug("Updated assistant message as complete")
                 }
               } else if state.assistantMessageCreated && state.contentBuffer.isEmpty {
                 // Remove empty assistant message
                 let finalMessageId = state.currentLocalMessageId ?? messageId
                 self.messageStore.removeMessage(id: finalMessageId)
-                self.logger.debug("Removed empty assistant message")
               }
             case .failure(let error):
-              self.logger.error("Stream failed: \(error.localizedDescription)")
+              // Call the error handler if provided
+              onError?(error)
             }
             
-            self.logger.debug("Resuming continuation")
             continuation.resume()
             
             // Clean up the subscription
@@ -113,11 +110,8 @@ final class StreamProcessor {
     if sessionManager.currentSessionId == nil {
       let firstMessage = firstMessageInSession ?? "New conversation"
       sessionManager.startNewSession(id: initMessage.sessionId, firstMessage: firstMessage)
-      logger.debug("Started new session: \(initMessage.sessionId)")
       // Notify settings storage of new session
       onSessionChange?(initMessage.sessionId)
-    } else {
-      logger.debug("Continuing with new session ID: \(initMessage.sessionId)")
     }
   }
   
@@ -128,15 +122,12 @@ final class StreamProcessor {
     
     let currentId = message.message.id
     if let msgId = currentId {
-      logger.debug("Processing assistant message with ID: \(msgId)")
-      
       // Reset content buffer if this is a new message ID
       if state.currentMessageId != msgId {
         state.contentBuffer = ""
         state.assistantMessageCreated = false
         state.currentMessageId = msgId
         state.currentLocalMessageId = UUID()
-        logger.debug("New message ID detected, resetting content buffer")
       }
     }
     
@@ -146,15 +137,11 @@ final class StreamProcessor {
     for content in message.message.content {
       switch content {
       case .text(let textContent, _):
-        logger.debug("Received text content: '\(textContent)' (length: \(textContent.count))")
-        
         // Only add content if it's not already in the buffer (prevents duplicate chunks)
         if !state.contentBuffer.contains(textContent) {
           state.contentBuffer += textContent
           contentChanged = true
-          logger.debug("Added new content to buffer")
         } else {
-          logger.debug("Skipping duplicate text content chunk")
           continue
         }
         
@@ -171,14 +158,12 @@ final class StreamProcessor {
             )
             messageStore.addMessage(assistantMessage)
             state.assistantMessageCreated = true
-            logger.debug("Created assistant message with content: '\(state.contentBuffer.prefix(50))...'")
           } else if contentChanged {
             messageStore.updateMessage(
               id: messageIdToUse,
               content: state.contentBuffer,
               isComplete: false
             )
-            logger.debug("Updated assistant message with content: '\(state.contentBuffer.prefix(50))...'")
           }
         }
         
@@ -208,15 +193,9 @@ final class StreamProcessor {
         messageStore.addMessage(searchMessage)
       }
     }
-    
-    if state.contentBuffer.isEmpty && !state.assistantMessageCreated {
-      logger.debug("Assistant message contained no text content (likely only tool use)")
-    }
   }
   
   private func handleUserMessage(_ userMessage: UserMessage) {
-    logger.info("Received user message in stream for session: \(userMessage.sessionId)")
-    
     for content in userMessage.message.content {
       switch content {
       case .text(let textContent, _):
@@ -230,7 +209,7 @@ final class StreamProcessor {
         messageStore.addMessage(resultMessage)
         
       default:
-        logger.debug("Received other content type in user message")
+        break
       }
     }
   }
@@ -240,6 +219,5 @@ final class StreamProcessor {
       let firstMessage = firstMessageInSession ?? "New conversation"
       sessionManager.startNewSession(id: resultMessage.sessionId, firstMessage: firstMessage)
     }
-    logger.info("Completed response for session: \(resultMessage.sessionId)")
   }
 }

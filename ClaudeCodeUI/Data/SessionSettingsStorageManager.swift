@@ -26,9 +26,6 @@ public final class SessionSettingsStorageManager: SessionSettingsStorage {
       if let projectPath = pendingSettings["projectPath"] as? String {
         setProjectPath(projectPath, for: sessionId)
       }
-      if let debugMode = pendingSettings["debugMode"] as? Bool {
-        setDebugMode(debugMode, for: sessionId)
-      }
       if let verboseMode = pendingSettings["verboseMode"] as? Bool {
         setVerboseMode(verboseMode, for: sessionId)
       }
@@ -64,22 +61,6 @@ public final class SessionSettingsStorageManager: SessionSettingsStorage {
         pendingSettings["projectPath"] = newValue
       } else {
         setProjectPath(newValue, for: currentSessionId)
-      }
-    }
-  }
-  
-  public var debugMode: Bool {
-    get {
-      if currentSessionId.isEmpty {
-        return pendingSettings["debugMode"] as? Bool ?? false
-      }
-      return getDebugMode(for: currentSessionId)
-    }
-    set {
-      if currentSessionId.isEmpty {
-        pendingSettings["debugMode"] = newValue
-      } else {
-        setDebugMode(newValue, for: currentSessionId)
       }
     }
   }
@@ -185,16 +166,6 @@ public final class SessionSettingsStorageManager: SessionSettingsStorage {
   
   public func clearProjectPath(for sessionId: String) {
     defaults.removeObject(forKey: key(for: "projectPath", sessionId: sessionId))
-  }
-  
-  // MARK: - Debug Mode
-  
-  public func setDebugMode(_ enabled: Bool, for sessionId: String) {
-    defaults.set(enabled, forKey: key(for: "debugMode", sessionId: sessionId))
-  }
-  
-  public func getDebugMode(for sessionId: String) -> Bool {
-    defaults.bool(forKey: key(for: "debugMode", sessionId: sessionId))
   }
   
   // MARK: - Verbose Mode

@@ -10,7 +10,6 @@ import Foundation
 @MainActor
 public protocol SessionSettingsStorage: AnyObject {
   var projectPath: String { get set }
-  var debugMode: Bool { get set }
   var verboseMode: Bool { get set }
   var maxTurns: Int { get set }
   var allowedTools: [String] { get set }
@@ -20,9 +19,6 @@ public protocol SessionSettingsStorage: AnyObject {
   func setProjectPath(_ path: String, for sessionId: String)
   func getProjectPath(for sessionId: String) -> String?
   func clearProjectPath(for sessionId: String)
-  
-  func setDebugMode(_ enabled: Bool, for sessionId: String)
-  func getDebugMode(for sessionId: String) -> Bool
   
   func setVerboseMode(_ enabled: Bool, for sessionId: String)
   func getVerboseMode(for sessionId: String) -> Bool
