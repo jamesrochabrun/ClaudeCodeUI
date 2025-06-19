@@ -17,7 +17,6 @@ final class SettingsStorageManager: SettingsStorage {
     static let colorScheme = "colorScheme"
     static let fontSize = "fontSize"
     static let apiKey = "apiKey"
-    static let debugMode = "debugMode"
     static let verboseMode = "verboseMode"
     static let maxTurns = "maxTurns"
     static let allowedTools = "allowedTools"
@@ -49,15 +48,6 @@ final class SettingsStorageManager: SettingsStorage {
     }
     set {
       userDefaults.set(newValue, forKey: Keys.fontSize)
-    }
-  }
-  
-  var debugMode: Bool {
-    get {
-      userDefaults.bool(forKey: Keys.debugMode)
-    }
-    set {
-      userDefaults.set(newValue, forKey: Keys.debugMode)
     }
   }
   
@@ -157,14 +147,6 @@ final class SettingsStorageManager: SettingsStorage {
     userDefaults.removeObject(forKey: key)
   }
   
-  func setDebugMode(_ enabled: Bool) {
-    debugMode = enabled
-  }
-  
-  func getDebugMode() -> Bool {
-    return debugMode
-  }
-  
   func setVerboseMode(_ enabled: Bool) {
     verboseMode = enabled
   }
@@ -209,7 +191,6 @@ final class SettingsStorageManager: SettingsStorage {
     projectPath = ""
     colorScheme = "system"
     fontSize = 14.0
-    debugMode = false
     verboseMode = false
     maxTurns = 30
     allowedTools = ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MultiEdit", "Write"]

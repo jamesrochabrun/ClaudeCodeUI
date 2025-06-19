@@ -12,7 +12,6 @@ public protocol SettingsStorage: AnyObject {
   var projectPath: String { get set }
   var colorScheme: String { get set }
   var fontSize: Double { get set }
-  var debugMode: Bool { get set }
   var verboseMode: Bool { get set }
   var maxTurns: Int { get set }
   var allowedTools: [String] { get set }
@@ -32,9 +31,6 @@ public protocol SettingsStorage: AnyObject {
   func saveSecureValue(_ value: String, forKey key: String)
   func getSecureValue(forKey key: String) -> String?
   func removeSecureValue(forKey key: String)
-  
-  func setDebugMode(_ enabled: Bool)
-  func getDebugMode() -> Bool
   
   func setVerboseMode(_ enabled: Bool)
   func getVerboseMode() -> Bool

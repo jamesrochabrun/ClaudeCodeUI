@@ -59,7 +59,7 @@ public final class ChatViewModel {
   public private(set) var isLoading: Bool = false
   
   /// Error state
-  public private(set) var error: Error?
+  public var error: Error?
   
   /// Current project path (observable)
   public private(set) var projectPath: String = ""
@@ -67,7 +67,7 @@ public final class ChatViewModel {
   
   // MARK: - Initialization
   
-  init(claudeClient: ClaudeCodeClient, sessionStorage: SessionStorageProtocol, settingsStorage: SettingsStorage, onSessionChange: ((String) -> Void)? = nil) {
+  init(claudeClient: ClaudeCode, sessionStorage: SessionStorageProtocol, settingsStorage: SettingsStorage, onSessionChange: ((String) -> Void)? = nil) {
     self.claudeClient = claudeClient
     self.sessionStorage = sessionStorage
     self.settingsStorage = settingsStorage
@@ -239,11 +239,7 @@ public final class ChatViewModel {
   // MARK: - Private Methods
   
   private func startNewConversation(prompt: String, messageId: UUID) async throws {
-    logger.debug("Starting new conversation with prompt: '\(prompt)' (length: \(prompt.count))")
-    
     let options = createOptions()
-    
-    logger.debug("Calling runSinglePrompt with prompt: '\(prompt)'")
     
     let result = try await claudeClient.runSinglePrompt(
       prompt: prompt,
@@ -273,7 +269,7 @@ public final class ChatViewModel {
     options.verbose = settingsStorage.getVerboseMode()
     options.maxTurns = settingsStorage.getMaxTurns()
     if let systemPrompt = settingsStorage.getSystemPrompt() {
-      options.systemPrompt = systemPrompt
+      options.customSystemPrompt = systemPrompt
     }
     if let appendSystemPrompt = settingsStorage.getAppendSystemPrompt() {
       options.appendSystemPrompt = appendSystemPrompt
@@ -284,19 +280,24 @@ public final class ChatViewModel {
   private func processResult(_ result: ClaudeCodeResult, messageId: UUID) async {
     switch result {
     case .stream(let publisher):
-      logger.debug("Processing stream result")
-      await streamProcessor.processStream(publisher, messageId: messageId, firstMessageInSession: firstMessageInSession)
-      logger.debug("Stream processing completed, setting isLoading to false")
+      await streamProcessor.processStream(
+        publisher, 
+        messageId: messageId, 
+        firstMessageInSession: firstMessageInSession,
+        onError: { [weak self] error in
+          Task { @MainActor in
+            self?.handleError(error)
+          }
+        }
+      )
       await MainActor.run {
         self.isLoading = false
-        self.logger.debug("isLoading set to false")
         // Clear first message after it's been saved
         self.firstMessageInSession = nil
       }
       
     default:
       await MainActor.run {
-        logger.error("Expected stream result but got a different format")
         error = NSError(
           domain: "ChatViewModel",
           code: 1001,
@@ -308,8 +309,7 @@ public final class ChatViewModel {
   }
   
   
-  private func handleError(_ error: Error) {
-    logger.error("Error: \(error.localizedDescription)")
+  func handleError(_ error: Error) {
     self.error = error
     self.isLoading = false
     
@@ -319,3 +319,4 @@ public final class ChatViewModel {
     }
   }
 }
+

@@ -69,9 +69,27 @@ struct ChatScreen: View {
       
       // Error message if present
       if let error = viewModel.error {
-        Text(error.localizedDescription)
-          .foregroundColor(.red)
-          .padding()
+        HStack {
+          Image(systemName: "exclamationmark.triangle.fill")
+            .foregroundColor(.red)
+          Text(error.localizedDescription)
+            .foregroundColor(.red)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+          Spacer()
+          Button(action: {
+            viewModel.error = nil
+          }) {
+            Image(systemName: "xmark.circle.fill")
+              .foregroundColor(.secondary)
+          }
+          .buttonStyle(.plain)
+        }
+        .padding()
+        .background(Color.red.opacity(0.1))
+        .cornerRadius(8)
+        .padding(.horizontal)
+        .padding(.bottom, 8)
       }
       
       // Thinking indicator overlay
