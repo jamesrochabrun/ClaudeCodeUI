@@ -320,7 +320,7 @@ public final class ChatViewModel {
     options.allowedTools = globalPreferences.allowedTools
     options.maxTurns = globalPreferences.maxTurns
     if !globalPreferences.systemPrompt.isEmpty {
-      options.customSystemPrompt = globalPreferences.systemPrompt
+      options.systemPrompt = globalPreferences.systemPrompt
     }
     if !globalPreferences.appendSystemPrompt.isEmpty {
       options.appendSystemPrompt = globalPreferences.appendSystemPrompt
