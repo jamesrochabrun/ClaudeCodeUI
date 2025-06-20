@@ -17,7 +17,6 @@ struct ChatScreen: View {
   
   @State var viewModel: ChatViewModel
   @State private var messageText: String = ""
-  @State var showingSettings = false
   
   var body: some View {
     VStack {
@@ -75,22 +74,12 @@ struct ChatScreen: View {
     .navigationTitle("Claude Code Chat")
     .toolbar {
       ToolbarItem(placement: .automatic) {
-        HStack {
-          Button(action: { showingSettings = true }) {
-            Image(systemName: "gearshape")
-              .font(.title2)
-          }
-          
-          Button(action: clearChat) {
-            Image(systemName: "trash")
-              .font(.title2)
-          }
-          .disabled(viewModel.messages.isEmpty)
+        Button(action: clearChat) {
+          Image(systemName: "trash")
+            .font(.title2)
         }
+        .disabled(viewModel.messages.isEmpty)
       }
-    }
-    .sheet(isPresented: $showingSettings) {
-      SettingsView(chatViewModel: viewModel)
     }
     .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
   }

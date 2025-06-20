@@ -72,6 +72,7 @@ final class StreamProcessor {
                 self.messageStore.removeMessage(id: finalMessageId)
               }
             case .failure(let error):
+              print("StreamProcessor: Stream failed with error: \(error)")
               // Call the error handler if provided
               onError?(error)
             }
