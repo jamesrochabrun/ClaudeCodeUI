@@ -17,6 +17,7 @@ struct ChatScreen: View {
   
   @State var viewModel: ChatViewModel
   @State private var messageText: String = ""
+  @State var showingSettings = false
   
   var body: some View {
     VStack {
@@ -82,6 +83,9 @@ struct ChatScreen: View {
       }
     }
     .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
+    .sheet(isPresented: $showingSettings) {
+      SettingsView(chatViewModel: viewModel)
+    }
   }
   
   
