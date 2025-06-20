@@ -15,31 +15,27 @@ struct SettingsView: View {
   var settingsStorage: SettingsStorage {
     chatViewModel.settingsStorage
   }
-  @State private var showingProjectPicker = false
-  @State private var selectedTools: Set<String> = []
-  @State private var showingToolsEditor = false
   
-  private let availableTools = ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MultiEdit", "Write", "NotebookRead", "NotebookEdit", "WebSearch", "Task"]
+  @State private var projectPath: String = ""
   
   init(chatViewModel: ChatViewModel) {
     self.chatViewModel = chatViewModel
-    _selectedTools = State(initialValue: Set(chatViewModel.settingsStorage.allowedTools))
   }
   
   var body: some View {
     NavigationStack {
       VStack(spacing: 0) {
         Form {
-          Section("Project Settings") {
+          Section("Working Directory") {
             VStack(alignment: .leading, spacing: 12) {
               Text("Project Path")
                 .font(.headline)
               
               HStack {
-                Text(settingsStorage.projectPath.isEmpty ? "No project selected" : settingsStorage.projectPath)
+                Text(projectPath.isEmpty ? "No project selected" : projectPath)
                   .lineLimit(1)
                   .truncationMode(.middle)
-                  .foregroundColor(settingsStorage.projectPath.isEmpty ? .secondary : .primary)
+                  .foregroundColor(projectPath.isEmpty ? .secondary : .primary)
                   .frame(maxWidth: .infinity, alignment: .leading)
                 
                 Button("Select") {
@@ -47,83 +43,21 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 
-                if !settingsStorage.projectPath.isEmpty {
+                if !projectPath.isEmpty {
                   Button("Clear") {
-                    settingsStorage.clearProjectPath()
+                    projectPath = ""
+                    saveProjectPath()
                     updateClaudeClient()
                   }
                   .buttonStyle(.bordered)
                 }
               }
-            }
-            .padding(.vertical, 8)
-          }
-          
-          Section("ClaudeCode Configuration") {
-            Toggle("Verbose Mode", isOn: Binding(
-              get: { settingsStorage.verboseMode },
-              set: { settingsStorage.verboseMode = $0 }
-            ))
-            
-            HStack {
-              Text("Max Turns")
-              Spacer()
-              TextField("Max Turns", value: Binding(
-                get: { settingsStorage.maxTurns },
-                set: { settingsStorage.maxTurns = $0 }
-              ), format: .number)
-              .textFieldStyle(.roundedBorder)
-              .frame(width: 80)
-            }
-            
-            VStack(alignment: .leading, spacing: 8) {
-              Text("System Prompt")
-              TextEditor(text: Binding(
-                get: { settingsStorage.systemPrompt },
-                set: { settingsStorage.systemPrompt = $0 }
-              ))
-              .font(.system(.body, design: .monospaced))
-              .frame(height: 60)
-              .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                  .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-              )
-            }
-            
-            VStack(alignment: .leading, spacing: 8) {
-              Text("Append System Prompt")
-              TextEditor(text: Binding(
-                get: { settingsStorage.appendSystemPrompt },
-                set: { settingsStorage.appendSystemPrompt = $0 }
-              ))
-              .font(.system(.body, design: .monospaced))
-              .frame(height: 60)
-              .overlay(
-                RoundedRectangle(cornerRadius: 4)
-                  .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
-              )
-            }
-            
-            VStack(alignment: .leading, spacing: 8) {
-              HStack {
-                Text("Allowed Tools")
-                Spacer()
-                Button("Edit Tools") {
-                  showingToolsEditor = true
-                }
-                .buttonStyle(.bordered)
-              }
-              Text("\(settingsStorage.allowedTools.count) tools selected")
+              
+              Text("This working directory is specific to this session. Other settings are configured globally via ⌘⇧,")
                 .font(.caption)
                 .foregroundColor(.secondary)
             }
-          }
-          
-          Section {
-            Button("Reset All Settings") {
-              settingsStorage.resetAllSettings()
-            }
-            .foregroundColor(.red)
+            .padding(.vertical, 8)
           }
         }
         .formStyle(.grouped)
@@ -141,12 +75,36 @@ struct SettingsView: View {
         .padding()
       }
       .navigationTitle("Session Settings")
-      .frame(width: 700, height: 550)
+      .frame(width: 600, height: 250)
     }
-    .sheet(isPresented: $showingToolsEditor) {
-      ToolsSelectionView(selectedTools: $selectedTools, availableTools: availableTools) {
-        settingsStorage.setAllowedTools(Array(selectedTools))
-      }
+    .onAppear {
+      loadProjectPath()
+    }
+  }
+  
+  private func loadProjectPath() {
+    // Load session-specific path if available
+    if let sessionId = chatViewModel.currentSessionId,
+       let sessionPath = settingsStorage.getProjectPath(forSessionId: sessionId) {
+      projectPath = sessionPath
+      print("[SettingsView] Loaded project path '\(sessionPath)' for session '\(sessionId)'")
+    } else {
+      // Fall back to current working directory
+      projectPath = chatViewModel.claudeClient.configuration.workingDirectory ?? ""
+      print("[SettingsView] No session ID or no saved path. Session ID: \(chatViewModel.currentSessionId ?? "nil"), using working directory: '\(projectPath)'")
+    }
+  }
+  
+  private func saveProjectPath() {
+    // Save to global setting
+    settingsStorage.setProjectPath(projectPath)
+    
+    // Also save session-specific if we have a session
+    if let sessionId = chatViewModel.currentSessionId {
+      settingsStorage.setProjectPath(projectPath, forSessionId: sessionId)
+      print("[SettingsView] Saved project path '\(projectPath)' for session '\(sessionId)'")
+    } else {
+      print("[SettingsView] WARNING: No session ID available when saving project path '\(projectPath)'")
     }
   }
   
@@ -186,7 +144,8 @@ struct SettingsView: View {
       panel.beginSheetModal(for: window) { response in
         if response == .OK, let url = panel.url {
           Task { @MainActor in
-            settingsStorage.setProjectPath(url.path)
+            projectPath = url.path
+            saveProjectPath()
             updateClaudeClient()
           }
         }
@@ -194,7 +153,8 @@ struct SettingsView: View {
     } else {
       if panel.runModal() == .OK, let url = panel.url {
         Task { @MainActor in
-          settingsStorage.setProjectPath(url.path)
+          projectPath = url.path
+          saveProjectPath()
           updateClaudeClient()
         }
       }
@@ -203,7 +163,7 @@ struct SettingsView: View {
   
   private func updateClaudeClient() {
     // Update the ClaudeCode client configuration directly
-    let workingDirectory = settingsStorage.getProjectPath() ?? ""
+    let workingDirectory = projectPath
     
     // Check if working directory changed
     let currentWorkingDir = chatViewModel.claudeClient.configuration.workingDirectory
@@ -220,15 +180,4 @@ struct SettingsView: View {
     // Update the observable project path in the view model
     chatViewModel.refreshProjectPath()
   }
-}
-
-#Preview {
-  let dependencyContainer = DependencyContainer()
-  let claudeClient = ClaudeCodeClient(workingDirectory: "", debug: false)
-  let viewModel = ChatViewModel(
-    claudeClient: claudeClient,
-    sessionStorage: dependencyContainer.sessionStorage,
-    settingsStorage: dependencyContainer.settingsStorage
-  )
-  return SettingsView(chatViewModel: viewModel)
 }

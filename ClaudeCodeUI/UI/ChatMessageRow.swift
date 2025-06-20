@@ -11,17 +11,19 @@ import SwiftUI
 struct ChatMessageRow: View {
   let message: ChatMessage
   let settingsStorage: SettingsStorage
+  let fontSize: Double
   
   init(
     message: ChatMessage,
-    settingsStorage: SettingsStorage)
+    settingsStorage: SettingsStorage,
+    fontSize: Double = 13.0)
   {
     self.message = message
     self.settingsStorage = settingsStorage
+    self.fontSize = fontSize
   }
   
   @Environment(\.colorScheme) private var colorScheme
-  @Environment(\.globalSettingsStorage) private var globalSettingsStorage
   @State private var isHovered = false
   @State private var showTimestamp = false
   
@@ -270,9 +272,9 @@ struct ChatMessageRow: View {
   private var messageFont: Font {
     switch message.messageType {
     case .text, .thinking, .webSearch:
-      return .system(size: globalSettingsStorage.fontSize)
+      return .system(size: fontSize)
     case .toolUse, .toolResult, .toolError:
-      return .system(size: globalSettingsStorage.fontSize - 1, design: .monospaced)
+      return .system(size: fontSize - 1, design: .monospaced)
     }
   }
   
@@ -294,49 +296,3 @@ struct ChatMessageRow: View {
   
   @State private var animationValues: [Bool] = [false, false, false]
 }
-
-// TODO: Create mocks for settings storage
-//#Preview {
-//  ScrollView {
-//    VStack(spacing: 8) {
-//      ChatMessageRow(message: ChatMessage(
-//        role: .user,
-//        content: "Can you help me analyze this codebase?"
-//      ))
-//
-//      ChatMessageRow(message: ChatMessage(
-//        role: .assistant,
-//        content: "I'd be happy to help you analyze your codebase! Let me start by exploring the project structure.",
-//        messageType: .text
-//      ))
-//
-//      ChatMessageRow(message: ChatMessage(
-//        role: .assistant,
-//        content: "find . -type f -name '*.swift' | head -20",
-//        messageType: .toolUse,
-//        toolName: "Bash"
-//      ))
-//
-//      ChatMessageRow(message: ChatMessage(
-//        role: .assistant,
-//        content: "./main.swift\n./Sources/App.swift\n./Sources/Models/User.swift\n./Sources/Views/ContentView.swift",
-//        messageType: .toolResult
-//      ))
-//
-//      ChatMessageRow(message: ChatMessage(
-//        role: .assistant,
-//        content: "Error: Command not found",
-//        messageType: .toolError
-//      ))
-//
-//      ChatMessageRow(message: ChatMessage(
-//        role: .assistant,
-//        content: "Analyzing the project structure...",
-//        messageType: .thinking
-//      ))
-//    }
-//    .padding()
-//  }
-//  .frame(width: 600, height: 800)
-//  .background(Color(NSColor.windowBackgroundColor))
-//}

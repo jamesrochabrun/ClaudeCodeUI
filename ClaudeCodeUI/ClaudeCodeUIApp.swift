@@ -9,7 +9,7 @@ import SwiftUI
 
 @main
 struct ClaudeCodeUIApp: App {
-  private let globalSettingsStorage = GlobalSettingsStorageManager()
+  @State private var globalPreferences = GlobalPreferencesStorage()
   
   var body: some Scene {
     WindowGroup(id: "main") {
@@ -21,7 +21,7 @@ struct ClaudeCodeUIApp: App {
         .toolbarBackgroundVisibility(
           .hidden, for: .windowToolbar
         )
-        .environment(\.globalSettingsStorage, globalSettingsStorage)
+        .environment(globalPreferences)
     }
     //  .windowResizability(.contentSize)
     .windowStyle(.hiddenTitleBar)
@@ -41,14 +41,15 @@ struct ClaudeCodeUIApp: App {
           .toolbarBackgroundVisibility(
             .hidden, for: .windowToolbar
           )
-          .environment(\.globalSettingsStorage, globalSettingsStorage)
+          .environment(globalPreferences)
       }
     }
     .windowStyle(.hiddenTitleBar)
     
-    // Appearance Settings Window
-    Window("Appearance Settings", id: "appearance-settings") {
-      AppearanceSettingsView(globalSettingsStorage: globalSettingsStorage)
+    // Global Settings Window
+    Window("Global Settings", id: "global-settings") {
+      GlobalSettingsView()
+        .environment(globalPreferences)
     }
     .windowResizability(.contentSize)
   }
@@ -60,22 +61,11 @@ struct AppearanceCommands: Commands {
   
   var body: some Commands {
     CommandGroup(after: .appSettings) {
-      Button("Appearance Settings...") {
-        openWindow(id: "appearance-settings")
+      Button("Global Settings...") {
+        openWindow(id: "global-settings")
       }
       .keyboardShortcut(",", modifiers: [.command, .shift])
     }
   }
 }
 
-// Environment key for GlobalSettingsStorage
-private struct GlobalSettingsStorageKey: EnvironmentKey {
-  static let defaultValue: GlobalSettingsStorage = GlobalSettingsStorageManager()
-}
-
-extension EnvironmentValues {
-  var globalSettingsStorage: GlobalSettingsStorage {
-    get { self[GlobalSettingsStorageKey.self] }
-    set { self[GlobalSettingsStorageKey.self] = newValue }
-  }
-}
