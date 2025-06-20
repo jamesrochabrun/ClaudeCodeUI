@@ -7,32 +7,32 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "725D0E20-7A00-4E51-85F0-A0A1B2D9E030"
+            uuid = "4CA2B9E9-76D4-4085-AE24-A8E7C31FD8C5"
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "../../../Library/Developer/Xcode/DerivedData/ClaudeCodeUI-hgwnhzjfmysuhualcdospacjdueb/SourcePackages/checkouts/ClaudeCodeSDK/Sources/ClaudeCodeSDK/Client/ClaudeCodeClient.swift"
+            filePath = "ClaudeCodeUI/ViewModels/ChatViewModel.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "93"
-            endingLineNumber = "93"
-            landmarkName = "runSinglePrompt(prompt:outputFormat:options:)"
+            startingLineNumber = "134"
+            endingLineNumber = "134"
+            landmarkName = "sendMessage(_:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            uuid = "8073B5C6-4A44-4B64-8D3A-0496AB484E93"
+            uuid = "8984244E-ECA5-4541-93AB-06F2FBE017A8"
             shouldBeEnabled = "Yes"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
-            filePath = "../../../Library/Developer/Xcode/DerivedData/ClaudeCodeUI-hgwnhzjfmysuhualcdospacjdueb/SourcePackages/checkouts/ClaudeCodeSDK/Sources/ClaudeCodeSDK/Client/ClaudeCodeClient.swift"
+            filePath = "ClaudeCodeUI/ViewModels/ChatViewModel.swift"
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
-            startingLineNumber = "96"
-            endingLineNumber = "96"
-            landmarkName = "runSinglePrompt(prompt:outputFormat:options:)"
+            startingLineNumber = "137"
+            endingLineNumber = "137"
+            landmarkName = "sendMessage(_:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>

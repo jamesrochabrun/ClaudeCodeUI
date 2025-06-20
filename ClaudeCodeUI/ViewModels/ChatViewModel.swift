@@ -19,6 +19,7 @@ public final class ChatViewModel {
   let sessionManager: SessionManager
   let sessionStorage: SessionStorageProtocol
   let settingsStorage: SettingsStorage
+  let globalPreferences: GlobalPreferencesStorage
   private let onSessionChange: ((String) -> Void)?
   
   private let streamProcessor: StreamProcessor
@@ -67,10 +68,17 @@ public final class ChatViewModel {
   
   // MARK: - Initialization
   
-  init(claudeClient: ClaudeCode, sessionStorage: SessionStorageProtocol, settingsStorage: SettingsStorage, onSessionChange: ((String) -> Void)? = nil) {
+  init(
+    claudeClient: ClaudeCode,
+    sessionStorage: SessionStorageProtocol,
+    settingsStorage: SettingsStorage,
+    globalPreferences: GlobalPreferencesStorage,
+    onSessionChange: ((String) -> Void)? = nil)
+  {
     self.claudeClient = claudeClient
     self.sessionStorage = sessionStorage
     self.settingsStorage = settingsStorage
+    self.globalPreferences = globalPreferences
     self.onSessionChange = onSessionChange
     self.sessionManager = SessionManager(sessionStorage: sessionStorage)
     self.streamProcessor = StreamProcessor(
@@ -179,6 +187,25 @@ public final class ChatViewModel {
   
   /// Resumes an existing session with optional initial prompt
   public func resumeSession(id: String, initialPrompt: String? = nil) async {
+    // Ensure sessions are loaded and validate
+    guard await validateSessionExists(id: id) else { return }
+    
+    logger.debug("Resuming session: \(id)")
+    
+    // Prepare session for resumption
+    prepareSessionForResumption(id: id)
+    
+    // Setup for conversation resumption
+    let assistantId = UUID()
+    setupConversationResumption(assistantId: assistantId, initialPrompt: initialPrompt)
+    
+    // Resume the conversation
+    await performSessionResumption(id: id, initialPrompt: initialPrompt, assistantId: assistantId)
+  }
+  
+  // MARK: - Session Resumption Helpers
+  
+  private func validateSessionExists(id: String) async -> Bool {
     // First ensure sessions are loaded
     if sessions.isEmpty {
       await loadSessions()
@@ -187,11 +214,13 @@ public final class ChatViewModel {
     // Verify the session exists
     guard sessions.contains(where: { $0.id == id }) else {
       logger.error("Session \(id) not found in stored sessions")
-      return
+      return false
     }
     
-    logger.debug("Resuming session: \(id)")
-    
+    return true
+  }
+  
+  private func prepareSessionForResumption(id: String) {
     // Clear current messages
     messageStore.clear()
     
@@ -206,10 +235,11 @@ public final class ChatViewModel {
     
     // Update last accessed time
     sessionManager.updateLastAccessed(id: id)
-    
+  }
+  
+  private func setupConversationResumption(assistantId: UUID, initialPrompt: String?) {
     // Resume the conversation - even with empty prompt to load history
     isLoading = true
-    let assistantId = UUID()
     currentMessageId = assistantId
     
     // If we have an initial prompt, add it as a user message
@@ -217,7 +247,9 @@ public final class ChatViewModel {
       let userMessage = MessageFactory.userMessage(content: prompt)
       messageStore.addMessage(userMessage)
     }
-    
+  }
+  
+  private func performSessionResumption(id: String, initialPrompt: String?, assistantId: UUID) async {
     do {
       // Resume the conversation with or without a prompt
       let options = createOptions()
@@ -230,7 +262,27 @@ public final class ChatViewModel {
       
       await processResult(result, messageId: assistantId)
     } catch {
-      await MainActor.run {
+      await handleSessionResumptionError(error, sessionId: id)
+    }
+  }
+  
+  private func handleSessionResumptionError(_ error: Error, sessionId: String) async {
+    logger.error("Failed to resume session \(sessionId): \(error.localizedDescription)")
+    
+    await MainActor.run {
+      // If the conversation doesn't exist in Claude, just select the session
+      // This allows us to continue with the session even if Claude doesn't have it
+      self.isLoading = false
+      
+      // Check if it's a "conversation not found" error
+      let errorMessage = error.localizedDescription.lowercased()
+      if errorMessage.contains("no conversation") || errorMessage.contains("not found") {
+        // Session exists in our storage but not in Claude
+        // This is OK - user can continue with a new message
+        logger.info("Session \(sessionId) exists locally but not in Claude. Ready for new messages.")
+        self.error = nil
+      } else {
+        // Some other error
         self.handleError(error)
       }
     }
@@ -265,14 +317,19 @@ public final class ChatViewModel {
   
   private func createOptions() -> ClaudeCodeOptions {
     var options = ClaudeCodeOptions()
-    options.allowedTools = settingsStorage.getAllowedTools()
-    options.verbose = settingsStorage.getVerboseMode()
-    options.maxTurns = settingsStorage.getMaxTurns()
-    if let systemPrompt = settingsStorage.getSystemPrompt() {
-      options.customSystemPrompt = systemPrompt
+    options.allowedTools = globalPreferences.allowedTools
+    options.maxTurns = globalPreferences.maxTurns
+    if !globalPreferences.systemPrompt.isEmpty {
+      options.systemPrompt = globalPreferences.systemPrompt
     }
-    if let appendSystemPrompt = settingsStorage.getAppendSystemPrompt() {
-      options.appendSystemPrompt = appendSystemPrompt
+    if !globalPreferences.appendSystemPrompt.isEmpty {
+      options.appendSystemPrompt = globalPreferences.appendSystemPrompt
+    }
+    if !globalPreferences.mcpConfigPath.isEmpty {
+      print("[MCP] Setting mcpConfigPath in options: \(globalPreferences.mcpConfigPath)")
+      options.mcpConfigPath = globalPreferences.mcpConfigPath
+    } else {
+      print("[MCP] No mcpConfigPath found in settings")
     }
     return options
   }
@@ -281,8 +338,8 @@ public final class ChatViewModel {
     switch result {
     case .stream(let publisher):
       await streamProcessor.processStream(
-        publisher, 
-        messageId: messageId, 
+        publisher,
+        messageId: messageId,
         firstMessageInSession: firstMessageInSession,
         onError: { [weak self] error in
           Task { @MainActor in

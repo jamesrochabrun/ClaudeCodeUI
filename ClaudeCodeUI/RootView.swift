@@ -9,52 +9,84 @@ import SwiftUI
 import ClaudeCodeSDK
 
 struct RootView: View {
+  @Environment(GlobalPreferencesStorage.self) private var globalPreferences
   
-  private let dependencyContainer: DependencyContainer
-  @State private var viewModel: ChatViewModel
+  @State private var dependencyContainer: DependencyContainer?
+  @State private var viewModel: ChatViewModel?
   private let sessionId: String?
   
   init(sessionId: String? = nil) {
     self.sessionId = sessionId
-    
-    let container = DependencyContainer()
+  }
+  
+  var body: some View {
+    if let viewModel = viewModel {
+      ChatScreen(viewModel: viewModel)
+    } else {
+      ProgressView()
+        .onAppear {
+          setupViewModel()
+        }
+    }
+  }
+  
+  private func setupViewModel() {
+    let container = DependencyContainer(globalPreferences: globalPreferences)
     self.dependencyContainer = container
     
     // Set the current session for settings storage
     if let sessionId = sessionId {
       container.setCurrentSession(sessionId)
+      print("[RootView] Setting up with session ID: \(sessionId)")
+    } else {
+      print("[RootView] Setting up with no session ID (new session)")
     }
     
-    let workingDirectory = container.settingsStorage.getProjectPath() ?? ""
+    // Get session-specific working directory if available
+    let workingDirectory: String
+    if let sessionId = sessionId,
+       let sessionPath = container.settingsStorage.getProjectPath(forSessionId: sessionId) {
+      workingDirectory = sessionPath
+      // Also set it as the active path for this session
+      container.settingsStorage.setProjectPath(sessionPath)
+      print("[RootView] Loaded working directory '\(sessionPath)' for session '\(sessionId)'")
+    } else {
+      // New session starts with empty working directory
+      workingDirectory = ""
+      container.settingsStorage.clearProjectPath()
+      print("[RootView] No working directory found. Session ID: \(sessionId ?? "nil")")
+    }
     
-    #if DEBUG
+#if DEBUG
     let debugMode = true
-    #else
+#else
     let debugMode = false
-    #endif
+#endif
     
     let claudeClient = ClaudeCodeClient(workingDirectory: workingDirectory, debug: debugMode)
     let vm = ChatViewModel(
       claudeClient: claudeClient,
       sessionStorage: container.sessionStorage,
       settingsStorage: container.settingsStorage,
+      globalPreferences: container.globalPreferences,
       onSessionChange: { newSessionId in
         container.setCurrentSession(newSessionId)
       }
     )
-    self._viewModel = State(initialValue: vm)
-  }
-  
-  var body: some View {
-    ChatScreen(viewModel: viewModel)
-      .task {
-        if let sessionId = sessionId {
-          // Resume the session when window opens
-          await viewModel.resumeSession(id: sessionId)
-          // Update last accessed time
-          viewModel.sessionManager.updateLastAccessed(id: sessionId)
-        }
+    self.viewModel = vm
+    
+    // Refresh the project path in the view model after we've set up the storage
+    vm.refreshProjectPath()
+    
+    // Resume session if needed
+    if let sessionId = sessionId {
+      Task {
+        // Resume the session when window opens
+        await vm.resumeSession(id: sessionId)
+        // Update last accessed time
+        vm.sessionManager.updateLastAccessed(id: sessionId)
       }
+    }
   }
 }
 

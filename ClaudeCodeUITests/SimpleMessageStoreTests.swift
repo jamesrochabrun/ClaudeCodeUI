@@ -48,11 +48,12 @@ struct SimpleMessageStoreTests {
   @Test
   @MainActor
   func testSessionManagerBasics() async throws {
-    let manager = SessionManager()
+    let sessionStorage = UserDefaultsSessionStorage()
+    let manager = SessionManager(sessionStorage: sessionStorage)
     
     #expect(manager.currentSessionId == nil)
     
-    manager.startNewSession(id: "test-123")
+    manager.startNewSession(id: "test-123", firstMessage: "Test message")
     #expect(manager.currentSessionId == "test-123")
     
     manager.clearSession()

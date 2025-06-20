@@ -11,7 +11,6 @@ struct ToolsSelectionView: View {
   @Environment(\.dismiss) private var dismiss
   @Binding var selectedTools: Set<String>
   let availableTools: [String]
-  let onSave: () -> Void
   
   var body: some View {
     NavigationStack {
@@ -63,7 +62,6 @@ struct ToolsSelectionView: View {
           .buttonStyle(.bordered)
           
           Button("Save") {
-            onSave()
             dismiss()
           }
           .buttonStyle(.borderedProminent)
@@ -80,7 +78,5 @@ struct ToolsSelectionView: View {
 #Preview {
   ToolsSelectionView(
     selectedTools: .constant(Set(["Bash", "LS", "Read"])),
-    availableTools: ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MultiEdit", "Write"],
-    onSave: {}
-  )
+    availableTools: ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MultiEdit", "Write"])
 }

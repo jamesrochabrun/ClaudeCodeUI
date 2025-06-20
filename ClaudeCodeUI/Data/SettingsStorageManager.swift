@@ -13,189 +13,46 @@ import SwiftUI
 final class SettingsStorageManager: SettingsStorage {
   
   private struct Keys {
-    static let projectPath = "projectPath"
-    static let colorScheme = "colorScheme"
-    static let fontSize = "fontSize"
-    static let apiKey = "apiKey"
-    static let verboseMode = "verboseMode"
-    static let maxTurns = "maxTurns"
-    static let allowedTools = "allowedTools"
-    static let systemPrompt = "systemPrompt"
-    static let appendSystemPrompt = "appendSystemPrompt"
-  }
-  
-  var projectPath: String {
-    get {
-      userDefaults.string(forKey: Keys.projectPath) ?? ""
-    }
-    set {
-      userDefaults.set(newValue, forKey: Keys.projectPath)
-    }
-  }
-  
-  var colorScheme: String {
-    get {
-      userDefaults.string(forKey: Keys.colorScheme) ?? "system"
-    }
-    set {
-      userDefaults.set(newValue, forKey: Keys.colorScheme)
-    }
-  }
-  
-  var fontSize: Double {
-    get {
-      userDefaults.double(forKey: Keys.fontSize) == 0 ? 14.0 : userDefaults.double(forKey: Keys.fontSize)
-    }
-    set {
-      userDefaults.set(newValue, forKey: Keys.fontSize)
-    }
-  }
-  
-  var verboseMode: Bool {
-    get {
-      userDefaults.bool(forKey: Keys.verboseMode)
-    }
-    set {
-      userDefaults.set(newValue, forKey: Keys.verboseMode)
-    }
-  }
-  
-  var maxTurns: Int {
-    get {
-      let value = userDefaults.integer(forKey: Keys.maxTurns)
-      return value == 0 ? 30 : value
-    }
-    set {
-      userDefaults.set(newValue, forKey: Keys.maxTurns)
-    }
-  }
-  
-  var allowedTools: [String] {
-    get {
-      userDefaults.array(forKey: Keys.allowedTools) as? [String] ?? ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MultiEdit", "Write"]
-    }
-    set {
-      userDefaults.set(newValue, forKey: Keys.allowedTools)
-    }
-  }
-  
-  var systemPrompt: String {
-    get {
-      userDefaults.string(forKey: Keys.systemPrompt) ?? ""
-    }
-    set {
-      userDefaults.set(newValue, forKey: Keys.systemPrompt)
-    }
-  }
-  
-  var appendSystemPrompt: String {
-    get {
-      userDefaults.string(forKey: Keys.appendSystemPrompt) ?? ""
-    }
-    set {
-      userDefaults.set(newValue, forKey: Keys.appendSystemPrompt)
-    }
+    static let sessionProjectPathPrefix = "session.projectPath."
   }
   
   private let userDefaults = UserDefaults.standard
   
-  init() {}
+  // MARK: - Temporary/Active Project Path
+  // This is only used for the currently active session
+  private var _activeProjectPath: String = ""
+  
+  var projectPath: String {
+    get { _activeProjectPath }
+    set { _activeProjectPath = newValue }
+  }
+  
+  // MARK: - Project Path Management
   
   func setProjectPath(_ path: String) {
-    projectPath = path
+    _activeProjectPath = path
   }
   
   func getProjectPath() -> String? {
-    return projectPath.isEmpty ? nil : projectPath
+    _activeProjectPath.isEmpty ? nil : _activeProjectPath
   }
   
   func clearProjectPath() {
-    projectPath = ""
+    _activeProjectPath = ""
   }
   
-  func setColorScheme(_ scheme: String) {
-    colorScheme = scheme
+  // MARK: - Per-Session Project Path
+  
+  func setProjectPath(_ path: String, forSessionId sessionId: String) {
+    let key = Keys.sessionProjectPathPrefix + sessionId
+    userDefaults.set(path, forKey: key)
+    print("[SettingsStorage] Saved path '\(path)' for session '\(sessionId)' with key '\(key)'")
   }
   
-  func getColorScheme() -> String {
-    return colorScheme
-  }
-  
-  func setFontSize(_ size: Double) {
-    fontSize = size
-  }
-  
-  func getFontSize() -> Double {
-    return fontSize
-  }
-  
-  func saveSecureValue(_ value: String, forKey key: String) {
-    if let data = value.data(using: .utf8) {
-      userDefaults.set(data, forKey: key)
-    }
-  }
-  
-  func getSecureValue(forKey key: String) -> String? {
-    guard let data = userDefaults.data(forKey: key),
-          let value = String(data: data, encoding: .utf8) else {
-      return nil
-    }
-    return value
-  }
-  
-  func removeSecureValue(forKey key: String) {
-    userDefaults.removeObject(forKey: key)
-  }
-  
-  func setVerboseMode(_ enabled: Bool) {
-    verboseMode = enabled
-  }
-  
-  func getVerboseMode() -> Bool {
-    return verboseMode
-  }
-  
-  func setMaxTurns(_ turns: Int) {
-    maxTurns = turns
-  }
-  
-  func getMaxTurns() -> Int {
-    return maxTurns
-  }
-  
-  func setAllowedTools(_ tools: [String]) {
-    allowedTools = tools
-  }
-  
-  func getAllowedTools() -> [String] {
-    return allowedTools
-  }
-  
-  func setSystemPrompt(_ prompt: String) {
-    systemPrompt = prompt
-  }
-  
-  func getSystemPrompt() -> String? {
-    return systemPrompt.isEmpty ? nil : systemPrompt
-  }
-  
-  func setAppendSystemPrompt(_ prompt: String) {
-    appendSystemPrompt = prompt
-  }
-  
-  func getAppendSystemPrompt() -> String? {
-    return appendSystemPrompt.isEmpty ? nil : appendSystemPrompt
-  }
-  
-  func resetAllSettings() {
-    projectPath = ""
-    colorScheme = "system"
-    fontSize = 14.0
-    verboseMode = false
-    maxTurns = 30
-    allowedTools = ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MultiEdit", "Write"]
-    systemPrompt = ""
-    appendSystemPrompt = ""
-    userDefaults.removeObject(forKey: Keys.apiKey)
+  func getProjectPath(forSessionId sessionId: String) -> String? {
+    let key = Keys.sessionProjectPathPrefix + sessionId
+    let path = userDefaults.string(forKey: key)
+    print("[SettingsStorage] Retrieved path '\(path ?? "nil")' for session '\(sessionId)' with key '\(key)'")
+    return path?.isEmpty == false ? path : nil
   }
 }

@@ -15,56 +15,18 @@ struct ChatScreen: View {
     self.viewModel = viewModel
   }
   
-  @State private var viewModel: ChatViewModel
+  @State var viewModel: ChatViewModel
   @State private var messageText: String = ""
-  @State private var showingSettings = false
+  @State var showingSettings = false
   
   var body: some View {
     VStack {
       // Show empty state if no project path is selected and no messages
       if viewModel.projectPath.isEmpty && viewModel.messages.isEmpty {
-        VStack(spacing: 20) {
-          Spacer()
-          Image(systemName: "folder.badge.questionmark")
-            .font(.system(size: 60))
-            .foregroundColor(.secondary)
-          Text("No Working Directory Selected")
-            .font(.title2)
-            .fontWeight(.semibold)
-          Text("Select a working directory to start chatting with Claude")
-            .font(.body)
-            .foregroundColor(.secondary)
-            .multilineTextAlignment(.center)
-          Button("Open Settings") {
-            showingSettings = true
-          }
-          .buttonStyle(.borderedProminent)
-          Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding()
+        emptyStateView
       } else {
         // Chat messages list
-        ScrollViewReader { scrollView in
-          List {
-            ForEach(viewModel.messages) { message in
-              ChatMessageRow(message: message, settingsStorage: viewModel.settingsStorage)
-                .listRowSeparator(.hidden)
-                .id(message.id)
-            }
-          }
-          .listStyle(.plain)
-          .listRowBackground(Color.clear)
-          .scrollContentBackground(.hidden)
-          .onChange(of: viewModel.messages) { _, newMessages in
-            // Scroll to bottom when new messages are added
-            if let lastMessage = viewModel.messages.last {
-              withAnimation {
-                scrollView.scrollTo(lastMessage.id, anchor: .bottom)
-              }
-            }
-          }
-        }
+        messagesListView
       }
       
       // Error message if present
