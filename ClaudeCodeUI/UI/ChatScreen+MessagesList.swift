@@ -11,6 +11,15 @@ extension ChatScreen {
   var messagesListView: some View {
     ScrollViewReader { scrollView in
       List {
+        // Add WelcomeRow at the top when project path is available
+        if !viewModel.projectPath.isEmpty {
+          WelcomeRow(
+            path: viewModel.projectPath
+          )
+          .listRowSeparator(.hidden)
+          .id("welcome-row")
+        }
+        
         ForEach(viewModel.messages) { message in
           ChatMessageRow(
             message: message,
@@ -18,6 +27,7 @@ extension ChatScreen {
             fontSize: 13.0  // Default font size for now
           )
           .listRowSeparator(.hidden)
+          .listRowInsets(EdgeInsets())
           .id(message.id)
         }
       }
