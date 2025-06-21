@@ -151,15 +151,15 @@ struct ChatMessageRow: View {
   // MARK: - Standard Message View
   @ViewBuilder
   private var standardMessageView: some View {
-    HStack(alignment: .top, spacing: 12) {
+    HStack(alignment: .firstTextBaseline, spacing: message.role == .user ? 0 : 12) {
       // Avatar for assistant messages
-      if message.role == .assistant {
+      if message.role == .assistant || message.role == .user {
         avatarView
           .frame(width: 32, height: 32)
           .transition(.scale.combined(with: .opacity))
       }
       
-      VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 6) {
+      VStack(alignment: .leading, spacing: 6) {
         // Main message bubble
         messageContentView
           .background(messageBubbleBackground)
@@ -221,7 +221,8 @@ struct ChatMessageRow: View {
       }
     }
     .padding(.vertical, 12)
-    .padding(.horizontal, 16)
+    .padding(.trailing, 16)
+    .padding(.leading, message.role == .user ? 0 : 16)
     .frame(maxWidth: .infinity, alignment: .leading)
   }
   
@@ -256,15 +257,16 @@ struct ChatMessageRow: View {
   @ViewBuilder
   private var avatarView: some View {
     ZStack {
-      Circle()
-        .fill(
-          LinearGradient(
-            colors: [messageTint.opacity(0.2), messageTint.opacity(0.1)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
+      if message.role == .assistant {
+        Circle()
+          .fill(
+            LinearGradient(
+              colors: [messageTint.opacity(0.2), messageTint.opacity(0.1)],
+              startPoint: .topLeading,
+              endPoint: .bottomTrailing
+            )
           )
-        )
-      
+      }
       Image(systemName: avatarIcon)
         .font(.system(size: 16, weight: .medium))
         .foregroundStyle(messageTint)
@@ -327,9 +329,9 @@ struct ChatMessageRow: View {
   private var statusColor: Color {
     switch message.messageType {
     case .toolUse, .thinking, .webSearch:
-      return .orange
+      return .bookCloth
     case .toolResult:
-      return .green
+      return .manilla
     case .toolError:
       return .red
     default:
@@ -357,7 +359,7 @@ struct ChatMessageRow: View {
   
   private var avatarIcon: String {
     switch message.messageType {
-    case .text: return "bubble.left.fill"
+    case .text: return message.role == .assistant ? "bubble.left.fill" : "greaterthan"
     case .toolUse: return "hammer.fill"
     case .toolResult: return "checkmark.circle.fill"
     case .toolError: return "exclamationmark.triangle.fill"
@@ -369,7 +371,7 @@ struct ChatMessageRow: View {
   private var messageTint: Color {
     switch message.messageType {
     case .text:
-      return message.role == .assistant ? Color(red: 147/255, green: 51/255, blue: 234/255) : Color(red: 0/255, green: 122/255, blue: 255/255)
+      return message.role == .assistant ? Color(red: 147/255, green: 51/255, blue: 234/255) : .primary
     case .toolUse:
       return Color(red: 255/255, green: 149/255, blue: 0/255)
     case .toolResult:

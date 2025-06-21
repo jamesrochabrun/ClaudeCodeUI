@@ -24,7 +24,7 @@ struct ChatInputView: View {
   
   // MARK: - Constants
   
-  private let textAreaEdgeInsets = EdgeInsets(top: 10, leading: 15, bottom: 10, trailing: 15)
+  private let textAreaEdgeInsets = EdgeInsets(top: 10, leading: 0, bottom: 10, trailing: 15)
   private let textAreaCornerRadius = 24.0
   
   // MARK: - Initialization
@@ -71,7 +71,7 @@ struct ChatInputView: View {
           sendMessage()
         }) {
           Image(systemName: "arrow.up.circle.fill")
-            .foregroundColor(.blue)
+            .foregroundColor(.kraft)
             .font(.title2)
         }
         .padding(10)
