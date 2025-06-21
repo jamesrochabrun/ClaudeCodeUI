@@ -13,6 +13,10 @@ struct ChatMessageRow: View {
   let settingsStorage: SettingsStorage
   let fontSize: Double
   
+  // Constants
+  private let bubbleCornerRadius: CGFloat = 6
+  private let fontDesign: Font.Design = .monospaced
+  
   init(
     message: ChatMessage,
     settingsStorage: SettingsStorage,
@@ -72,7 +76,7 @@ struct ChatMessageRow: View {
         
         // Message type label
         Text(collapsibleHeaderText)
-          .font(.system(size: fontSize - 1))
+          .font(.system(size: fontSize - 1, design: fontDesign))
           .foregroundStyle(.primary)
         
         Spacer()
@@ -83,14 +87,23 @@ struct ChatMessageRow: View {
           .foregroundStyle(.secondary)
           .rotationEffect(.degrees(isExpanded ? 90 : 0))
       }
-      .padding(.horizontal, 20)
-      .padding(.vertical, 10)
+      .padding(10)
       .background(
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
-          .fill(collapsibleBackgroundColor)
+        RoundedRectangle(cornerRadius: bubbleCornerRadius, style: .continuous)
+          .fill(.ultraThinMaterial)
           .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-              .strokeBorder(borderColor, lineWidth: 1)
+            RoundedRectangle(cornerRadius: bubbleCornerRadius, style: .continuous)
+              .strokeBorder(
+                LinearGradient(
+                  colors: [
+                    Color(red: 147/255, green: 51/255, blue: 234/255).opacity(0.3),
+                    Color(red: 147/255, green: 51/255, blue: 234/255).opacity(0.1)
+                  ],
+                  startPoint: .topLeading,
+                  endPoint: .bottomTrailing
+                ),
+                lineWidth: 1
+              )
           )
       )
       .contentShape(Rectangle())
@@ -106,11 +119,11 @@ struct ChatMessageRow: View {
           // Connection line
           HStack(spacing: 0) {
             Color.clear
-              .frame(width: 30)
+              .frame(width: 20)
             
             Rectangle()
               .fill(borderColor)
-              .frame(width: 1)
+              .frame(width: 2)
               .padding(.vertical, -1)
           }
           .frame(height: 8)
@@ -118,7 +131,7 @@ struct ChatMessageRow: View {
           // Content area
           HStack(alignment: .top, spacing: 0) {
             Color.clear
-              .frame(width: 30)
+              .frame(width: 20)
             
             VStack(alignment: .leading, spacing: 0) {
               Rectangle()
@@ -129,7 +142,7 @@ struct ChatMessageRow: View {
               // Message content
               ScrollView {
                 Text(message.content)
-                  .font(.system(size: fontSize - 1, design: .monospaced))
+                  .font(.system(size: fontSize - 1, design: fontDesign))
                   .foregroundColor(contentTextColor)
                   .padding(16)
                   .frame(maxWidth: .infinity, alignment: .leading)
@@ -186,10 +199,10 @@ struct ChatMessageRow: View {
       } else {
         // Assistant message bubble with glassmorphism effect
         ZStack {
-          RoundedRectangle(cornerRadius: 18, style: .continuous)
+          RoundedRectangle(cornerRadius: bubbleCornerRadius, style: .continuous)
             .fill(.ultraThinMaterial)
           
-          RoundedRectangle(cornerRadius: 18, style: .continuous)
+          RoundedRectangle(cornerRadius: bubbleCornerRadius, style: .continuous)
             .strokeBorder(
               LinearGradient(
                 colors: [
@@ -221,8 +234,8 @@ struct ChatMessageRow: View {
       }
     }
     .padding(.vertical, 12)
-    .padding(.trailing, 16)
-    .padding(.leading, message.role == .user ? 0 : 16)
+    .padding(.trailing, 12)
+    .padding(.leading, message.role == .user ? 0 : 12)
     .frame(maxWidth: .infinity, alignment: .leading)
   }
   
@@ -341,20 +354,20 @@ struct ChatMessageRow: View {
   
   private var collapsibleBackgroundColor: Color {
     colorScheme == .dark
-      ? Color(white: 0.15)
-      : Color(white: 0.95)
+    ? Color(white: 0.15)
+    : Color(white: 0.95)
   }
   
   private var contentBackgroundColor: Color {
     colorScheme == .dark
-      ? Color(white: 0.1)
-      : Color.white
+    ? Color(white: 0.1)
+    : Color.white
   }
   
   private var borderColor: Color {
     colorScheme == .dark
-      ? Color(white: 0.25)
-      : Color(white: 0.85)
+    ? Color(white: 0.25)
+    : Color(white: 0.85)
   }
   
   private var avatarIcon: String {
@@ -386,12 +399,7 @@ struct ChatMessageRow: View {
   }
   
   private var messageFont: Font {
-    switch message.messageType {
-    case .text, .thinking, .webSearch:
-      return .system(size: fontSize)
-    case .toolUse, .toolResult, .toolError:
-      return .system(size: fontSize - 1, design: .monospaced)
-    }
+    .system(size: fontSize, weight: colorScheme == .dark ? .ultraLight : .light, design: fontDesign)
   }
   
   private var contentTextColor: Color {
