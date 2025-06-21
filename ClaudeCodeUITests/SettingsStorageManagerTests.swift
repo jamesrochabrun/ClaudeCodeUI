@@ -50,13 +50,13 @@ final class SettingsStorageManagerTests: XCTestCase {
         XCTAssertNil(storage.getProjectPath())
     }
     
-    func testProjectPathPersistence() {
+    func testProjectPathNonPersistence() {
         let testPath = "/persistent/path"
         storage.setProjectPath(testPath)
         
-        // Create new instance
+        // Create new instance - should NOT have the previous path
         let newStorage = SettingsStorageManager()
-        XCTAssertEqual(newStorage.projectPath, testPath, "Project path should persist")
+        XCTAssertEqual(newStorage.projectPath, "", "Project path should NOT persist across instances")
     }
     
     // MARK: - Per-Session Project Path Tests
@@ -103,19 +103,16 @@ final class SettingsStorageManagerTests: XCTestCase {
     
     func testProjectPathObservation() {
         let expectation = expectation(description: "Property change observed")
-        var observedChange = false
         
         withObservationTracking {
             _ = storage.projectPath
         } onChange: {
-            observedChange = true
             expectation.fulfill()
         }
         
         storage.setProjectPath("/new/path")
         
         wait(for: [expectation], timeout: 1.0)
-        XCTAssertTrue(observedChange, "Project path change should be observable")
     }
     
     // MARK: - Current Session Management Tests

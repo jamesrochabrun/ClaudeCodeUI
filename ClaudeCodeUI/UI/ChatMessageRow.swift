@@ -26,22 +26,140 @@ struct ChatMessageRow: View {
   @Environment(\.colorScheme) private var colorScheme
   @State private var isHovered = false
   @State private var showTimestamp = false
+  @State private var isExpanded = false
+  
+  // Determine if this message type should be collapsible
+  private var isCollapsible: Bool {
+    switch message.messageType {
+    case .toolUse, .toolResult, .toolError, .thinking, .webSearch:
+      return true
+    case .text:
+      return false
+    }
+  }
   
   var body: some View {
-    HStack(alignment: .top, spacing: 12) {
+    VStack(alignment: .leading, spacing: 0) {
+      if isCollapsible {
+        collapsibleMessageView
+      } else {
+        standardMessageView
+      }
+    }
+    .padding(.horizontal)
+    .padding(.vertical, 4)
+    .onHover { hovering in
+      withAnimation(.easeInOut(duration: 0.2)) {
+        isHovered = hovering
+      }
+    }
+    .contextMenu {
+      contextMenuItems
+    }
+  }
+  
+  // MARK: - Collapsible Message View
+  @ViewBuilder
+  private var collapsibleMessageView: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      // Header that's always visible
+      HStack(spacing: 12) {
+        // Checkmark indicator
+        Image(systemName: isExpanded ? "checkmark.circle.fill" : "checkmark.circle")
+          .font(.system(size: 14))
+          .foregroundStyle(statusColor)
+          .frame(width: 20, height: 20)
+        
+        // Message type label
+        Text(collapsibleHeaderText)
+          .font(.system(size: fontSize - 1))
+          .foregroundStyle(.primary)
+        
+        Spacer()
+        
+        // Expand/collapse chevron
+        Image(systemName: "chevron.right")
+          .font(.system(size: 12, weight: .medium))
+          .foregroundStyle(.secondary)
+          .rotationEffect(.degrees(isExpanded ? 90 : 0))
+      }
+      .padding(.horizontal, 20)
+      .padding(.vertical, 10)
+      .background(
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+          .fill(collapsibleBackgroundColor)
+          .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+              .strokeBorder(borderColor, lineWidth: 1)
+          )
+      )
+      .contentShape(Rectangle())
+      .onTapGesture {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+          isExpanded.toggle()
+        }
+      }
+      
+      // Expandable content
+      if isExpanded {
+        VStack(alignment: .leading, spacing: 0) {
+          // Connection line
+          HStack(spacing: 0) {
+            Color.clear
+              .frame(width: 30)
+            
+            Rectangle()
+              .fill(borderColor)
+              .frame(width: 1)
+              .padding(.vertical, -1)
+          }
+          .frame(height: 8)
+          
+          // Content area
+          HStack(alignment: .top, spacing: 0) {
+            Color.clear
+              .frame(width: 30)
+            
+            VStack(alignment: .leading, spacing: 0) {
+              Rectangle()
+                .fill(borderColor)
+                .frame(height: 1)
+                .frame(maxWidth: .infinity)
+              
+              // Message content
+              ScrollView {
+                Text(message.content)
+                  .font(.system(size: fontSize - 1, design: .monospaced))
+                  .foregroundColor(contentTextColor)
+                  .padding(16)
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                  .textSelection(.enabled)
+              }
+              .frame(maxHeight: 400)
+              .background(contentBackgroundColor)
+            }
+          }
+        }
+        .transition(.asymmetric(
+          insertion: .push(from: .top).combined(with: .opacity),
+          removal: .push(from: .bottom).combined(with: .opacity)
+        ))
+      }
+    }
+  }
+  
+  // MARK: - Standard Message View
+  @ViewBuilder
+  private var standardMessageView: some View {
+    HStack(alignment: .firstTextBaseline, spacing: message.role == .user ? 0 : 12) {
       // Avatar for assistant messages
-      if message.role == .assistant {
+      if message.role == .assistant || message.role == .user {
         avatarView
           .frame(width: 32, height: 32)
           .transition(.scale.combined(with: .opacity))
       }
       
-      VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 6) {
-        // Message header for special types
-        if message.role == .assistant && message.messageType != .text {
-          messageTypeHeader
-        }
-        
+      VStack(alignment: .leading, spacing: 6) {
         // Main message bubble
         messageContentView
           .background(messageBubbleBackground)
@@ -57,18 +175,9 @@ struct ChatMessageRow: View {
       }
       .frame(maxWidth: message.role == .user ? nil : .infinity, alignment: message.role == .user ? .trailing : .leading)
     }
-    .padding(.horizontal)
-    .padding(.vertical, 4)
-    .onHover { hovering in
-      withAnimation(.easeInOut(duration: 0.2)) {
-        isHovered = hovering
-      }
-    }
-    .contextMenu {
-      contextMenuItems
-    }
   }
   
+  // MARK: - Helper Views
   private var messageBubbleBackground: some View {
     Group {
       if message.role == .user {
@@ -99,30 +208,6 @@ struct ChatMessageRow: View {
   }
   
   @ViewBuilder
-  private var messageTypeHeader: some View {
-    HStack(spacing: 6) {
-      Image(systemName: headerIcon)
-        .font(.caption)
-        .foregroundStyle(messageTint)
-      
-      Text(roleLabel)
-        .font(.caption)
-        .fontWeight(.medium)
-        .foregroundStyle(messageTint)
-    }
-    .padding(.horizontal, 12)
-    .padding(.vertical, 4)
-    .background(
-      Capsule()
-        .fill(messageTint.opacity(0.1))
-        .overlay(
-          Capsule()
-            .strokeBorder(messageTint.opacity(0.2), lineWidth: 1)
-        )
-    )
-  }
-  
-  @ViewBuilder
   private var messageContentView: some View {
     Group {
       if message.content.isEmpty && !message.isComplete {
@@ -136,7 +221,8 @@ struct ChatMessageRow: View {
       }
     }
     .padding(.vertical, 12)
-    .padding(.horizontal, 16)
+    .padding(.trailing, 16)
+    .padding(.leading, message.role == .user ? 0 : 16)
     .frame(maxWidth: .infinity, alignment: .leading)
   }
   
@@ -171,15 +257,16 @@ struct ChatMessageRow: View {
   @ViewBuilder
   private var avatarView: some View {
     ZStack {
-      Circle()
-        .fill(
-          LinearGradient(
-            colors: [messageTint.opacity(0.2), messageTint.opacity(0.1)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
+      if message.role == .assistant {
+        Circle()
+          .fill(
+            LinearGradient(
+              colors: [messageTint.opacity(0.2), messageTint.opacity(0.1)],
+              startPoint: .topLeading,
+              endPoint: .bottomTrailing
+            )
           )
-        )
-      
+      }
       Image(systemName: avatarIcon)
         .font(.system(size: 16, weight: .medium))
         .foregroundStyle(messageTint)
@@ -214,14 +301,65 @@ struct ChatMessageRow: View {
     }
   }
   
+  // MARK: - Helper Functions
   private func copyMessage() {
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(message.content, forType: .string)
   }
   
+  // MARK: - Computed Properties
+  private var collapsibleHeaderText: String {
+    switch message.messageType {
+    case .toolUse:
+      let toolName = message.toolName ?? "Tool Use"
+      return message.toolInputData?.headerText(for: toolName) ?? toolName
+    case .toolResult:
+      return "Processing result"
+    case .toolError:
+      return "Error occurred"
+    case .thinking:
+      return "Thinking..."
+    case .webSearch:
+      return "Searching the web"
+    default:
+      return "Processing"
+    }
+  }
+  
+  private var statusColor: Color {
+    switch message.messageType {
+    case .toolUse, .thinking, .webSearch:
+      return .bookCloth
+    case .toolResult:
+      return .manilla
+    case .toolError:
+      return .red
+    default:
+      return .secondary
+    }
+  }
+  
+  private var collapsibleBackgroundColor: Color {
+    colorScheme == .dark
+      ? Color(white: 0.15)
+      : Color(white: 0.95)
+  }
+  
+  private var contentBackgroundColor: Color {
+    colorScheme == .dark
+      ? Color(white: 0.1)
+      : Color.white
+  }
+  
+  private var borderColor: Color {
+    colorScheme == .dark
+      ? Color(white: 0.25)
+      : Color(white: 0.85)
+  }
+  
   private var avatarIcon: String {
     switch message.messageType {
-    case .text: return "bubble.left.fill"
+    case .text: return message.role == .assistant ? "bubble.left.fill" : "greaterthan"
     case .toolUse: return "hammer.fill"
     case .toolResult: return "checkmark.circle.fill"
     case .toolError: return "exclamationmark.triangle.fill"
@@ -230,42 +368,20 @@ struct ChatMessageRow: View {
     }
   }
   
-  private var headerIcon: String {
-    switch message.messageType {
-    case .text: return "text.bubble"
-    case .toolUse: return "terminal"
-    case .toolResult: return "checkmark.seal"
-    case .toolError: return "xmark.octagon"
-    case .thinking: return "brain"
-    case .webSearch: return "safari"
-    }
-  }
-  
-  private var roleLabel: String {
-    switch message.messageType {
-    case .text: return message.role == .assistant ? "Claude" : "You"
-    case .toolUse: return message.toolName ?? "Tool Use"
-    case .toolResult: return "Result"
-    case .toolError: return "Error"
-    case .thinking: return "Thinking"
-    case .webSearch: return "Searching"
-    }
-  }
-  
   private var messageTint: Color {
     switch message.messageType {
     case .text:
-      return message.role == .assistant ? Color(red: 147, green: 51, blue: 234) : Color(red: 0, green: 122, blue: 255)
+      return message.role == .assistant ? Color(red: 147/255, green: 51/255, blue: 234/255) : .primary
     case .toolUse:
-      return Color(red: 255, green: 149, blue: 0)
+      return Color(red: 255/255, green: 149/255, blue: 0/255)
     case .toolResult:
-      return Color(red: 52, green: 199, blue: 89)
+      return Color(red: 52/255, green: 199/255, blue: 89/255)
     case .toolError:
-      return Color(red: 255, green: 59, blue: 48)
+      return Color(red: 255/255, green: 59/255, blue: 48/255)
     case .thinking:
-      return Color(red: 90, green: 200, blue: 250)
+      return Color(red: 90/255, green: 200/255, blue: 250/255)
     case .webSearch:
-      return Color(red: 0, green: 199, blue: 190)
+      return Color(red: 0/255, green: 199/255, blue: 190/255)
     }
   }
   
@@ -280,12 +396,6 @@ struct ChatMessageRow: View {
   
   private var contentTextColor: Color {
     colorScheme == .dark ? .white : .black.opacity(0.85)
-  }
-  
-  private var shadowColor: Color {
-    colorScheme == .dark
-    ? Color.white.opacity(0.03)
-    : Color.black.opacity(0.08)
   }
   
   private var timeFormatter: DateFormatter {

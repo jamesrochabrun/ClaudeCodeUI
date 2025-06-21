@@ -10,6 +10,7 @@ import SwiftUI
 @main
 struct ClaudeCodeUIApp: App {
   @State private var globalPreferences = GlobalPreferencesStorage()
+  @Environment(\.openWindow) private var openWindow
   
   var body: some Scene {
     WindowGroup(id: "main") {
@@ -52,6 +53,28 @@ struct ClaudeCodeUIApp: App {
         .environment(globalPreferences)
     }
     .windowResizability(.contentSize)
+    
+    // Menu Bar Extra
+    MenuBarExtra("Claude Code", systemImage: "brain") {
+      Button("Open Claude Code") {
+        openWindow(id: "main")
+      }
+      .keyboardShortcut("o", modifiers: [.command, .shift])
+      
+      Divider()
+      
+      Button("Global Settings...") {
+        openWindow(id: "global-settings")
+      }
+      .keyboardShortcut(",", modifiers: [.command, .shift])
+      
+      Divider()
+      
+      Button("Quit") {
+        NSApplication.shared.terminate(nil)
+      }
+      .keyboardShortcut("q")
+    }
   }
 }
 

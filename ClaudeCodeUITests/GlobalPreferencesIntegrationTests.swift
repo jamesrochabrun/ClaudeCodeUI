@@ -52,7 +52,7 @@ final class GlobalPreferencesIntegrationTests: XCTestCase {
         
         // Verify options reflect global preferences
         XCTAssertEqual(options.maxTurns, 20, "MaxTurns should match global preference")
-        XCTAssertEqual(options.customSystemPrompt, "Custom system prompt", "System prompt should match")
+        XCTAssertEqual(options.systemPrompt, "Custom system prompt", "System prompt should match")
         XCTAssertEqual(options.appendSystemPrompt, "Append this", "Append prompt should match")
         XCTAssertEqual(options.mcpConfigPath, "/path/to/mcp/config.json", "MCP config path should match")
         XCTAssertEqual(options.allowedTools, ["bash", "read", "write"], "Allowed tools should match")
@@ -68,7 +68,7 @@ final class GlobalPreferencesIntegrationTests: XCTestCase {
         let options = testHelper.createTestOptions()
         
         // Verify empty strings are not set
-        XCTAssertNil(options.customSystemPrompt, "Empty systemPrompt should not be set")
+        XCTAssertNil(options.systemPrompt, "Empty systemPrompt should not be set")
         XCTAssertNil(options.appendSystemPrompt, "Empty appendSystemPrompt should not be set")
         XCTAssertNil(options.mcpConfigPath, "Empty mcpConfigPath should not be set")
     }
@@ -80,7 +80,7 @@ final class GlobalPreferencesIntegrationTests: XCTestCase {
         
         // Verify defaults
         XCTAssertEqual(options.maxTurns, 50, "Default maxTurns should be 50")
-        XCTAssertNil(options.customSystemPrompt, "Default customSystemPrompt should be nil")
+        XCTAssertNil(options.systemPrompt, "Default customSystemPrompt should be nil")
         XCTAssertNil(options.appendSystemPrompt, "Default appendSystemPrompt should be nil")
         XCTAssertNil(options.mcpConfigPath, "Default mcpConfigPath should be nil")
         XCTAssertEqual(options.allowedTools, ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MultiEdit", "Write", "NotebookRead", "NotebookEdit", "WebSearch", "Task"], "Default allowedTools should match expected list")
@@ -103,7 +103,7 @@ final class GlobalPreferencesIntegrationTests: XCTestCase {
         let options2 = testHelper.createTestOptions()
         
         XCTAssertEqual(options2.maxTurns, 15, "New options should reflect updated maxTurns")
-        XCTAssertEqual(options2.customSystemPrompt, "Updated prompt", "New options should reflect updated prompt")
+        XCTAssertEqual(options2.systemPrompt, "Updated prompt", "New options should reflect updated prompt")
     }
 }
 
@@ -122,7 +122,7 @@ private class OptionsTestHelper {
         options.allowedTools = globalPreferences.allowedTools
         options.maxTurns = globalPreferences.maxTurns
         if !globalPreferences.systemPrompt.isEmpty {
-            options.customSystemPrompt = globalPreferences.systemPrompt
+            options.systemPrompt = globalPreferences.systemPrompt
         }
         if !globalPreferences.appendSystemPrompt.isEmpty {
             options.appendSystemPrompt = globalPreferences.appendSystemPrompt

@@ -367,6 +367,7 @@ public final class ChatViewModel {
   
   
   func handleError(_ error: Error) {
+    logger.error("handleError called with: \(error.localizedDescription)")
     self.error = error
     self.isLoading = false
     

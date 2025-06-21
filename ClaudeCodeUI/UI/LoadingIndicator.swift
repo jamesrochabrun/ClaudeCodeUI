@@ -51,7 +51,7 @@ struct ThinkingIndicator: View {
     HStack(spacing: 10) {
       Image(systemName: "brain")
         .font(.body)
-        .foregroundColor(.blue)
+        .foregroundColor(.kraft)
         .symbolEffect(.pulse)
       
       Text("Claude is thinking\(dots)")

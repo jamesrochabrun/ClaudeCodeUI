@@ -19,6 +19,7 @@ final class StreamProcessor {
   private let sessionManager: SessionManager
   private let onSessionChange: ((String) -> Void)?
   private var cancellables = Set<AnyCancellable>()
+  private let formatter = DynamicContentFormatter()
   
   // Stream state holder
   private class StreamState {
@@ -72,6 +73,25 @@ final class StreamProcessor {
                 self.messageStore.removeMessage(id: finalMessageId)
               }
             case .failure(let error):
+              self.logger.error("Stream failed with error: \(error.localizedDescription)")
+              
+              // Clean up any partial messages
+              if state.assistantMessageCreated {
+                let finalMessageId = state.currentLocalMessageId ?? messageId
+                
+                // If we have partial content, mark it as incomplete with error indicator
+                if !state.contentBuffer.isEmpty {
+                  self.messageStore.updateMessage(
+                    id: finalMessageId,
+                    content: state.contentBuffer + "\n\n⚠️ Response interrupted due to error.",
+                    isComplete: true
+                  )
+                } else {
+                  // Remove empty message if no content was received
+                  self.messageStore.removeMessage(id: finalMessageId)
+                }
+              }
+              
               // Call the error handler if provided
               onError?(error)
             }
@@ -168,9 +188,34 @@ final class StreamProcessor {
         }
         
       case .toolUse(let toolUse):
+        // Extract structured data from tool input
+        var parameters: [String: String] = [:]
+        
+        // Since toolUse.input is [String: MessageResponse.Content.DynamicContent],
+        // we need to extract the actual values from DynamicContent
+        for (key, dynamicContent) in toolUse.input {
+          // Special handling for todos to preserve the formatted list
+          let formattedValue: String
+          if key == "todos" {
+            formattedValue = formatter.formatForTodos(dynamicContent)
+          } else {
+            formattedValue = formatter.format(dynamicContent)
+          }
+          parameters[key] = formattedValue
+          logger.debug("Key: \(key), formatted value: \(formattedValue)")
+        }
+        
+        // Debug logging
+        logger.debug("Tool use: \(toolUse.name), parameters: \(parameters)")
+        
+        // Also log what formattedDescription returns
+        let formattedDesc = toolUse.input.formattedDescription()
+        logger.debug("FormattedDescription output: \(formattedDesc)")
+        
         let toolMessage = MessageFactory.toolUseMessage(
           toolName: toolUse.name,
-          input: toolUse.input.formattedDescription()
+          input: toolUse.input.formattedDescription(),
+          toolInputData: ToolInputData(parameters: parameters)
         )
         messageStore.addMessage(toolMessage)
         

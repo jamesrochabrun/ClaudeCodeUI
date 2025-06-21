@@ -24,6 +24,7 @@ extension ChatScreen {
       Button("Open Settings") {
         showingSettings = true
       }
+      .tint(.bookCloth)
       .buttonStyle(.borderedProminent)
       Spacer()
     }
