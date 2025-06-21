@@ -27,7 +27,6 @@ struct ChatMessageRow: View {
   @State private var isHovered = false
   @State private var showTimestamp = false
   @State private var isExpanded = false
-  @State private var contentHeight: CGFloat = 0
   
   // Determine if this message type should be collapsible
   private var isCollapsible: Bool {
@@ -310,7 +309,8 @@ struct ChatMessageRow: View {
   private var collapsibleHeaderText: String {
     switch message.messageType {
     case .toolUse:
-      return message.toolName ?? "Tool Use"
+      let toolName = message.toolName ?? "Tool Use"
+      return message.toolInputData?.headerText(for: toolName) ?? toolName
     case .toolResult:
       return "Processing result"
     case .toolError:

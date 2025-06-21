@@ -7,15 +7,41 @@
 
 import Foundation
 
+/// Represents a single message in the chat conversation
+///
+/// ChatMessage encapsulates all the information needed to display and manage
+/// messages in the chat interface, including tool interactions and streaming states.
 public struct ChatMessage: Identifiable, Equatable {
+  /// Unique identifier for the message
   public var id: UUID
+  
+  /// The role of the message sender (user, assistant, tool, etc.)
   public var role: MessageRole
+  
+  /// The text content of the message
   public var content: String
+  
+  /// When the message was created
   public var timestamp: Date
+  
+  /// Whether the message has finished streaming/processing
+  /// - Note: Used primarily for assistant messages during streaming
   public var isComplete: Bool
+  
+  /// The type of message content (text, tool use, tool result, etc.)
   public var messageType: MessageType
+  
+  /// Name of the tool if this message is related to tool usage
+  /// - Note: Used for tool use, tool result, and tool error messages
   public var toolName: String?
-
+  
+  /// Structured data about tool inputs for enhanced UI display
+  /// - Note: Only populated for tool use messages to show parameters in collapsible headers
+  public var toolInputData: ToolInputData?
+  
+  /// Whether this message represents an error state
+  public var isError: Bool
+  
   public init(
     id: UUID = UUID(),
     role: MessageRole,
@@ -23,7 +49,9 @@ public struct ChatMessage: Identifiable, Equatable {
     timestamp: Date = Date(),
     isComplete: Bool = true,
     messageType: MessageType = .text,
-    toolName: String? = nil
+    toolName: String? = nil,
+    toolInputData: ToolInputData? = nil,
+    isError: Bool = false
   ) {
     self.id = id
     self.role = role
@@ -32,34 +60,121 @@ public struct ChatMessage: Identifiable, Equatable {
     self.isComplete = isComplete
     self.messageType = messageType
     self.toolName = toolName
+    self.toolInputData = toolInputData
+    self.isError = isError
   }
-
+  
   public static func == (lhs: ChatMessage, rhs: ChatMessage) -> Bool {
     return lhs.content == rhs.content &&
            lhs.id == rhs.id &&
            lhs.isComplete == rhs.isComplete &&
            lhs.messageType == rhs.messageType &&
-           lhs.toolName == rhs.toolName
+           lhs.toolName == rhs.toolName &&
+           lhs.toolInputData == rhs.toolInputData &&
+           lhs.isError == rhs.isError
   }
 }
 
-/// Message content types
+/// Defines the type of content in a message
 public enum MessageType: String {
+  /// Regular text message from user or assistant
   case text
+  /// Tool invocation message showing tool name and parameters
   case toolUse
+  /// Result returned from a tool execution
   case toolResult
+  /// Error returned from a failed tool execution
   case toolError
+  /// Assistant's internal reasoning/thinking process
   case thinking
+  /// Web search results
   case webSearch
 }
 
-/// Message role types
+/// Defines who sent the message or what generated it
 public enum MessageRole: String {
+  /// Message from the user
   case user
+  /// Message from Claude assistant
   case assistant
+  /// System-generated message
   case system
+  /// Tool invocation indicator
   case toolUse
+  /// Tool execution result
   case toolResult
+  /// Tool execution error
   case toolError
+  /// Assistant's thinking process
   case thinking
+}
+
+/// Structured data extracted from tool inputs for enhanced UI display
+///
+/// ToolInputData serves as a bridge between the raw tool input parameters
+/// (which come from Claude's API as complex nested structures) and the UI
+/// layer that needs to display them in a user-friendly way.
+///
+/// Primary purposes:
+/// 1. Store simplified key-value pairs extracted from complex DynamicContent
+/// 2. Provide smart parameter extraction for collapsible message headers
+/// 3. Special handling for complex parameters like todo lists
+///
+/// Example: For a TodoWrite tool with 5 todos (2 completed), instead of showing
+/// the raw JSON, it displays "TodoWrite(2/5 completed)" in the header.
+public struct ToolInputData: Equatable {
+  /// Simplified key-value representation of tool parameters
+  /// - Note: Complex nested structures are flattened to strings for display
+  public let parameters: [String: String]
+  
+  public init(parameters: [String: String]) {
+    self.parameters = parameters
+  }
+  
+  /// Extracts the most important parameters for display in collapsible headers
+  /// - Returns: An array of up to 3 key parameters, with special formatting for todos
+  public var keyParameters: [(key: String, value: String)] {
+    // Special handling for todos parameter
+    if let todosValue = parameters["todos"] {
+      // Count completed vs total todos
+      var completedCount = 0
+      var totalCount = 0
+      
+      // Parse the todos string to count statuses
+      let lines = todosValue.split(separator: "\n")
+      for line in lines {
+        if line.contains("[✓]") {
+          completedCount += 1
+          totalCount += 1
+        } else if line.contains("[ ]") {
+          totalCount += 1
+        }
+      }
+      
+      if totalCount > 0 {
+        return [(key: "todos", value: "\(completedCount)/\(totalCount) completed")]
+      }
+    }
+    
+    // Common parameters to prioritize
+    let priorityKeys = ["file_path", "command", "pattern", "query", "path", "url", "name"]
+    
+    var result: [(key: String, value: String)] = []
+    
+    // Add priority parameters first
+    for key in priorityKeys {
+      if let value = parameters[key] {
+        result.append((key: key, value: value))
+      }
+    }
+    
+    // Add remaining parameters
+    for (key, value) in parameters {
+      if !priorityKeys.contains(key) && result.count < 3 {
+        result.append((key: key, value: value))
+      }
+    }
+    
+    return result
+  }
 }
