@@ -15,7 +15,6 @@ import AccessibilityService
 import AccessibilityServiceInterface
 import ShellService
 import ShellServiceInterface
-import AppFoundation
 import ApplicationServices
 
 @MainActor

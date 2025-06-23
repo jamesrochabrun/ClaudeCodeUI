@@ -7,15 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		7B5698F22E07D17C00E8065C /* AccessibilityFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 7B5698F12E07D17C00E8065C /* AccessibilityFoundation */; };
-		7B5698F52E07D21F00E8065C /* AccessibilityService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B5698F42E07D21F00E8065C /* AccessibilityService */; };
-		7B5698F82E07D24A00E8065C /* AccessibilityServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 7B5698F72E07D24A00E8065C /* AccessibilityServiceInterface */; };
-		7B6C0CA12E07DA1D008ADF13 /* AppFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 7B6C0CA02E07DA1D008ADF13 /* AppFoundation */; };
-		7B6C0D1C2E07DFEE008ADF13 /* XcodeObserverServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 7B6C0D1B2E07DFEE008ADF13 /* XcodeObserverServiceInterface */; };
-		7B6C0D202E07E004008ADF13 /* PermissionsServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 7B6C0D1F2E07E004008ADF13 /* PermissionsServiceInterface */; };
-		7B6C0D282E07E3BC008ADF13 /* XcodeObserverService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B6C0D272E07E3BC008ADF13 /* XcodeObserverService */; };
-		7B6C0D2F2E07E73B008ADF13 /* PermissionsService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B6C0D2E2E07E73B008ADF13 /* PermissionsService */; };
-		7B6C0D332E07E962008ADF13 /* ShellService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B6C0D322E07E962008ADF13 /* ShellService */; };
+		7B90FE1D2E09384F00764905 /* AccessibilityFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE1C2E09384F00764905 /* AccessibilityFoundation */; };
+		7B90FE1F2E09385B00764905 /* AccessibilityService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE1E2E09385B00764905 /* AccessibilityService */; };
+		7B90FE212E09386900764905 /* AccessibilityServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE202E09386900764905 /* AccessibilityServiceInterface */; };
+		7B90FE252E09388000764905 /* PermissionsService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE242E09388000764905 /* PermissionsService */; };
+		7B90FE272E0938CC00764905 /* ShellServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE262E0938CC00764905 /* ShellServiceInterface */; };
+		7B90FE2A2E0938E200764905 /* XcodeObserverServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE292E0938E200764905 /* XcodeObserverServiceInterface */; };
+		7B90FE2D2E09391B00764905 /* ShellService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE2C2E09391B00764905 /* ShellService */; };
+		7B90FE2F2E09398300764905 /* ShellService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE2E2E09398300764905 /* ShellService */; };
+		7B90FE322E093A3D00764905 /* XcodeObserverService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE312E093A3D00764905 /* XcodeObserverService */; };
 		7BE462B62E08AAD100FD421C /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 7BE462B52E08AAD100FD421C /* KeyboardShortcuts */; };
 		7BE463412E09304F00FD421C /* ClaudeCodeSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 7BE463402E09304F00FD421C /* ClaudeCodeSDK */; };
 /* End PBXBuildFile section */
@@ -66,17 +66,17 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7B90FE322E093A3D00764905 /* XcodeObserverService in Frameworks */,
 				7BE463412E09304F00FD421C /* ClaudeCodeSDK in Frameworks */,
-				7B6C0D282E07E3BC008ADF13 /* XcodeObserverService in Frameworks */,
-				7B6C0D332E07E962008ADF13 /* ShellService in Frameworks */,
-				7B6C0D1C2E07DFEE008ADF13 /* XcodeObserverServiceInterface in Frameworks */,
-				7B6C0D202E07E004008ADF13 /* PermissionsServiceInterface in Frameworks */,
-				7B5698F22E07D17C00E8065C /* AccessibilityFoundation in Frameworks */,
-				7B6C0D2F2E07E73B008ADF13 /* PermissionsService in Frameworks */,
-				7B5698F52E07D21F00E8065C /* AccessibilityService in Frameworks */,
-				7B6C0CA12E07DA1D008ADF13 /* AppFoundation in Frameworks */,
-				7B5698F82E07D24A00E8065C /* AccessibilityServiceInterface in Frameworks */,
+				7B90FE2D2E09391B00764905 /* ShellService in Frameworks */,
+				7B90FE1F2E09385B00764905 /* AccessibilityService in Frameworks */,
+				7B90FE1D2E09384F00764905 /* AccessibilityFoundation in Frameworks */,
+				7B90FE2A2E0938E200764905 /* XcodeObserverServiceInterface in Frameworks */,
+				7B90FE252E09388000764905 /* PermissionsService in Frameworks */,
+				7B90FE2F2E09398300764905 /* ShellService in Frameworks */,
+				7B90FE212E09386900764905 /* AccessibilityServiceInterface in Frameworks */,
 				7BE462B62E08AAD100FD421C /* KeyboardShortcuts in Frameworks */,
+				7B90FE272E0938CC00764905 /* ShellServiceInterface in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -145,17 +145,17 @@
 			);
 			name = ClaudeCodeUI;
 			packageProductDependencies = (
-				7B5698F12E07D17C00E8065C /* AccessibilityFoundation */,
-				7B5698F42E07D21F00E8065C /* AccessibilityService */,
-				7B5698F72E07D24A00E8065C /* AccessibilityServiceInterface */,
-				7B6C0CA02E07DA1D008ADF13 /* AppFoundation */,
-				7B6C0D1B2E07DFEE008ADF13 /* XcodeObserverServiceInterface */,
-				7B6C0D1F2E07E004008ADF13 /* PermissionsServiceInterface */,
-				7B6C0D272E07E3BC008ADF13 /* XcodeObserverService */,
-				7B6C0D2E2E07E73B008ADF13 /* PermissionsService */,
-				7B6C0D322E07E962008ADF13 /* ShellService */,
 				7BE462B52E08AAD100FD421C /* KeyboardShortcuts */,
 				7BE463402E09304F00FD421C /* ClaudeCodeSDK */,
+				7B90FE1C2E09384F00764905 /* AccessibilityFoundation */,
+				7B90FE1E2E09385B00764905 /* AccessibilityService */,
+				7B90FE202E09386900764905 /* AccessibilityServiceInterface */,
+				7B90FE242E09388000764905 /* PermissionsService */,
+				7B90FE262E0938CC00764905 /* ShellServiceInterface */,
+				7B90FE292E0938E200764905 /* XcodeObserverServiceInterface */,
+				7B90FE2C2E09391B00764905 /* ShellService */,
+				7B90FE2E2E09398300764905 /* ShellService */,
+				7B90FE312E093A3D00764905 /* XcodeObserverService */,
 			);
 			productName = ClaudeCodeUI;
 			productReference = 7B3764CC2DE3D2B200F32C87 /* ClaudeCodeUI.app */;
@@ -243,15 +243,13 @@
 				7B5698F02E07D17C00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityFoundation" */,
 				7B5698F32E07D21F00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityService" */,
 				7B5698F62E07D24A00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityServiceInterface" */,
-				7B6C0C9F2E07DA1D008ADF13 /* XCLocalSwiftPackageReference "modules/AppFoundation" */,
-				7B6C0CA42E07DAFC008ADF13 /* XCLocalSwiftPackageReference "modules/PermissionsServiceInterface" */,
-				7B6C0CA52E07DB09008ADF13 /* XCLocalSwiftPackageReference "modules/ShellService" */,
 				7B6C0CA62E07DB3A008ADF13 /* XCLocalSwiftPackageReference "modules/ShellServiceInterface" */,
-				7B6C0CA72E07DB4E008ADF13 /* XCLocalSwiftPackageReference "modules/XcodeObserverService" */,
-				7B6C0CA82E07DB5E008ADF13 /* XCLocalSwiftPackageReference "modules/XcodeObserverServiceInterface" */,
 				7B6C0D2D2E07E73B008ADF13 /* XCLocalSwiftPackageReference "modules/PermissionsService" */,
 				7BE462B42E08AAD100FD421C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
 				7BE4633F2E09304F00FD421C /* XCRemoteSwiftPackageReference "ClaudeCodeSDK" */,
+				7B90FE282E0938E200764905 /* XCLocalSwiftPackageReference "modules/XcodeObserverServiceInterface" */,
+				7B90FE2B2E09391B00764905 /* XCLocalSwiftPackageReference "modules/ShellService" */,
+				7B90FE302E0939E100764905 /* XCLocalSwiftPackageReference "modules/XcodeObserverService" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7B3764CD2DE3D2B200F32C87 /* Products */;
@@ -623,33 +621,25 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = modules/AccessibilityServiceInterface;
 		};
-		7B6C0C9F2E07DA1D008ADF13 /* XCLocalSwiftPackageReference "modules/AppFoundation" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/AppFoundation;
-		};
-		7B6C0CA42E07DAFC008ADF13 /* XCLocalSwiftPackageReference "modules/PermissionsServiceInterface" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/PermissionsServiceInterface;
-		};
-		7B6C0CA52E07DB09008ADF13 /* XCLocalSwiftPackageReference "modules/ShellService" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/ShellService;
-		};
 		7B6C0CA62E07DB3A008ADF13 /* XCLocalSwiftPackageReference "modules/ShellServiceInterface" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = modules/ShellServiceInterface;
 		};
-		7B6C0CA72E07DB4E008ADF13 /* XCLocalSwiftPackageReference "modules/XcodeObserverService" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/XcodeObserverService;
-		};
-		7B6C0CA82E07DB5E008ADF13 /* XCLocalSwiftPackageReference "modules/XcodeObserverServiceInterface" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/XcodeObserverServiceInterface;
-		};
 		7B6C0D2D2E07E73B008ADF13 /* XCLocalSwiftPackageReference "modules/PermissionsService" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = modules/PermissionsService;
+		};
+		7B90FE282E0938E200764905 /* XCLocalSwiftPackageReference "modules/XcodeObserverServiceInterface" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = modules/XcodeObserverServiceInterface;
+		};
+		7B90FE2B2E09391B00764905 /* XCLocalSwiftPackageReference "modules/ShellService" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = modules/ShellService;
+		};
+		7B90FE302E0939E100764905 /* XCLocalSwiftPackageReference "modules/XcodeObserverService" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = modules/XcodeObserverService;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -673,45 +663,47 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		7B5698F12E07D17C00E8065C /* AccessibilityFoundation */ = {
+		7B90FE1C2E09384F00764905 /* AccessibilityFoundation */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = 7B5698F02E07D17C00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityFoundation" */;
 			productName = AccessibilityFoundation;
 		};
-		7B5698F42E07D21F00E8065C /* AccessibilityService */ = {
+		7B90FE1E2E09385B00764905 /* AccessibilityService */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = 7B5698F32E07D21F00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityService" */;
 			productName = AccessibilityService;
 		};
-		7B5698F72E07D24A00E8065C /* AccessibilityServiceInterface */ = {
+		7B90FE202E09386900764905 /* AccessibilityServiceInterface */ = {
 			isa = XCSwiftPackageProductDependency;
+			package = 7B5698F62E07D24A00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityServiceInterface" */;
 			productName = AccessibilityServiceInterface;
 		};
-		7B6C0CA02E07DA1D008ADF13 /* AppFoundation */ = {
+		7B90FE242E09388000764905 /* PermissionsService */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = AppFoundation;
-		};
-		7B6C0D1B2E07DFEE008ADF13 /* XcodeObserverServiceInterface */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7B6C0CA82E07DB5E008ADF13 /* XCLocalSwiftPackageReference "modules/XcodeObserverServiceInterface" */;
-			productName = XcodeObserverServiceInterface;
-		};
-		7B6C0D1F2E07E004008ADF13 /* PermissionsServiceInterface */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7B6C0CA42E07DAFC008ADF13 /* XCLocalSwiftPackageReference "modules/PermissionsServiceInterface" */;
-			productName = PermissionsServiceInterface;
-		};
-		7B6C0D272E07E3BC008ADF13 /* XcodeObserverService */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7B6C0CA72E07DB4E008ADF13 /* XCLocalSwiftPackageReference "modules/XcodeObserverService" */;
-			productName = XcodeObserverService;
-		};
-		7B6C0D2E2E07E73B008ADF13 /* PermissionsService */ = {
-			isa = XCSwiftPackageProductDependency;
+			package = 7B6C0D2D2E07E73B008ADF13 /* XCLocalSwiftPackageReference "modules/PermissionsService" */;
 			productName = PermissionsService;
 		};
-		7B6C0D322E07E962008ADF13 /* ShellService */ = {
+		7B90FE262E0938CC00764905 /* ShellServiceInterface */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7B6C0CA52E07DB09008ADF13 /* XCLocalSwiftPackageReference "modules/ShellService" */;
+			package = 7B6C0CA62E07DB3A008ADF13 /* XCLocalSwiftPackageReference "modules/ShellServiceInterface" */;
+			productName = ShellServiceInterface;
+		};
+		7B90FE292E0938E200764905 /* XcodeObserverServiceInterface */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = XcodeObserverServiceInterface;
+		};
+		7B90FE2C2E09391B00764905 /* ShellService */ = {
+			isa = XCSwiftPackageProductDependency;
 			productName = ShellService;
+		};
+		7B90FE2E2E09398300764905 /* ShellService */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ShellService;
+		};
+		7B90FE312E093A3D00764905 /* XcodeObserverService */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7B90FE302E0939E100764905 /* XCLocalSwiftPackageReference "modules/XcodeObserverService" */;
+			productName = XcodeObserverService;
 		};
 		7BE462B52E08AAD100FD421C /* KeyboardShortcuts */ = {
 			isa = XCSwiftPackageProductDependency;
