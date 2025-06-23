@@ -13,8 +13,6 @@ import PermissionsService
 import PermissionsServiceInterface
 import AccessibilityService
 import AccessibilityServiceInterface
-import LoggingService
-import LoggingServiceInterface
 import ShellService
 import ShellServiceInterface
 import AppFoundation
@@ -26,7 +24,6 @@ final class DependencyContainer {
   let settingsStorage: SettingsStorage
   let sessionStorage: SessionStorageProtocol
   let globalPreferences: GlobalPreferencesStorage
-  let loggingService: LoggingService
   let shellService: ShellService
   let permissionsService: PermissionsService
   let accessibilityService: AccessibilityService
@@ -40,12 +37,10 @@ final class DependencyContainer {
     self.globalPreferences = globalPreferences
     
     // Initialize core services
-    self.loggingService = DefaultLoggingService()
     self.shellService = DefaultShellService()
     
     // Initialize permissions service
     self.permissionsService = DefaultPermissionsService(
-      loggingService: loggingService,
       shellService: shellService,
       userDefaults: .standard,
       bundle: .main,
@@ -58,7 +53,7 @@ final class DependencyContainer {
     // Initialize XcodeObserver with dependencies
     self.xcodeObserver = DefaultXcodeObserver(
       accessibilityService: accessibilityService,
-      permissionsService: permissionsService
+      permissionsService: permissionsService,
     )
     self.xcodeObservationViewModel = XcodeObservationViewModel(xcodeObserver: xcodeObserver)
     self.contextManager = ContextManager(xcodeObservationViewModel: xcodeObservationViewModel)

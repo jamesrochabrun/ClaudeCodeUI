@@ -7,19 +7,17 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		7B3764FA2DE3D2FA00F32C87 /* ClaudeCodeSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 7B3764F92DE3D2FA00F32C87 /* ClaudeCodeSDK */; };
 		7B5698F22E07D17C00E8065C /* AccessibilityFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 7B5698F12E07D17C00E8065C /* AccessibilityFoundation */; };
 		7B5698F52E07D21F00E8065C /* AccessibilityService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B5698F42E07D21F00E8065C /* AccessibilityService */; };
 		7B5698F82E07D24A00E8065C /* AccessibilityServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 7B5698F72E07D24A00E8065C /* AccessibilityServiceInterface */; };
 		7B6C0CA12E07DA1D008ADF13 /* AppFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 7B6C0CA02E07DA1D008ADF13 /* AppFoundation */; };
 		7B6C0D1C2E07DFEE008ADF13 /* XcodeObserverServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 7B6C0D1B2E07DFEE008ADF13 /* XcodeObserverServiceInterface */; };
-		7B6C0D1E2E07DFFB008ADF13 /* InstallationGuideFeature in Frameworks */ = {isa = PBXBuildFile; productRef = 7B6C0D1D2E07DFFB008ADF13 /* InstallationGuideFeature */; };
 		7B6C0D202E07E004008ADF13 /* PermissionsServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 7B6C0D1F2E07E004008ADF13 /* PermissionsServiceInterface */; };
 		7B6C0D282E07E3BC008ADF13 /* XcodeObserverService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B6C0D272E07E3BC008ADF13 /* XcodeObserverService */; };
 		7B6C0D2F2E07E73B008ADF13 /* PermissionsService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B6C0D2E2E07E73B008ADF13 /* PermissionsService */; };
-		7B6C0D312E07E93F008ADF13 /* LoggingService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B6C0D302E07E93F008ADF13 /* LoggingService */; };
 		7B6C0D332E07E962008ADF13 /* ShellService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B6C0D322E07E962008ADF13 /* ShellService */; };
 		7BE462B62E08AAD100FD421C /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 7BE462B52E08AAD100FD421C /* KeyboardShortcuts */; };
+		7BE463412E09304F00FD421C /* ClaudeCodeSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 7BE463402E09304F00FD421C /* ClaudeCodeSDK */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -68,16 +66,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7BE463412E09304F00FD421C /* ClaudeCodeSDK in Frameworks */,
 				7B6C0D282E07E3BC008ADF13 /* XcodeObserverService in Frameworks */,
 				7B6C0D332E07E962008ADF13 /* ShellService in Frameworks */,
 				7B6C0D1C2E07DFEE008ADF13 /* XcodeObserverServiceInterface in Frameworks */,
 				7B6C0D202E07E004008ADF13 /* PermissionsServiceInterface in Frameworks */,
 				7B5698F22E07D17C00E8065C /* AccessibilityFoundation in Frameworks */,
-				7B6C0D1E2E07DFFB008ADF13 /* InstallationGuideFeature in Frameworks */,
 				7B6C0D2F2E07E73B008ADF13 /* PermissionsService in Frameworks */,
 				7B5698F52E07D21F00E8065C /* AccessibilityService in Frameworks */,
-				7B6C0D312E07E93F008ADF13 /* LoggingService in Frameworks */,
-				7B3764FA2DE3D2FA00F32C87 /* ClaudeCodeSDK in Frameworks */,
 				7B6C0CA12E07DA1D008ADF13 /* AppFoundation in Frameworks */,
 				7B5698F82E07D24A00E8065C /* AccessibilityServiceInterface in Frameworks */,
 				7BE462B62E08AAD100FD421C /* KeyboardShortcuts in Frameworks */,
@@ -149,19 +145,17 @@
 			);
 			name = ClaudeCodeUI;
 			packageProductDependencies = (
-				7B3764F92DE3D2FA00F32C87 /* ClaudeCodeSDK */,
 				7B5698F12E07D17C00E8065C /* AccessibilityFoundation */,
 				7B5698F42E07D21F00E8065C /* AccessibilityService */,
 				7B5698F72E07D24A00E8065C /* AccessibilityServiceInterface */,
 				7B6C0CA02E07DA1D008ADF13 /* AppFoundation */,
 				7B6C0D1B2E07DFEE008ADF13 /* XcodeObserverServiceInterface */,
-				7B6C0D1D2E07DFFB008ADF13 /* InstallationGuideFeature */,
 				7B6C0D1F2E07E004008ADF13 /* PermissionsServiceInterface */,
 				7B6C0D272E07E3BC008ADF13 /* XcodeObserverService */,
 				7B6C0D2E2E07E73B008ADF13 /* PermissionsService */,
-				7B6C0D302E07E93F008ADF13 /* LoggingService */,
 				7B6C0D322E07E962008ADF13 /* ShellService */,
 				7BE462B52E08AAD100FD421C /* KeyboardShortcuts */,
+				7BE463402E09304F00FD421C /* ClaudeCodeSDK */,
 			);
 			productName = ClaudeCodeUI;
 			productReference = 7B3764CC2DE3D2B200F32C87 /* ClaudeCodeUI.app */;
@@ -246,13 +240,10 @@
 			mainGroup = 7B3764C32DE3D2B200F32C87;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				7B3764F72DE3D2CC00F32C87 /* XCRemoteSwiftPackageReference "ClaudeCodeSDK" */,
 				7B5698F02E07D17C00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityFoundation" */,
 				7B5698F32E07D21F00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityService" */,
 				7B5698F62E07D24A00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityServiceInterface" */,
 				7B6C0C9F2E07DA1D008ADF13 /* XCLocalSwiftPackageReference "modules/AppFoundation" */,
-				7B6C0CA22E07DADC008ADF13 /* XCLocalSwiftPackageReference "modules/InstallationGuideFeature" */,
-				7B6C0CA32E07DAEC008ADF13 /* XCLocalSwiftPackageReference "modules/LoggingService" */,
 				7B6C0CA42E07DAFC008ADF13 /* XCLocalSwiftPackageReference "modules/PermissionsServiceInterface" */,
 				7B6C0CA52E07DB09008ADF13 /* XCLocalSwiftPackageReference "modules/ShellService" */,
 				7B6C0CA62E07DB3A008ADF13 /* XCLocalSwiftPackageReference "modules/ShellServiceInterface" */,
@@ -260,6 +251,7 @@
 				7B6C0CA82E07DB5E008ADF13 /* XCLocalSwiftPackageReference "modules/XcodeObserverServiceInterface" */,
 				7B6C0D2D2E07E73B008ADF13 /* XCLocalSwiftPackageReference "modules/PermissionsService" */,
 				7BE462B42E08AAD100FD421C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
+				7BE4633F2E09304F00FD421C /* XCRemoteSwiftPackageReference "ClaudeCodeSDK" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7B3764CD2DE3D2B200F32C87 /* Products */;
@@ -635,14 +627,6 @@
 			isa = XCLocalSwiftPackageReference;
 			relativePath = modules/AppFoundation;
 		};
-		7B6C0CA22E07DADC008ADF13 /* XCLocalSwiftPackageReference "modules/InstallationGuideFeature" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/InstallationGuideFeature;
-		};
-		7B6C0CA32E07DAEC008ADF13 /* XCLocalSwiftPackageReference "modules/LoggingService" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/LoggingService;
-		};
 		7B6C0CA42E07DAFC008ADF13 /* XCLocalSwiftPackageReference "modules/PermissionsServiceInterface" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = modules/PermissionsServiceInterface;
@@ -670,14 +654,6 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		7B3764F72DE3D2CC00F32C87 /* XCRemoteSwiftPackageReference "ClaudeCodeSDK" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/jamesrochabrun/ClaudeCodeSDK";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
-		};
 		7BE462B42E08AAD100FD421C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
@@ -686,14 +662,17 @@
 				minimumVersion = 2.3.0;
 			};
 		};
+		7BE4633F2E09304F00FD421C /* XCRemoteSwiftPackageReference "ClaudeCodeSDK" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jamesrochabrun/ClaudeCodeSDK";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		7B3764F92DE3D2FA00F32C87 /* ClaudeCodeSDK */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7B3764F72DE3D2CC00F32C87 /* XCRemoteSwiftPackageReference "ClaudeCodeSDK" */;
-			productName = ClaudeCodeSDK;
-		};
 		7B5698F12E07D17C00E8065C /* AccessibilityFoundation */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AccessibilityFoundation;
@@ -715,11 +694,6 @@
 			package = 7B6C0CA82E07DB5E008ADF13 /* XCLocalSwiftPackageReference "modules/XcodeObserverServiceInterface" */;
 			productName = XcodeObserverServiceInterface;
 		};
-		7B6C0D1D2E07DFFB008ADF13 /* InstallationGuideFeature */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7B6C0CA22E07DADC008ADF13 /* XCLocalSwiftPackageReference "modules/InstallationGuideFeature" */;
-			productName = InstallationGuideFeature;
-		};
 		7B6C0D1F2E07E004008ADF13 /* PermissionsServiceInterface */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7B6C0CA42E07DAFC008ADF13 /* XCLocalSwiftPackageReference "modules/PermissionsServiceInterface" */;
@@ -734,11 +708,6 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = PermissionsService;
 		};
-		7B6C0D302E07E93F008ADF13 /* LoggingService */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7B6C0CA32E07DAEC008ADF13 /* XCLocalSwiftPackageReference "modules/LoggingService" */;
-			productName = LoggingService;
-		};
 		7B6C0D322E07E962008ADF13 /* ShellService */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7B6C0CA52E07DB09008ADF13 /* XCLocalSwiftPackageReference "modules/ShellService" */;
@@ -748,6 +717,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7BE462B42E08AAD100FD421C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
 			productName = KeyboardShortcuts;
+		};
+		7BE463402E09304F00FD421C /* ClaudeCodeSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7BE4633F2E09304F00FD421C /* XCRemoteSwiftPackageReference "ClaudeCodeSDK" */;
+			productName = ClaudeCodeSDK;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
