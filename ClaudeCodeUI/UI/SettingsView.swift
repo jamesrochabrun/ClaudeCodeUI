@@ -95,7 +95,7 @@ struct SettingsView: View {
                 }
               }
               
-              Text("Use ⌘C to capture code selections from Xcode")
+              Text("Use ⌘I to capture code selections from Xcode")
                 .font(.caption)
                 .foregroundColor(.secondary)
             }

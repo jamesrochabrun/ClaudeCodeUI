@@ -260,4 +260,15 @@ extension XcodeObservationViewModel {
     !workspaceModel.openFiles.isEmpty ||
     !workspaceModel.selectedText.isEmpty
   }
+  
+  /// Gets the workspace document URL if available
+  func getWorkspaceDocumentURL() -> URL? {
+    guard let state = xcodeObserver.state.knownState?.first,
+          let window = state.windows.first,
+          let workspace = window.workspace,
+          let documentURL = workspace.documentURL else {
+      return nil
+    }
+    return documentURL
+  }
 }

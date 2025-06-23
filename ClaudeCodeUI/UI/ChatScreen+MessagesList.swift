@@ -8,17 +8,36 @@
 import SwiftUI
 
 extension ChatScreen {
+  
+  /// Determines the effective working directory based on manual selection or Xcode active file
+  var effectiveWorkingDirectory: String? {
+    // First priority: manually set project path
+    if !viewModel.projectPath.isEmpty {
+      return "cwd: \(viewModel.projectPath)"
+    }
+    
+    return nil
+  }
+  
+  /// Determines whether to show the settings button
+  var shouldShowSettingsButton: Bool {
+    // Show settings button when there's no working directory
+    return effectiveWorkingDirectory == nil
+  }
+  
   var messagesListView: some View {
     ScrollViewReader { scrollView in
       List {
-        // Add WelcomeRow at the top when project path is available
-        if !viewModel.projectPath.isEmpty {
-          WelcomeRow(
-            path: viewModel.projectPath
-          )
-          .listRowSeparator(.hidden)
-          .id("welcome-row")
-        }
+        // Always show WelcomeRow at the top
+        WelcomeRow(
+          path: effectiveWorkingDirectory,
+          showSettingsButton: shouldShowSettingsButton,
+          onSettingsTapped: {
+            showingSettings = true
+          }
+        )
+        .listRowSeparator(.hidden)
+        .id("welcome-row")
         
         ForEach(viewModel.messages) { message in
           ChatMessageRow(
@@ -41,6 +60,12 @@ extension ChatScreen {
             scrollView.scrollTo(lastMessage.id, anchor: .bottom)
           }
         }
+      }
+      .onAppear {
+        checkForAutoDetection()
+      }
+      .onChange(of: xcodeObservationViewModel.workspaceModel) { _, _ in
+        checkForAutoDetection()
       }
     }
   }

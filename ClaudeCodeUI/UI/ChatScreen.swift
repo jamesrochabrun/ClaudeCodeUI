@@ -27,16 +27,14 @@ struct ChatScreen: View {
   @State private var messageText: String = ""
   @State var showingSettings = false
   @State private var keyboardManager = KeyboardShortcutManager()
+  @State var hasShownAutoDetectionAlert = false
+  @State var detectedProjectPath: String?
+  @State var showingPathDetectionAlert = false
   
   var body: some View {
     VStack {
-      // Show empty state if no project path is selected and no messages
-      if viewModel.projectPath.isEmpty && viewModel.messages.isEmpty {
-        emptyStateView
-      } else {
-        // Chat messages list
-        messagesListView
-      }
+      // Always show the messages list (WelcomeRow will handle empty state)
+      messagesListView
       
       // Error message if present
       if let error = viewModel.error {
@@ -97,6 +95,25 @@ struct ChatScreen: View {
     .sheet(isPresented: $showingSettings) {
       SettingsView(chatViewModel: viewModel, xcodeObservationViewModel: xcodeObservationViewModel, permissionsService: permissionsService)
     }
+    .alert("Working Directory Detected", isPresented: $showingPathDetectionAlert) {
+      Button("Accept") {
+        if let detectedPath = detectedProjectPath {
+          viewModel.claudeClient.configuration.workingDirectory = detectedPath
+          viewModel.settingsStorage.setProjectPath(detectedPath)
+          if let sessionId = viewModel.currentSessionId {
+            viewModel.settingsStorage.setProjectPath(detectedPath, forSessionId: sessionId)
+          }
+          viewModel.refreshProjectPath()
+        }
+      }
+      Button("Cancel", role: .cancel) {
+        // User declined - will show the settings button
+      }
+    } message: {
+      if let detectedPath = detectedProjectPath {
+        Text("Claude Code UI has detected the following working directory:\n\n\(detectedPath)\n\nWould you like to use this as your working directory?")
+      }
+    }
     .onChange(of: keyboardManager.capturedText) { oldValue, newValue in
       if !newValue.isEmpty && newValue != oldValue {
         // First try to capture from Xcode if available
@@ -112,5 +129,17 @@ struct ChatScreen: View {
   
   private func clearChat() {
     viewModel.clearConversation()
+  }
+  
+  func checkForAutoDetection() {
+    // Only check if we haven't shown the alert and don't have a manual path
+    if !hasShownAutoDetectionAlert && viewModel.projectPath.isEmpty {
+      if xcodeObservationViewModel.hasAccessibilityPermission,
+         let projectRoot = xcodeObservationViewModel.getProjectRootPath() {
+        detectedProjectPath = projectRoot
+        hasShownAutoDetectionAlert = true
+        showingPathDetectionAlert = true
+      }
+    }
   }
 }

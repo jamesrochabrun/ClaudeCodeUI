@@ -9,11 +9,15 @@ import Foundation
 import SwiftUI
 
 struct WelcomeRow: View {
-  let path: String
+  let path: String?
+  let showSettingsButton: Bool
+  let onSettingsTapped: () -> Void
   
   // Custom color
-  init(path: String) {
+  init(path: String?, showSettingsButton: Bool = false, onSettingsTapped: @escaping () -> Void = {}) {
     self.path = path
+    self.showSettingsButton = showSettingsButton
+    self.onSettingsTapped = onSettingsTapped
   }
   
   var body: some View {
@@ -24,9 +28,30 @@ struct WelcomeRow: View {
         Text("Welcome to **Claude Code UI!**")
           .font(.system(.body, design: .monospaced))
           .foregroundColor(.primary)
-        Text(path)
-          .font(.system(.caption, design: .monospaced))
-          .foregroundColor(.secondary)
+        
+        if showSettingsButton {
+          Button(action: onSettingsTapped) {
+            Image(systemName: "plus.circle.fill")
+              .font(.system(size: 16))
+              .foregroundColor(.bookCloth)
+          }
+          .buttonStyle(.plain)
+          .help("Select Working Directory")
+        } else if let path = path {
+          HStack(spacing: 8) {
+            Text(path)
+              .font(.system(.caption, design: .monospaced))
+              .foregroundColor(.secondary)
+            
+            Button(action: onSettingsTapped) {
+              Image(systemName: "pencil.circle")
+                .font(.caption)
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(.secondary)
+            .help("Change working directory")
+          }
+        }
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -40,5 +65,10 @@ struct WelcomeRow: View {
 }
 
 #Preview {
-  WelcomeRow(path: "cwd: /Users/jamesrochabrun/Desktop/git/ClaudeCodeUI")
+  VStack {
+    WelcomeRow(path: "cwd: /Users/jamesrochabrun/Desktop/git/ClaudeCodeUI")
+    WelcomeRow(path: nil, showSettingsButton: true) {
+      print("Settings tapped")
+    }
+  }
 }

@@ -3,6 +3,10 @@ xcuserdata/
 *.xcscmblueprint
 *.xccheckout
 
+# Build folders
+build/
+DerivedData/
+
 # Swift Package Manager
 .build/
 .swiftpm/
