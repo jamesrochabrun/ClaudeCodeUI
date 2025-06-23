@@ -16,12 +16,12 @@ class KeyboardShortcutManager {
   
   init() {
     setupShortcuts()
-    KeyboardShortcuts.enable([.captureWithEight])
+    KeyboardShortcuts.enable([.captureWithC])
   }
   
   private func setupShortcuts() {
-    // cmd+8
-    KeyboardShortcuts.onKeyUp(for: .captureWithEight) { [weak self] in
+    // cmd+c
+    KeyboardShortcuts.onKeyUp(for: .captureWithC) { [weak self] in
       Task { @MainActor in
         self?.captureSelectedText()
       }
@@ -68,5 +68,5 @@ class KeyboardShortcutManager {
 
 // Define the keyboard shortcuts
 extension KeyboardShortcuts.Name {
-  static let captureWithEight = Self("captureWithEight", default: .init(.eight, modifiers: [.command]))
+  static let captureWithC = Self("captureWithC", default: .init(.c, modifiers: [.command]))
 }

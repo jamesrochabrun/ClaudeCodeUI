@@ -13,8 +13,8 @@ import PermissionsService
 import PermissionsServiceInterface
 import AccessibilityService
 import AccessibilityServiceInterface
-import ShellService
-import ShellServiceInterface
+import TerminalService
+import TerminalServiceInterface
 import ApplicationServices
 
 @MainActor
@@ -23,7 +23,7 @@ final class DependencyContainer {
   let settingsStorage: SettingsStorage
   let sessionStorage: SessionStorageProtocol
   let globalPreferences: GlobalPreferencesStorage
-  let shellService: ShellService
+  let terminalService: TerminalService
   let permissionsService: PermissionsService
   let accessibilityService: AccessibilityService
   let xcodeObserver: XcodeObserver
@@ -36,11 +36,11 @@ final class DependencyContainer {
     self.globalPreferences = globalPreferences
     
     // Initialize core services
-    self.shellService = DefaultShellService()
+    self.terminalService = DefaultTerminalService()
     
     // Initialize permissions service
     self.permissionsService = DefaultPermissionsService(
-      shellService: shellService,
+      terminalService: terminalService,
       userDefaults: .standard,
       bundle: .main,
       isAccessibilityPermissionGrantedClosure: { AXIsProcessTrusted() }
