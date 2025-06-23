@@ -104,8 +104,11 @@ public final class ChatViewModel {
   // MARK: - Public Methods
   
   /// Sends a new message to Claude
-  /// - Parameter text: The message text to send
-  public func sendMessage(_ text: String) {
+  /// - Parameters:
+  ///   - text: The message text to send
+  ///   - context: Optional context to include with the message
+  ///   - hiddenContext: Optional hidden context to send to API but not display
+  public func sendMessage(_ text: String, context: String? = nil, hiddenContext: String? = nil) {
     guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
     
     // Store first message if this is a new session
@@ -113,8 +116,46 @@ public final class ChatViewModel {
       firstMessageInSession = text
     }
     
-    // Add user message
-    let userMessage = MessageFactory.userMessage(content: text)
+    // Build message content for display (without hidden context)
+    let displayContent: String
+    if let context = context, !context.isEmpty {
+      displayContent = """
+      \(text)
+      
+      --- Context ---
+      \(context)
+      """
+    } else {
+      displayContent = text
+    }
+    
+    // Build message content for API (with all context)
+    let apiContent: String
+    if let context = context, !context.isEmpty {
+      if let hiddenContext = hiddenContext, !hiddenContext.isEmpty {
+        apiContent = """
+        \(text)
+        
+        --- Context ---
+        \(context)
+        
+        \(hiddenContext)
+        """
+      } else {
+        apiContent = displayContent
+      }
+    } else if let hiddenContext = hiddenContext, !hiddenContext.isEmpty {
+      apiContent = """
+      \(text)
+      
+      \(hiddenContext)
+      """
+    } else {
+      apiContent = text
+    }
+    
+    // Add user message (only display content)
+    let userMessage = MessageFactory.userMessage(content: displayContent)
     messageStore.addMessage(userMessage)
     
     // Clear any previous errors
@@ -132,10 +173,10 @@ public final class ChatViewModel {
       do {
         if let sessionId = sessionManager.currentSessionId {
           logger.debug("Continuing conversation with session: \(sessionId)")
-          try await continueConversation(sessionId: sessionId, prompt: text, messageId: assistantId)
+          try await continueConversation(sessionId: sessionId, prompt: apiContent, messageId: assistantId)
         } else {
           logger.debug("No current session, starting new conversation")
-          try await startNewConversation(prompt: text, messageId: assistantId)
+          try await startNewConversation(prompt: apiContent, messageId: assistantId)
         }
       } catch {
         await MainActor.run {

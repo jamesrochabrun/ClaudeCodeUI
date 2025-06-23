@@ -7,6 +7,18 @@
 
 import Foundation
 import SwiftUI
+import XcodeObserverService
+import XcodeObserverServiceInterface
+import PermissionsService
+import PermissionsServiceInterface
+import AccessibilityService
+import AccessibilityServiceInterface
+import LoggingService
+import LoggingServiceInterface
+import ShellService
+import ShellServiceInterface
+import AppFoundation
+import ApplicationServices
 
 @MainActor
 final class DependencyContainer {
@@ -14,11 +26,42 @@ final class DependencyContainer {
   let settingsStorage: SettingsStorage
   let sessionStorage: SessionStorageProtocol
   let globalPreferences: GlobalPreferencesStorage
+  let loggingService: LoggingService
+  let shellService: ShellService
+  let permissionsService: PermissionsService
+  let accessibilityService: AccessibilityService
+  let xcodeObserver: XcodeObserver
+  let xcodeObservationViewModel: XcodeObservationViewModel
+  let contextManager: ContextManager
   
   init(globalPreferences: GlobalPreferencesStorage) {
     self.settingsStorage = SettingsStorageManager()
     self.sessionStorage = UserDefaultsSessionStorage()
     self.globalPreferences = globalPreferences
+    
+    // Initialize core services
+    self.loggingService = DefaultLoggingService()
+    self.shellService = DefaultShellService()
+    
+    // Initialize permissions service
+    self.permissionsService = DefaultPermissionsService(
+      loggingService: loggingService,
+      shellService: shellService,
+      userDefaults: .standard,
+      bundle: .main,
+      isAccessibilityPermissionGrantedClosure: { AXIsProcessTrusted() }
+    )
+    
+    // Initialize accessibility service
+    self.accessibilityService = DefaultAccessibilityService()
+    
+    // Initialize XcodeObserver with dependencies
+    self.xcodeObserver = DefaultXcodeObserver(
+      accessibilityService: accessibilityService,
+      permissionsService: permissionsService
+    )
+    self.xcodeObservationViewModel = XcodeObservationViewModel(xcodeObserver: xcodeObserver)
+    self.contextManager = ContextManager(xcodeObservationViewModel: xcodeObservationViewModel)
   }
   
   func setCurrentSession(_ sessionId: String) {

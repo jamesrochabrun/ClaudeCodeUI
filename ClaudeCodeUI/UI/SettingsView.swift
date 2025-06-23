@@ -8,18 +8,25 @@
 import SwiftUI
 import AppKit
 import ClaudeCodeSDK
+import PermissionsServiceInterface
 
 struct SettingsView: View {
   @Environment(\.dismiss) private var dismiss
   let chatViewModel: ChatViewModel
+  let xcodeObservationViewModel: XcodeObservationViewModel
+  let permissionsService: PermissionsService
+  
   var settingsStorage: SettingsStorage {
     chatViewModel.settingsStorage
   }
   
   @State private var projectPath: String = ""
+  @State private var isRequestingPermission: Bool = false
   
-  init(chatViewModel: ChatViewModel) {
+  init(chatViewModel: ChatViewModel, xcodeObservationViewModel: XcodeObservationViewModel, permissionsService: PermissionsService) {
     self.chatViewModel = chatViewModel
+    self.xcodeObservationViewModel = xcodeObservationViewModel
+    self.permissionsService = permissionsService
   }
   
   var body: some View {
@@ -59,6 +66,41 @@ struct SettingsView: View {
             }
             .padding(.vertical, 8)
           }
+          
+          Section("Xcode Integration") {
+            VStack(alignment: .leading, spacing: 12) {
+              Text("Accessibility Permission")
+                .font(.headline)
+              
+              HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                  Text(xcodeObservationViewModel.hasAccessibilityPermission ? "Permission Granted" : "Permission Required")
+                    .foregroundColor(xcodeObservationViewModel.hasAccessibilityPermission ? .primary : .secondary)
+                  
+                  Text("Grant accessibility permission to observe Xcode and capture code selections")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                if !xcodeObservationViewModel.hasAccessibilityPermission {
+                  Button("Grant Permission") {
+                    requestAccessibilityPermission()
+                  }
+                  .buttonStyle(.borderedProminent)
+                  .disabled(isRequestingPermission)
+                } else {
+                  Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                }
+              }
+              
+              Text("Use ⌘8 to capture code selections from Xcode")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            }
+            .padding(.vertical, 8)
+          }
         }
         .formStyle(.grouped)
         
@@ -75,7 +117,7 @@ struct SettingsView: View {
         .padding()
       }
       .navigationTitle("Session Settings")
-      .frame(width: 600, height: 250)
+      .frame(width: 600, height: 350)
     }
     .onAppear {
       loadProjectPath()
@@ -179,5 +221,20 @@ struct SettingsView: View {
     
     // Update the observable project path in the view model
     chatViewModel.refreshProjectPath()
+  }
+  
+  private func requestAccessibilityPermission() {
+    isRequestingPermission = true
+    
+    Task {
+      permissionsService.requestAccessibilityPermission()
+      
+      // Wait a moment for the system to update
+      try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+      
+      await MainActor.run {
+        isRequestingPermission = false
+      }
+    }
   }
 }

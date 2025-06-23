@@ -7,6 +7,7 @@
 
 import SwiftUI
 import ClaudeCodeSDK
+import PermissionsServiceInterface
 
 struct ChatInputView: View {
   
@@ -14,6 +15,9 @@ struct ChatInputView: View {
   
   @Binding var text: String
   @Binding var viewModel: ChatViewModel
+  let contextManager: ContextManager
+  let xcodeObservationViewModel: XcodeObservationViewModel
+  let permissionsService: PermissionsService
   
   @FocusState private var isFocused: Bool
   let placeholder: String
@@ -32,76 +36,176 @@ struct ChatInputView: View {
   init(
     text: Binding<String>,
     chatViewModel: Binding<ChatViewModel>,
+    contextManager: ContextManager,
+    xcodeObservationViewModel: XcodeObservationViewModel,
+    permissionsService: PermissionsService,
     placeholder: String = "Type a message...")
   {
     _text = text
     _viewModel = chatViewModel
+    self.contextManager = contextManager
+    self.xcodeObservationViewModel = xcodeObservationViewModel
+    self.permissionsService = permissionsService
     self.placeholder = placeholder
   }
   // MARK: - Body
   
   var body: some View {
-    HStack {
-      // Sessions button
-      Button(action: {
-        showingSessionsList = true
-      }) {
-        Image(systemName: "list.bullet")
-          .foregroundColor(.gray)
+    VStack(alignment: .leading, spacing: 2) {
+      if shouldShowContextBar {
+        contextBar
       }
-      .buttonStyle(.plain)
-      .padding(.leading, 8)
-      .popover(isPresented: $showingSessionsList) {
-        SessionsListView(viewModel: $viewModel)
-          .frame(width: 300, height: 400)
-      }
-      
-      textArea
-      
-      if viewModel.isLoading {
-        Button(action: {
-          viewModel.cancelRequest()
-        }) {
-          Image(systemName: "stop.fill")
-        }
-        .padding(10)
-        .buttonStyle(.plain)
-      } else {
-        Button(action: {
-          sendMessage()
-        }) {
-          Image(systemName: "arrow.up.circle.fill")
-            .foregroundColor(.kraft)
-            .font(.title2)
-        }
-        .padding(10)
-        .buttonStyle(.plain)
-        .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+      HStack {
+        sessionsButton
+        textEditor
+        actionButton
       }
     }
     .background(Color(NSColor.controlBackgroundColor))
     .clipShape(RoundedRectangle(cornerRadius: 12))
-    .overlay(
-      RoundedRectangle(cornerRadius: 12)
-        .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-    )
+    .overlay(inputBorder)
     .padding(.horizontal, 12)
     .padding(.bottom, 12)
+    .animation(.easeInOut(duration: 0.2), value: xcodeObservationViewModel.workspaceModel.activeFile?.name)
+    .animation(.easeInOut(duration: 0.2), value: contextManager.context.codeSelections.count)
     .alert("No Working Directory Selected", isPresented: $showingProjectPathAlert) {
-      Button("Open Settings") {
-        showingSettings = true
-      }
-      Button("Cancel", role: .cancel) {}
+      workingDirectoryAlertButtons
     } message: {
       Text("Please select a working directory before starting a conversation. This helps Claude understand the context of your project.")
     }
     .sheet(isPresented: $showingSettings) {
-      SettingsView(chatViewModel: viewModel)
-        .frame(width: 700, height: 550)
+      settingsSheet
     }
   }
   
-  private var textArea: some View {
+  // MARK: - Computed Properties
+  
+  private var sessionsButton: some View {
+    Button(action: {
+      showingSessionsList = true
+    }) {
+      Image(systemName: "list.bullet")
+        .foregroundColor(.gray)
+    }
+    .buttonStyle(.plain)
+    .padding(.leading, 8)
+    .popover(isPresented: $showingSessionsList) {
+      SessionsListView(viewModel: $viewModel)
+        .frame(width: 300, height: 400)
+    }
+  }
+  
+  private var actionButton: some View {
+    Group {
+      if viewModel.isLoading {
+        cancelButton
+      } else {
+        sendButton
+      }
+    }
+  }
+  
+  private var cancelButton: some View {
+    Button(action: {
+      viewModel.cancelRequest()
+    }) {
+      Image(systemName: "stop.fill")
+    }
+    .padding(10)
+    .buttonStyle(.plain)
+  }
+  
+  private var sendButton: some View {
+    Button(action: {
+      sendMessage()
+    }) {
+      Image(systemName: "arrow.up.circle.fill")
+        .foregroundColor(.kraft)
+        .font(.title2)
+    }
+    .padding(10)
+    .buttonStyle(.plain)
+    .disabled(isTextEmpty)
+  }
+  
+  private var inputBorder: some View {
+    RoundedRectangle(cornerRadius: 12)
+      .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+  }
+  
+  private var workingDirectoryAlertButtons: some View {
+    Group {
+      Button("Open Settings") {
+        showingSettings = true
+      }
+      Button("Cancel", role: .cancel) {}
+    }
+  }
+  
+  private var settingsSheet: some View {
+    SettingsView(
+      chatViewModel: viewModel,
+      xcodeObservationViewModel: xcodeObservationViewModel,
+      permissionsService: permissionsService
+    )
+    .frame(width: 700, height: 550)
+  }
+  
+  private var isTextEmpty: Bool {
+    text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
+  
+  private var shouldShowContextBar: Bool {
+    xcodeObservationViewModel.workspaceModel.activeFile != nil || !contextManager.context.codeSelections.isEmpty
+  }
+  
+  private var contextBar: some View {
+    ScrollView(.horizontal, showsIndicators: false) {
+      HStack(spacing: 8) {
+        activeFileChip
+        contextDivider
+        codeSelectionChips
+      }
+      .padding(.horizontal, 4)
+    }
+    .padding(.top, 6)
+    .padding(.horizontal, 4)
+    .transition(.asymmetric(
+      insertion: .move(edge: .top).combined(with: .opacity),
+      removal: .move(edge: .top).combined(with: .opacity)
+    ))
+  }
+  
+  @ViewBuilder
+  private var activeFileChip: some View {
+    if let activeFile = xcodeObservationViewModel.workspaceModel.activeFile {
+      ActiveFileView(model: .activeFile(activeFile))
+        .onTapGesture {
+          contextManager.addFile(activeFile)
+        }
+    }
+  }
+  
+  @ViewBuilder
+  private var contextDivider: some View {
+    if xcodeObservationViewModel.workspaceModel.activeFile != nil && !contextManager.context.codeSelections.isEmpty {
+      Divider()
+        .frame(height: 16)
+    }
+  }
+  
+  private var codeSelectionChips: some View {
+    ForEach(contextManager.context.codeSelections) { selection in
+      ActiveFileView(
+        model: .selection(selection),
+        onRemove: {
+          contextManager.removeSelection(id: selection.id)
+        }
+      )
+    }
+  }
+  
+  private var textEditor: some View {
     ZStack(alignment: .center) {
       TextEditor(text: $text)
         .scrollContentBackground(.hidden)
@@ -138,18 +242,32 @@ struct ChatInputView: View {
       }
   }
   
+  // MARK: - Helper Computed Properties
+  
+  private var trimmedText: String {
+    text.trimmingCharacters(in: .whitespacesAndNewlines)
+  }
+  
+  private var formattedContext: String? {
+    contextManager.hasContext ? contextManager.getFormattedContext() : nil
+  }
+  
+  private var hiddenContext: String? {
+    guard let activeFile = xcodeObservationViewModel.workspaceModel.activeFile else { return nil }
+    return "Currently viewing: \(activeFile.path)"
+  }
+  
+  // MARK: - Actions
+  
   private func sendMessage() {
-    let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !text.isEmpty else { return }
+    guard !trimmedText.isEmpty else { return }
     
-    // Check if project path is set
     if viewModel.projectPath.isEmpty {
       showingProjectPathAlert = true
       return
     }
     
-    // Remove focus first
-    viewModel.sendMessage(text)
+    viewModel.sendMessage(trimmedText, context: formattedContext, hiddenContext: hiddenContext)
     DispatchQueue.main.async {
       self.text = ""
     }

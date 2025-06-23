@@ -20,8 +20,14 @@ struct RootView: View {
   }
   
   var body: some View {
-    if let viewModel = viewModel {
-      ChatScreen(viewModel: viewModel)
+    if let viewModel = viewModel, let container = dependencyContainer {
+      ChatScreen(
+        viewModel: viewModel,
+        contextManager: container.contextManager,
+        xcodeObservationViewModel: container.xcodeObservationViewModel,
+        permissionsService: container.permissionsService
+      )
+      .environment(container.xcodeObservationViewModel)
     } else {
       ProgressView()
         .onAppear {

@@ -8,16 +8,25 @@
 import ClaudeCodeSDK
 import Foundation
 import SwiftUI
+import PermissionsServiceInterface
+import KeyboardShortcuts
 
 struct ChatScreen: View {
   
-  init(viewModel: ChatViewModel) {
+  init(viewModel: ChatViewModel, contextManager: ContextManager, xcodeObservationViewModel: XcodeObservationViewModel, permissionsService: PermissionsService) {
     self.viewModel = viewModel
+    self.contextManager = contextManager
+    self.xcodeObservationViewModel = xcodeObservationViewModel
+    self.permissionsService = permissionsService
   }
   
   @State var viewModel: ChatViewModel
+  @State var contextManager: ContextManager
+  let xcodeObservationViewModel: XcodeObservationViewModel
+  let permissionsService: PermissionsService
   @State private var messageText: String = ""
   @State var showingSettings = false
+  @State private var keyboardManager = KeyboardShortcutManager()
   
   var body: some View {
     VStack {
@@ -53,7 +62,6 @@ struct ChatScreen: View {
         .padding(.horizontal)
         .padding(.bottom, 8)
       }
-      
       // Thinking indicator overlay
       if viewModel.isLoading {
         ThinkingIndicator(message: "")
@@ -70,6 +78,9 @@ struct ChatScreen: View {
       ChatInputView(
         text: $messageText,
         chatViewModel: $viewModel,
+        contextManager: contextManager,
+        xcodeObservationViewModel: xcodeObservationViewModel,
+        permissionsService: permissionsService,
         placeholder: "Type a message...")
     }
     .navigationTitle("Claude Code Chat")
@@ -84,10 +95,20 @@ struct ChatScreen: View {
     }
     .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
     .sheet(isPresented: $showingSettings) {
-      SettingsView(chatViewModel: viewModel)
+      SettingsView(chatViewModel: viewModel, xcodeObservationViewModel: xcodeObservationViewModel, permissionsService: permissionsService)
+    }
+    .onChange(of: keyboardManager.capturedText) { oldValue, newValue in
+      if !newValue.isEmpty && newValue != oldValue {
+        // First try to capture from Xcode if available
+        if contextManager.captureCurrentSelection() != nil {
+          // Successfully captured from Xcode, ignore clipboard text
+        } else {
+          // No Xcode selection, use clipboard text
+          contextManager.addCapturedText(newValue)
+        }
+      }
     }
   }
-  
   
   private func clearChat() {
     viewModel.clearConversation()
