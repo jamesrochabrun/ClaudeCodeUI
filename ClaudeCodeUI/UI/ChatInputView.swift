@@ -267,9 +267,14 @@ struct ChatInputView: View {
       return
     }
     
-    viewModel.sendMessage(trimmedText, context: formattedContext, hiddenContext: hiddenContext)
+    // Get current code selections from context manager
+    let codeSelections = contextManager.context.codeSelections.isEmpty ? nil : contextManager.context.codeSelections
+    
+    viewModel.sendMessage(trimmedText, context: formattedContext, hiddenContext: hiddenContext, codeSelections: codeSelections)
     DispatchQueue.main.async {
       self.text = ""
+      // Clear context after sending
+      contextManager.clearAll()
     }
   }
 }

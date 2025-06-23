@@ -42,6 +42,11 @@ struct ChatMessageRow: View {
     }
   }
   
+  // Check if this is a user or assistant text message
+  private var isUserOrAssistantMessage: Bool {
+    return (message.role == .user || message.role == .assistant) && message.messageType == .text
+  }
+  
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       if isCollapsible {
@@ -50,7 +55,7 @@ struct ChatMessageRow: View {
         standardMessageView
       }
     }
-    .padding(.horizontal)
+    .padding(.horizontal, 4)
     .padding(.vertical, 4)
     .onHover { hovering in
       withAnimation(.easeInOut(duration: 0.2)) {
@@ -87,7 +92,8 @@ struct ChatMessageRow: View {
           .foregroundStyle(.secondary)
           .rotationEffect(.degrees(isExpanded ? 90 : 0))
       }
-      .padding(10)
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4)
       .background(
         RoundedRectangle(cornerRadius: bubbleCornerRadius, style: .continuous)
           .fill(.ultraThinMaterial)
@@ -164,16 +170,22 @@ struct ChatMessageRow: View {
   // MARK: - Standard Message View
   @ViewBuilder
   private var standardMessageView: some View {
-    HStack(alignment: .firstTextBaseline, spacing: message.role == .user ? 0 : 12) {
-      // Avatar for assistant messages
-      if message.role == .assistant || message.role == .user {
-        avatarView
-          .frame(width: 32, height: 32)
-          .transition(.scale.combined(with: .opacity))
+    VStack(alignment: .leading, spacing: 0) {
+      // Code selections for user messages (leading position)
+      if message.role == .user, let codeSelections = message.codeSelections, !codeSelections.isEmpty {
+        codeSelectionsView(selections: codeSelections)
+          .padding(.top, 6)
       }
       
-      VStack(alignment: .leading, spacing: 6) {
-        // Main message bubble
+      HStack(alignment: .firstTextBaseline, spacing: isUserOrAssistantMessage ? 4 : 12) {
+        // Avatar for user messages only
+        if message.role == .user {
+          avatarView
+            .frame(width: 20, height: 20)
+            .transition(.scale.combined(with: .opacity))
+        }
+        
+        // Main message content
         messageContentView
           .background(messageBubbleBackground)
           .overlay(alignment: message.role == .user ? .bottomTrailing : .bottomLeading) {
@@ -186,38 +198,14 @@ struct ChatMessageRow: View {
             }
           }
       }
-      .frame(maxWidth: message.role == .user ? nil : .infinity, alignment: message.role == .user ? .trailing : .leading)
     }
+    .frame(maxWidth: message.role == .user ? nil : .infinity, alignment: message.role == .user ? .trailing : .leading)
   }
   
   // MARK: - Helper Views
   private var messageBubbleBackground: some View {
-    Group {
-      if message.role == .user {
-        // No background for user messages
-        Color.clear
-      } else {
-        // Assistant message bubble with glassmorphism effect
-        ZStack {
-          RoundedRectangle(cornerRadius: bubbleCornerRadius, style: .continuous)
-            .fill(.ultraThinMaterial)
-          
-          RoundedRectangle(cornerRadius: bubbleCornerRadius, style: .continuous)
-            .strokeBorder(
-              LinearGradient(
-                colors: [
-                  messageTint.opacity(0.3),
-                  messageTint.opacity(0.1)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-              ),
-              lineWidth: 1
-            )
-        }
-        .shadow(color: messageTint.opacity(0.1), radius: 5, x: 0, y: 2)
-      }
-    }
+    // No background for any text messages
+    Color.clear
   }
   
   @ViewBuilder
@@ -233,9 +221,9 @@ struct ChatMessageRow: View {
           .font(messageFont)
       }
     }
-    .padding(.vertical, 12)
+    .padding(.vertical, isUserOrAssistantMessage ? 4 : 12)
     .padding(.trailing, 12)
-    .padding(.leading, message.role == .user ? 0 : 12)
+    .padding(.leading, message.role == .assistant ? 4 : (isUserOrAssistantMessage ? 0 : 12))
     .frame(maxWidth: .infinity, alignment: .leading)
   }
   
@@ -269,21 +257,9 @@ struct ChatMessageRow: View {
   
   @ViewBuilder
   private var avatarView: some View {
-    ZStack {
-      if message.role == .assistant {
-        Circle()
-          .fill(
-            LinearGradient(
-              colors: [messageTint.opacity(0.2), messageTint.opacity(0.1)],
-              startPoint: .topLeading,
-              endPoint: .bottomTrailing
-            )
-          )
-      }
-      Image(systemName: avatarIcon)
-        .font(.system(size: 16, weight: .medium))
-        .foregroundStyle(messageTint)
-    }
+    Image(systemName: avatarIcon)
+      .font(.system(size: 16, weight: .regular))
+      .foregroundStyle(.primary)
   }
   
   @ViewBuilder
@@ -372,7 +348,7 @@ struct ChatMessageRow: View {
   
   private var avatarIcon: String {
     switch message.messageType {
-    case .text: return message.role == .assistant ? "bubble.left.fill" : "greaterthan"
+    case .text: return "chevron.right.circle"
     case .toolUse: return "hammer.fill"
     case .toolResult: return "checkmark.circle.fill"
     case .toolError: return "exclamationmark.triangle.fill"
@@ -399,7 +375,10 @@ struct ChatMessageRow: View {
   }
   
   private var messageFont: Font {
-    .system(size: fontSize, weight: colorScheme == .dark ? .ultraLight : .light, design: fontDesign)
+    guard (message.role == .user || message.role == .assistant) else {
+      return .system(size: fontSize, weight: colorScheme == .dark ? .ultraLight : .light, design: fontDesign)
+    }
+    return Font.system(.body)
   }
   
   private var contentTextColor: Color {
@@ -413,4 +392,18 @@ struct ChatMessageRow: View {
   }
   
   @State private var animationValues: [Bool] = [false, false, false]
+  
+  // MARK: - Code Selections View
+  @ViewBuilder
+  private func codeSelectionsView(selections: [TextSelection]) -> some View {
+    VStack(alignment: .leading, spacing: 8) {
+      ForEach(selections) { selection in
+        ActiveFileView(model: .selection(selection))
+          .transition(.asymmetric(
+            insertion: .scale(scale: 0.95).combined(with: .opacity),
+            removal: .scale(scale: 0.95).combined(with: .opacity)
+          ))
+      }
+    }
+  }
 }

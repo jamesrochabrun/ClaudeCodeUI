@@ -108,7 +108,8 @@ public final class ChatViewModel {
   ///   - text: The message text to send
   ///   - context: Optional context to include with the message
   ///   - hiddenContext: Optional hidden context to send to API but not display
-  public func sendMessage(_ text: String, context: String? = nil, hiddenContext: String? = nil) {
+  ///   - codeSelections: Optional code selections to display in UI
+  public func sendMessage(_ text: String, context: String? = nil, hiddenContext: String? = nil, codeSelections: [TextSelection]? = nil) {
     guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
     
     // Store first message if this is a new session
@@ -116,18 +117,8 @@ public final class ChatViewModel {
       firstMessageInSession = text
     }
     
-    // Build message content for display (without hidden context)
-    let displayContent: String
-    if let context = context, !context.isEmpty {
-      displayContent = """
-      \(text)
-      
-      --- Context ---
-      \(context)
-      """
-    } else {
-      displayContent = text
-    }
+    // Build message content for display (just the user's text)
+    let displayContent = text
     
     // Build message content for API (with all context)
     let apiContent: String
@@ -142,7 +133,12 @@ public final class ChatViewModel {
         \(hiddenContext)
         """
       } else {
-        apiContent = displayContent
+        apiContent = """
+        \(text)
+        
+        --- Context ---
+        \(context)
+        """
       }
     } else if let hiddenContext = hiddenContext, !hiddenContext.isEmpty {
       apiContent = """
@@ -154,8 +150,8 @@ public final class ChatViewModel {
       apiContent = text
     }
     
-    // Add user message (only display content)
-    let userMessage = MessageFactory.userMessage(content: displayContent)
+    // Add user message with code selections for UI display
+    let userMessage = MessageFactory.userMessage(content: displayContent, codeSelections: codeSelections)
     messageStore.addMessage(userMessage)
     
     // Clear any previous errors

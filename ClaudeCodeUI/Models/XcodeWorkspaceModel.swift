@@ -8,23 +8,23 @@
 import Foundation
 
 /// Represents the current state of the Xcode workspace
-struct XcodeWorkspaceModel: Equatable {
+public struct XcodeWorkspaceModel: Equatable {
   /// The name of the current workspace or project
-  let workspaceName: String?
+  public let workspaceName: String?
   
   /// Information about the currently active file in the editor
-  let activeFile: FileInfo?
+  public let activeFile: FileInfo?
   
   /// All files currently open in Xcode
-  let openFiles: [FileInfo]
+  public let openFiles: [FileInfo]
   
   /// Current text selections across all files
-  let selectedText: [TextSelection]
+  public let selectedText: [TextSelection]
   
   /// Timestamp of when this state was captured
-  let timestamp: Date
+  public let timestamp: Date
   
-  init(
+  public init(
     workspaceName: String? = nil,
     activeFile: FileInfo? = nil,
     openFiles: [FileInfo] = [],
@@ -40,25 +40,25 @@ struct XcodeWorkspaceModel: Equatable {
 }
 
 /// Represents information about a file in Xcode
-struct FileInfo: Equatable, Identifiable {
-  let id = UUID()
+public struct FileInfo: Equatable, Identifiable {
+  public let id = UUID()
   
   /// Full path to the file
-  let path: String
+  public let path: String
   
   /// File name without path
-  let name: String
+  public let name: String
   
   /// File content (optional, loaded on demand)
-  let content: String?
+  public let content: String?
   
   /// File extension
-  var fileExtension: String? {
+  public var fileExtension: String? {
     URL(fileURLWithPath: path).pathExtension.isEmpty ? nil : URL(fileURLWithPath: path).pathExtension
   }
   
   /// Programming language based on file extension
-  var language: String? {
+  public var language: String? {
     guard let ext = fileExtension else { return nil }
     switch ext.lowercased() {
     case "swift": return "swift"
@@ -83,7 +83,7 @@ struct FileInfo: Equatable, Identifiable {
     }
   }
   
-  init(path: String, name: String? = nil, content: String? = nil) {
+  public init(path: String, name: String? = nil, content: String? = nil) {
     self.path = path
     self.name = name ?? URL(fileURLWithPath: path).lastPathComponent
     self.content = content
@@ -91,31 +91,31 @@ struct FileInfo: Equatable, Identifiable {
 }
 
 /// Represents a text selection in a file
-struct TextSelection: Equatable, Identifiable {
-  let id = UUID()
+public struct TextSelection: Equatable, Identifiable {
+  public let id = UUID()
   
   /// Path to the file containing the selection
-  let filePath: String
+  public let filePath: String
   
   /// The selected text
-  let selectedText: String
+  public let selectedText: String
   
   /// Line range of the selection (1-based)
-  let lineRange: ClosedRange<Int>
+  public let lineRange: ClosedRange<Int>
   
   /// Column range on the start line
-  let columnRange: Range<Int>?
+  public let columnRange: Range<Int>?
   
   /// Timestamp when the selection was captured
-  let timestamp: Date
+  public let timestamp: Date
   
   /// File name for display
-  var fileName: String {
+  public var fileName: String {
     URL(fileURLWithPath: filePath).lastPathComponent
   }
   
   /// Formatted line range for display
-  var lineRangeDescription: String {
+  public var lineRangeDescription: String {
     if lineRange.lowerBound == lineRange.upperBound {
       return "Line \(lineRange.lowerBound)"
     } else {
@@ -123,7 +123,7 @@ struct TextSelection: Equatable, Identifiable {
     }
   }
   
-  init(
+  public init(
     filePath: String,
     selectedText: String,
     lineRange: ClosedRange<Int>,

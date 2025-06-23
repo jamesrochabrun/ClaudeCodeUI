@@ -12,10 +12,12 @@ import SwiftAnthropic
 struct MessageFactory {
   
   /// Creates a user message with the specified content
-  /// - Parameter content: The text content of the user's message
+  /// - Parameters:
+  ///   - content: The text content of the user's message
+  ///   - codeSelections: Optional code selections to display with the message
   /// - Returns: A ChatMessage configured as a user message
-  static func userMessage(content: String) -> ChatMessage {
-    ChatMessage(role: .user, content: content)
+  static func userMessage(content: String, codeSelections: [TextSelection]? = nil) -> ChatMessage {
+    ChatMessage(role: .user, content: content, codeSelections: codeSelections)
   }
   
   /// Creates an assistant message with streaming support

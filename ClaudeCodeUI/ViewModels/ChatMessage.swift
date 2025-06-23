@@ -42,6 +42,9 @@ public struct ChatMessage: Identifiable, Equatable {
   /// Whether this message represents an error state
   public var isError: Bool
   
+  /// Code selections associated with this message (for user messages)
+  public var codeSelections: [TextSelection]?
+  
   public init(
     id: UUID = UUID(),
     role: MessageRole,
@@ -51,7 +54,8 @@ public struct ChatMessage: Identifiable, Equatable {
     messageType: MessageType = .text,
     toolName: String? = nil,
     toolInputData: ToolInputData? = nil,
-    isError: Bool = false
+    isError: Bool = false,
+    codeSelections: [TextSelection]? = nil
   ) {
     self.id = id
     self.role = role
@@ -62,6 +66,7 @@ public struct ChatMessage: Identifiable, Equatable {
     self.toolName = toolName
     self.toolInputData = toolInputData
     self.isError = isError
+    self.codeSelections = codeSelections
   }
   
   public static func == (lhs: ChatMessage, rhs: ChatMessage) -> Bool {
@@ -71,7 +76,8 @@ public struct ChatMessage: Identifiable, Equatable {
            lhs.messageType == rhs.messageType &&
            lhs.toolName == rhs.toolName &&
            lhs.toolInputData == rhs.toolInputData &&
-           lhs.isError == rhs.isError
+           lhs.isError == rhs.isError &&
+           lhs.codeSelections == rhs.codeSelections
   }
 }
 
