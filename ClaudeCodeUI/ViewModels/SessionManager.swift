@@ -53,6 +53,23 @@ final class SessionManager {
     currentSessionId = id
   }
   
+  /// Updates the current session ID to match what Claude is using.
+  /// 
+  /// This method is called when Claude's streaming response contains a different
+  /// session ID than what we expected. This situation typically occurs after:
+  /// - Stream interruptions or cancellations
+  /// - Network issues
+  /// - Claude's internal session management decisions
+  /// 
+  /// By updating our local session ID to match Claude's, we maintain conversation
+  /// continuity and prevent creating multiple separate message threads.
+  ///
+  /// - Parameter id: The new session ID from Claude
+  func updateCurrentSession(id: String) {
+    // Update the current session ID when Claude returns a different one
+    currentSessionId = id
+  }
+  
   func updateLastAccessed(id: String) {
     Task {
       do {
