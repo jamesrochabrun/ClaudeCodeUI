@@ -127,10 +127,20 @@ final class StreamProcessor {
   }
   
   private func handleInitSystem(_ initMessage: InitSystemMessage, firstMessageInSession: String?) {
-    if sessionManager.currentSessionId == nil {
-      let firstMessage = firstMessageInSession ?? "New conversation"
-      sessionManager.startNewSession(id: initMessage.sessionId, firstMessage: firstMessage)
-      // Notify settings storage of new session
+    // Check if Claude is giving us a different session ID than what we have
+    if sessionManager.currentSessionId != initMessage.sessionId {
+      if sessionManager.currentSessionId == nil {
+        // This is a new conversation
+        let firstMessage = firstMessageInSession ?? "New conversation"
+        sessionManager.startNewSession(id: initMessage.sessionId, firstMessage: firstMessage)
+      } else {
+        // Claude has created a new session even though we tried to resume
+        // We need to update our session ID to match what Claude is using
+        let log = "Claude returned different session ID. Expected: \(sessionManager.currentSessionId ?? "nil"), Got: \(initMessage.sessionId)"
+        logger.warning("\(log)")
+        sessionManager.updateCurrentSession(id: initMessage.sessionId)
+      }
+      // Notify settings storage of session change
       onSessionChange?(initMessage.sessionId)
     }
   }
@@ -140,14 +150,17 @@ final class StreamProcessor {
     // since different content types (thinking, text, tools) can share the same message ID
     // in the streaming response. Each content type should be processed independently.
     
+    // For multi-part responses, we want to treat all assistant messages in a single
+    // streaming session as one continuous message, regardless of the message IDs
+    // sent by the API. This prevents multiple answer bubbles for multi-question prompts.
+    
     let currentId = message.message.id
     if let msgId = currentId {
-      // Reset content buffer if this is a new message ID
-      if state.currentMessageId != msgId {
-        state.contentBuffer = ""
-        state.assistantMessageCreated = false
+      // Only set the message ID if we haven't seen any message ID yet
+      // This ensures we maintain a single message throughout the stream
+      if state.currentMessageId == nil {
         state.currentMessageId = msgId
-        state.currentLocalMessageId = UUID()
+        state.currentLocalMessageId = messageId  // Use the provided messageId instead of creating new ones
       }
     }
     
@@ -167,7 +180,8 @@ final class StreamProcessor {
         
         // Create/update assistant message only if content changed
         if !textContent.isEmpty {
-          // Use the local UUID for this specific Claude message
+          // Always use the same message ID throughout the streaming session
+          // This ensures all content goes into a single message bubble
           let messageIdToUse = state.currentLocalMessageId ?? messageId
           
           if !state.assistantMessageCreated {

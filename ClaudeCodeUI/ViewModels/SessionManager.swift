@@ -53,6 +53,11 @@ final class SessionManager {
     currentSessionId = id
   }
   
+  func updateCurrentSession(id: String) {
+    // Update the current session ID when Claude returns a different one
+    currentSessionId = id
+  }
+  
   func updateLastAccessed(id: String) {
     Task {
       do {
