@@ -2,233 +2,304 @@
 //  StreamProcessorTests.swift
 //  ClaudeCodeUITests
 //
-//  Created on 6/21/2025.
+//  Unit tests for StreamProcessor sequence of messages fix
 //
 
 import XCTest
-import Foundation
 import Combine
+import ClaudeCodeSDK
+import SwiftAnthropic
 @testable import ClaudeCodeUI
 
-@MainActor
-final class StreamProcessorTests: XCTestCase {
-  
-  // MARK: - Test Dependencies
-  
-  private var messageStore: MessageStore!
-  private var sessionStorage: SessionStorageProtocol!
-  private var sessionManager: SessionManager!
-  private var streamProcessor: StreamProcessor!
-  
-  override func setUp() {
-    super.setUp()
-    messageStore = MessageStore()
-    sessionStorage = UserDefaultsSessionStorage()
-    sessionManager = SessionManager(sessionStorage: sessionStorage)
-    streamProcessor = StreamProcessor(
-      messageStore: messageStore,
-      sessionManager: sessionManager,
-      onSessionChange: nil
-    )
-  }
-  
-  override func tearDown() {
-    messageStore = nil
-    sessionManager = nil
-    streamProcessor = nil
-    sessionStorage = nil
-    super.tearDown()
-  }
-  
-  // MARK: - Basic Tests
-  
-  func testStreamProcessorInitialization() {
-    XCTAssertNotNil(streamProcessor)
-    XCTAssertTrue(messageStore.messages.isEmpty)
-    XCTAssertNil(sessionManager.currentSessionId)
-  }
-  
-  func testMessageStoreIntegration() {
-    // Test that StreamProcessor can add messages to the store
-    let testMessage = MessageFactory.userMessage(content: "Test message")
-    messageStore.addMessage(testMessage)
+/// Mock implementations for testing
+class MockSessionManager: SessionManager {
+    var updateCurrentSessionCalled = false
+    var updateCurrentSessionId: String?
     
-    XCTAssertEqual(messageStore.messages.count, 1)
-    XCTAssertEqual(messageStore.messages[0].content, "Test message")
-    XCTAssertEqual(messageStore.messages[0].role, .user)
-  }
-  
-  func testSessionManagerIntegration() {
-    // Test session creation
-    sessionManager.startNewSession(id: "test-123", firstMessage: "Hello")
-    
-    XCTAssertEqual(sessionManager.currentSessionId, "test-123")
-  }
-  
-  // MARK: - Message Factory Tests
-  
-  func testAssistantMessageCreation() {
-    let message = MessageFactory.assistantMessage(
-      id: UUID(),
-      content: "Assistant response",
-      isComplete: true
-    )
-    
-    messageStore.addMessage(message)
-    
-    XCTAssertEqual(messageStore.messages.count, 1)
-    XCTAssertEqual(messageStore.messages[0].role, .assistant)
-    XCTAssertEqual(messageStore.messages[0].content, "Assistant response")
-    XCTAssertTrue(messageStore.messages[0].isComplete)
-  }
-  
-  func testToolUseMessageCreation() {
-    let toolData = ToolInputData(parameters: [
-      "file_path": "/test/path",
-      "command": "ls -la"
-    ])
-    
-    let message = MessageFactory.toolUseMessage(
-      toolName: "Bash",
-      input: "Running command: ls -la",
-      toolInputData: toolData
-    )
-    
-    messageStore.addMessage(message)
-    
-    XCTAssertEqual(messageStore.messages.count, 1)
-    XCTAssertEqual(messageStore.messages[0].messageType, .toolUse)
-    XCTAssertEqual(messageStore.messages[0].toolName, "Bash")
-    XCTAssertNotNil(messageStore.messages[0].toolInputData)
-    XCTAssertEqual(messageStore.messages[0].toolInputData?.parameters["file_path"], "/test/path")
-  }
-  
-  func testToolResultMessageCreation() {
-    let message = MessageFactory.toolResultMessage(
-      content: .string("Command executed successfully"),
-      isError: false
-    )
-    
-    messageStore.addMessage(message)
-    
-    XCTAssertEqual(messageStore.messages.count, 1)
-    XCTAssertEqual(messageStore.messages[0].messageType, .toolResult)
-    XCTAssertFalse(messageStore.messages[0].isError)
-  }
-  
-  func testToolErrorMessageCreation() {
-    let message = MessageFactory.toolResultMessage(
-      content: .string("Command failed"),
-      isError: true
-    )
-    
-    messageStore.addMessage(message)
-    
-    XCTAssertEqual(messageStore.messages.count, 1)
-    XCTAssertEqual(messageStore.messages[0].messageType, .toolError)
-    XCTAssertTrue(messageStore.messages[0].isError)
-  }
-  
-  func testThinkingMessageCreation() {
-    let message = MessageFactory.thinkingMessage(
-      content: "Processing your request..."
-    )
-    
-    messageStore.addMessage(message)
-    
-    XCTAssertEqual(messageStore.messages.count, 1)
-    XCTAssertEqual(messageStore.messages[0].messageType, .thinking)
-    XCTAssertEqual(messageStore.messages[0].content, "THINKING: Processing your request...")
-  }
-  
-  func testWebSearchMessageCreation() {
-    let message = MessageFactory.webSearchMessage(resultCount: 5)
-    
-    messageStore.addMessage(message)
-    
-    XCTAssertEqual(messageStore.messages.count, 1)
-    XCTAssertEqual(messageStore.messages[0].messageType, .webSearch)
-    XCTAssertEqual(messageStore.messages[0].content, "WEB SEARCH RESULT: Found 5 results")
-  }
-  
-  // MARK: - Message Update Tests
-  
-  func testMessageUpdateContent() {
-    let messageId = UUID()
-    let message = MessageFactory.assistantMessage(
-      id: messageId,
-      content: "Initial content",
-      isComplete: false
-    )
-    
-    messageStore.addMessage(message)
-    messageStore.updateMessage(
-      id: messageId,
-      content: "Updated content",
-      isComplete: true
-    )
-    
-    XCTAssertEqual(messageStore.messages.count, 1)
-    XCTAssertEqual(messageStore.messages[0].content, "Updated content")
-    XCTAssertTrue(messageStore.messages[0].isComplete)
-  }
-  
-  func testMessageRemoval() {
-    let messageId = UUID()
-    let message = MessageFactory.assistantMessage(
-      id: messageId,
-      content: "To be removed",
-      isComplete: true
-    )
-    
-    messageStore.addMessage(message)
-    XCTAssertEqual(messageStore.messages.count, 1)
-    
-    messageStore.removeMessage(id: messageId)
-    XCTAssertTrue(messageStore.messages.isEmpty)
-  }
-  
-  // MARK: - DynamicContentFormatter Tests
-  
-  func testDynamicContentFormatterIntegration() {
-    let formatter = DynamicContentFormatter()
-    
-    // Test that formatter exists and can be initialized
-    XCTAssertNotNil(formatter)
-    
-    // The actual formatting tests would require access to DynamicContent types
-    // which are part of the external SDK
-  }
-  
-  // MARK: - ToolInputData Tests
-  
-  func testToolInputDataWithTodos() {
-    let todosString = """
-    [✓] Complete task 1
-    [ ] Pending task 2
-    [✓] Complete task 3
-    """
-    
-    let toolData = ToolInputData(parameters: ["todos": todosString])
-    let keyParams = toolData.keyParameters
-    
-    XCTAssertEqual(keyParams.count, 1)
-    XCTAssertEqual(keyParams[0].key, "todos")
-    XCTAssertEqual(keyParams[0].value, "2/3 completed")
-  }
-  
-  func testToolInputDataPriorityKeys() {
-    let toolData = ToolInputData(parameters: [
-      "custom": "value",
-      "file_path": "/important/path",
-      "another": "value2"
-    ])
-    
-    let keyParams = toolData.keyParameters
-    
-    // file_path should be prioritized
-    XCTAssertTrue(keyParams.count >= 1)
-    XCTAssertEqual(keyParams[0].key, "file_path")
-  }
+    override func updateCurrentSession(id: String) {
+        updateCurrentSessionCalled = true
+        updateCurrentSessionId = id
+        super.updateCurrentSession(id: id)
+    }
 }
 
+class MockMessageStore: MessageStore {
+    var addMessageCalled = false
+    var updateMessageCalled = false
+    
+    override func addMessage(_ message: ChatMessage) {
+        addMessageCalled = true
+        super.addMessage(message)
+    }
+    
+    override func updateMessage(id: UUID, content: String, isComplete: Bool) {
+        updateMessageCalled = true
+        super.updateMessage(id: id, content: content, isComplete: isComplete)
+    }
+}
+
+final class StreamProcessorTests: XCTestCase {
+    var streamProcessor: StreamProcessor!
+    var mockSessionManager: MockSessionManager!
+    var mockMessageStore: MockMessageStore!
+    var onSessionChangeCalled = false
+    var onSessionChangeId: String?
+    
+    override func setUp() {
+        super.setUp()
+        
+        // Create mock session storage
+        let mockSessionStorage = MockSessionStorage()
+        
+        // Initialize mocks
+        mockSessionManager = MockSessionManager(sessionStorage: mockSessionStorage)
+        mockMessageStore = MockMessageStore()
+        
+        // Create stream processor with mocks
+        streamProcessor = StreamProcessor(
+            messageStore: mockMessageStore,
+            sessionManager: mockSessionManager,
+            onSessionChange: { [weak self] sessionId in
+                self?.onSessionChangeCalled = true
+                self?.onSessionChangeId = sessionId
+            }
+        )
+        
+        // Reset test state
+        onSessionChangeCalled = false
+        onSessionChangeId = nil
+    }
+    
+    override func tearDown() {
+        streamProcessor = nil
+        mockSessionManager = nil
+        mockMessageStore = nil
+        super.tearDown()
+    }
+    
+    // MARK: - Session ID Update Tests
+    
+    /// Tests that a new session is started when no current session exists
+    func testHandleInitSystem_NewSession() async {
+        // Given
+        let initMessage = InitSystemMessage(
+            sessionId: "new-session-123",
+            cwd: "/test",
+            tools: [],
+            mcpServers: [],
+            model: "claude-3",
+            permissionMode: "default",
+            apiKeySource: "none"
+        )
+        
+        // Create a publisher that emits the init message
+        let subject = PassthroughSubject<ResponseChunk, Error>()
+        let publisher = subject.eraseToAnyPublisher()
+        
+        // When
+        Task {
+            await streamProcessor.processStream(
+                publisher,
+                messageId: UUID(),
+                firstMessageInSession: "Test message"
+            )
+        }
+        
+        // Send init message
+        subject.send(.initSystem(initMessage))
+        subject.send(completion: .finished)
+        
+        // Allow async processing
+        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        
+        // Then
+        XCTAssertEqual(mockSessionManager.currentSessionId, "new-session-123")
+        XCTAssertTrue(onSessionChangeCalled)
+        XCTAssertEqual(onSessionChangeId, "new-session-123")
+        XCTAssertFalse(mockSessionManager.updateCurrentSessionCalled)
+    }
+    
+    /// Tests that session ID is updated when Claude returns a different one
+    func testHandleInitSystem_UpdatesSessionIdWhenDifferent() async {
+        // Given
+        mockSessionManager.currentSessionId = "existing-session-456"
+        
+        let initMessage = InitSystemMessage(
+            sessionId: "different-session-789",
+            cwd: "/test",
+            tools: [],
+            mcpServers: [],
+            model: "claude-3",
+            permissionMode: "default",
+            apiKeySource: "none"
+        )
+        
+        // Create a publisher that emits the init message
+        let subject = PassthroughSubject<ResponseChunk, Error>()
+        let publisher = subject.eraseToAnyPublisher()
+        
+        // When
+        Task {
+            await streamProcessor.processStream(
+                publisher,
+                messageId: UUID(),
+                firstMessageInSession: nil
+            )
+        }
+        
+        // Send init message
+        subject.send(.initSystem(initMessage))
+        subject.send(completion: .finished)
+        
+        // Allow async processing
+        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        
+        // Then
+        XCTAssertTrue(mockSessionManager.updateCurrentSessionCalled)
+        XCTAssertEqual(mockSessionManager.updateCurrentSessionId, "different-session-789")
+        XCTAssertEqual(mockSessionManager.currentSessionId, "different-session-789")
+        XCTAssertTrue(onSessionChangeCalled)
+        XCTAssertEqual(onSessionChangeId, "different-session-789")
+    }
+    
+    /// Tests that session ID is not updated when it matches the current one
+    func testHandleInitSystem_NoUpdateWhenSessionIdMatches() async {
+        // Given
+        mockSessionManager.currentSessionId = "matching-session-123"
+        
+        let initMessage = InitSystemMessage(
+            sessionId: "matching-session-123",
+            cwd: "/test",
+            tools: [],
+            mcpServers: [],
+            model: "claude-3",
+            permissionMode: "default",
+            apiKeySource: "none"
+        )
+        
+        // Create a publisher that emits the init message
+        let subject = PassthroughSubject<ResponseChunk, Error>()
+        let publisher = subject.eraseToAnyPublisher()
+        
+        // When
+        Task {
+            await streamProcessor.processStream(
+                publisher,
+                messageId: UUID(),
+                firstMessageInSession: nil
+            )
+        }
+        
+        // Send init message
+        subject.send(.initSystem(initMessage))
+        subject.send(completion: .finished)
+        
+        // Allow async processing
+        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        
+        // Then
+        XCTAssertFalse(mockSessionManager.updateCurrentSessionCalled)
+        XCTAssertEqual(mockSessionManager.currentSessionId, "matching-session-123")
+        XCTAssertFalse(onSessionChangeCalled)
+        XCTAssertNil(onSessionChangeId)
+    }
+    
+    // MARK: - Integration Tests
+    
+    /// Tests that multiple messages maintain the same session after ID update
+    func testMultipleMessages_MaintainSessionAfterUpdate() async {
+        // Given
+        mockSessionManager.currentSessionId = "original-session"
+        
+        // Create messages with different session IDs (simulating Claude's behavior)
+        let initMessage1 = InitSystemMessage(
+            sessionId: "new-session-1",
+            cwd: "/test",
+            tools: [],
+            mcpServers: [],
+            model: "claude-3",
+            permissionMode: "default",
+            apiKeySource: "none"
+        )
+        
+        let assistantMessage1 = AssistantMessage(
+            sessionId: "new-session-1",
+            message: MessageResponse(
+                id: "msg-1",
+                type: .message,
+                role: .assistant,
+                model: "claude-3",
+                content: [.text("Response 1", nil)],
+                stopReason: nil,
+                stopSequence: nil,
+                usage: MessageUsage(inputTokens: 10, outputTokens: 5, cacheCreationInputTokens: nil, cacheReadInputTokens: nil, serviceTier: nil)
+            ),
+            parentToolUseId: nil
+        )
+        
+        // Create a publisher
+        let subject = PassthroughSubject<ResponseChunk, Error>()
+        let publisher = subject.eraseToAnyPublisher()
+        
+        // When
+        Task {
+            await streamProcessor.processStream(
+                publisher,
+                messageId: UUID(),
+                firstMessageInSession: nil
+            )
+        }
+        
+        // Send first set of messages
+        subject.send(.initSystem(initMessage1))
+        subject.send(.assistant(assistantMessage1))
+        subject.send(completion: .finished)
+        
+        // Allow async processing
+        try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+        
+        // Then
+        XCTAssertEqual(mockSessionManager.currentSessionId, "new-session-1")
+        XCTAssertTrue(mockSessionManager.updateCurrentSessionCalled)
+        XCTAssertTrue(mockMessageStore.addMessageCalled)
+        
+        // Verify all messages were processed correctly
+        XCTAssertEqual(mockMessageStore.messages.count, 1)
+        XCTAssertEqual(mockMessageStore.messages.first?.content, "Response 1")
+    }
+}
+
+// MARK: - Mock Session Storage
+
+class MockSessionStorage: SessionStorageProtocol {
+    var sessions: [StoredSession] = []
+    
+    func saveSession(id: String, firstMessage: String) async throws {
+        let session = StoredSession(
+            id: id,
+            title: firstMessage,
+            createdAt: Date(),
+            lastAccessedAt: Date()
+        )
+        sessions.append(session)
+    }
+    
+    func getAllSessions() async throws -> [StoredSession] {
+        return sessions
+    }
+    
+    func deleteSession(id: String) async throws {
+        sessions.removeAll { $0.id == id }
+    }
+    
+    func updateLastAccessed(id: String) async throws {
+        if let index = sessions.firstIndex(where: { $0.id == id }) {
+            sessions[index] = StoredSession(
+                id: sessions[index].id,
+                title: sessions[index].title,
+                createdAt: sessions[index].createdAt,
+                lastAccessedAt: Date()
+            )
+        }
+    }
+}

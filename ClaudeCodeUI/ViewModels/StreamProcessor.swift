@@ -126,6 +126,20 @@ final class StreamProcessor {
     }
   }
   
+  /// Handles initialization system messages from Claude's streaming response.
+  /// 
+  /// This method is crucial for maintaining session continuity. It handles two scenarios:
+  /// 1. Starting a new conversation when no session exists
+  /// 2. Updating our local session ID when Claude returns a different one
+  /// 
+  /// The second scenario often occurs after stream interruptions or when Claude's internal
+  /// session management creates a new session. By updating our local session ID to match
+  /// Claude's, we ensure subsequent messages use the correct session and avoid creating
+  /// multiple separate conversations.
+  ///
+  /// - Parameters:
+  ///   - initMessage: The initialization message containing Claude's session ID
+  ///   - firstMessageInSession: Optional first message text for new sessions
   private func handleInitSystem(_ initMessage: InitSystemMessage, firstMessageInSession: String?) {
     // Check if Claude is giving us a different session ID than what we have
     if sessionManager.currentSessionId != initMessage.sessionId {
