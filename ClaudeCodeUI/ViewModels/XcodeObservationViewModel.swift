@@ -142,12 +142,14 @@ final class XcodeObservationViewModel {
     let activeFile: FileInfo? = workspace.editors
       .first(where: { $0.isFocussed })
       .flatMap { editor in
-        guard let url = editor.activeTabURL,
-              let activeTab = editor.activeTab else { return nil }
+        guard let url = editor.activeTabURL else { return nil }
+        
+        // Use activeTab if available, otherwise extract filename from URL
+        let fileName = editor.activeTab ?? url.lastPathComponent
         
         return FileInfo(
           path: url.path,
-          name: activeTab,
+          name: fileName,
           content: editor.content.lines.joined()
         )
       }

@@ -137,7 +137,7 @@ final class WorkspaceWindowObserver: WindowObserver {
       let activeTabTitle = tabsElements.first(where: { $0.doubleValue == 1 })?.title
 
       if let existingEditor = editors.first(where: { $0.element == editorElement }) {
-        existingEditor.update(tabs: tabTitles)
+        existingEditor.update(tabs: tabTitles, activeTab: activeTabTitle)
         return existingEditor
       } else {
         return SourceEditorObserver(

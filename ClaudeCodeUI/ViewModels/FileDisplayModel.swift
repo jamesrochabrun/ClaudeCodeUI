@@ -39,6 +39,11 @@ struct FileDisplayModel: Identifiable {
   /// Display text for the file (includes line range if present)
   var displayText: String {
     if let lineRange = lineRange {
+      // Check if this is a placeholder range (0...0) used for file-only references
+      if lineRange == 0...0 {
+        return fileName
+      }
+      
       let lowerBound = lineRange.lowerBound + 1 // Convert to 1-based
       let upperBound = lineRange.upperBound + 1 // Convert to 1-based
       

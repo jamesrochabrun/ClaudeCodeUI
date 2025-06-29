@@ -68,6 +68,9 @@ struct ChatInputView: View {
     .padding(.bottom, 12)
     .animation(.easeInOut(duration: 0.2), value: xcodeObservationViewModel.workspaceModel.activeFile?.name)
     .animation(.easeInOut(duration: 0.2), value: contextManager.context.codeSelections.count)
+    .onAppear {
+      xcodeObservationViewModel.refresh()
+    }
     .alert("No Working Directory Selected", isPresented: $showingProjectPathAlert) {
       workingDirectoryAlertButtons
     } message: {
@@ -268,7 +271,21 @@ struct ChatInputView: View {
     }
     
     // Get current code selections from context manager
-    let codeSelections = contextManager.context.codeSelections.isEmpty ? nil : contextManager.context.codeSelections
+    var allSelections = contextManager.context.codeSelections
+    
+    // Add active file as a selection if present
+    if let activeFile = xcodeObservationViewModel.workspaceModel.activeFile {
+      // Create a TextSelection for the active file to display as a pill
+      let activeFileSelection = TextSelection(
+        filePath: activeFile.path,
+        selectedText: "", // Empty since we're just showing the file, not a selection
+        lineRange: 0...0,  // No specific line range
+        columnRange: nil
+      )
+      allSelections.append(activeFileSelection)
+    }
+    
+    let codeSelections = allSelections.isEmpty ? nil : allSelections
     
     viewModel.sendMessage(trimmedText, context: formattedContext, hiddenContext: hiddenContext, codeSelections: codeSelections)
     DispatchQueue.main.async {

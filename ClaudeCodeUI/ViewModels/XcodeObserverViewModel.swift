@@ -9,25 +9,25 @@ import Foundation
 import SwiftUI
 import XcodeObserverServiceInterface
 
-// MARK: - SourceCodeViewModel
+// MARK: - XcodeObserverViewModel
 
 extension XcodeObserverViewModel {
   static func ==(lhs: XcodeObserverViewModel, rhs: XcodeObserverViewModel) -> Bool {
     lhs.workSpaceDocumentURL?.absoluteString == rhs.workSpaceDocumentURL?.absoluteString &&
-      lhs.workspaceURL?.absoluteString == rhs.workspaceURL?.absoluteString &&
-      lhs.selectionSources == rhs.selectionSources &&
-      lhs.activeEditorSource == rhs.activeEditorSource &&
-      lhs.editorsSources == rhs.editorsSources
+    lhs.workspaceURL?.absoluteString == rhs.workspaceURL?.absoluteString &&
+    lhs.selectionSources == rhs.selectionSources &&
+    lhs.activeEditorSource == rhs.activeEditorSource &&
+    lhs.editorsSources == rhs.editorsSources
   }
 }
 
-// MARK: - SourceCodeViewModel
+// MARK: - XcodeObserverViewModel
 
 /// Represents the source code information for a given workspace, including file selection and active file for example.
 struct XcodeObserverViewModel: Equatable {
-
+  
   // MARK: Lifecycle
-
+  
   /// Initializes the SourceCodeViewModel with the given XcodeObserver.State.
   init(state: XcodeObserver.State) {
     /// The state of one Xcode instance.
@@ -38,16 +38,16 @@ struct XcodeObserverViewModel: Equatable {
     let workspace = window?.workspace
     /// An editor represents a file opened inside Xcode.
     let editors = workspace?.editors ?? []
-
+    
     // Important: Currently each editor will contain only the last selection.
     // This means that if user selects different sections of a file, only the last one
     // will be available as `selectedContent`.
     var selections: [SourceCode] = []
-
+    
     var editorsSources: [SourceCode] = []
-
+    
     var activeEditorSource: SourceCode? = nil
-
+    
     // Iterate through the editors and extract information to construct respective `SourceCode` instances.
     for editor in editors {
       if let activeTab = editor.activeTab {
@@ -56,7 +56,7 @@ struct XcodeObserverViewModel: Equatable {
           let selectedContent = editor.content.selectedContent,
           // If user selects a lines of code that are empty, the selectedContent will return the `\n` value for each line.
           // We don't want to use empty lines as selection.
-          !selectedContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            !selectedContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
           let rangeDisplayText = editor.content.selection?.rangeDisplayText
         {
           selections.append(.init(
@@ -66,7 +66,7 @@ struct XcodeObserverViewModel: Equatable {
             activeTabFilePath: editor.activeTabURL?.absoluteString ?? "",
             tabs: editor.tabs))
         }
-
+        
         // Active editor Source
         if editor.isFocussed {
           activeEditorSource = .init(
@@ -76,7 +76,7 @@ struct XcodeObserverViewModel: Equatable {
             activeTabFilePath: editor.activeTabURL?.absoluteString ?? "",
             tabs: editor.tabs)
         }
-
+        
         // Editors sources
         editorsSources.append(.init(
           content: editor.content.lines.formatWithLineNumbers(),
@@ -86,18 +86,18 @@ struct XcodeObserverViewModel: Equatable {
           tabs: editor.tabs))
       }
     }
-
+    
     selectionSources = selections
     self.editorsSources = editorsSources
     self.activeEditorSource = activeEditorSource
-
+    
     self.editors = editors
     workSpaceDocumentURL = workspace?.documentURL
     workspaceURL = workspace?.workspaceURL
   }
-
+  
   // MARK: Internal
-
+  
   struct SourceCode: Equatable, Hashable, Identifiable {
     /// The content of the selected source code
     let content: String
@@ -109,32 +109,32 @@ struct XcodeObserverViewModel: Equatable {
     let activeTabFilePath: String
     /// The current editor's open tabs.
     let tabs: [String]
-
+    
     var id: String {
       activeTab
     }
-
+    
     /// Returns the concatenated content of the current sources if any, else nil.
     /// This is used as part of the users prompt.
     var contentPrompt: String {
       """
       ### File Name: \(activeTab)
-
+      
       \(content)
       """
     }
-
+    
     static func ==(lhs: SourceCode, rhs: SourceCode) -> Bool {
       lhs.activeTab == rhs.activeTab && lhs.tabs == rhs.tabs && lhs.rangeDisplayText == rhs.rangeDisplayText
     }
-
+    
     func hash(into hasher: inout Hasher) {
       hasher.combine(activeTab)
       hasher.combine(tabs)
       hasher.combine(rangeDisplayText)
     }
   }
-
+  
   /// The workspace Document URL.
   let workSpaceDocumentURL: URL?
   /// The workspace URL.
@@ -153,7 +153,7 @@ struct XcodeObserverViewModel: Equatable {
 
 /// Represents the scope of source code that XA has access to using the accessibility APIs.
 enum SourceCodeScope: String {
-
+  
   /// Represents access to all open active editors in the IDE.
   /// This includes only the active files, not all open tabs.
   case editors
@@ -164,16 +164,16 @@ enum SourceCodeScope: String {
   case selection
 }
 
-// MARK: SourceCodeViewModel + SourceCodeScopeAction
+// MARK: XcodeObserverViewModel + SourceCodeScopeAction
 
 extension XcodeObserverViewModel {
-
+  
   // MARK: Internal
-
+  
   /// Returns the available sources for a given Scope action.
   func sourcesForAction(
     _ scope: SourceCodeScope)
-    -> [SourceCode]
+  -> [SourceCode]
   {
     switch scope {
     case .editors:
@@ -184,12 +184,12 @@ extension XcodeObserverViewModel {
       removeDuplicatesKeepingOrder(from: selectionSources)
     }
   }
-
+  
   /// Returns the concatenated content of the current sources if any, else nil.
   /// This is used as part of the users prompt.
   func contentForAction(
     _ scope: SourceCodeScope)
-    -> String?
+  -> String?
   {
     let sources = sourcesForAction(scope)
     guard !sources.isEmpty else { return nil }
@@ -197,12 +197,12 @@ extension XcodeObserverViewModel {
       source.contentPrompt
     }.joined(separator: "\n")
   }
-
+  
   // MARK: Private
-
+  
   private func removeDuplicatesKeepingOrder(
     from array: [SourceCode])
-    -> [SourceCode]
+  -> [SourceCode]
   {
     var seen: Set<SourceCode> = []
     return array.filter { element in
@@ -217,12 +217,12 @@ extension XcodeObserverViewModel {
 }
 
 extension XcodeObserverViewModel.SourceCode {
-
+  
   var fileExtension: String {
     let components = activeTab.split(separator: ".")
     return components.last.map(String.init) ?? ""
   }
-
+  
   var fileExtensionImageName: String {
     switch fileExtension {
     case "swift": "swift"
@@ -230,14 +230,14 @@ extension XcodeObserverViewModel.SourceCode {
     default: "doc"
     }
   }
-
+  
   var imageForegroundColorForFileExtension: Color {
     switch fileExtension {
     case "swift": .orange
     default: .primary
     }
   }
-
+  
   var displayCode: String {
     """
     ```\(fileExtension)
@@ -248,10 +248,10 @@ extension XcodeObserverViewModel.SourceCode {
 }
 
 extension [String] {
-
+  
   func formatWithLineNumbers() -> String {
     let maxLineNumberWidth = String(count).count
-
+    
     return enumerated().map { index, line in
       let lineNumber = index + 1 // Normalize to start from 1
       // Remove the newline character at the end if it exists
