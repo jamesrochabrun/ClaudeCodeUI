@@ -27,6 +27,7 @@ final class StreamProcessor {
     var assistantMessageCreated = false
     var currentMessageId: String?
     var currentLocalMessageId: UUID?
+    var hasProcessedToolUse = false  // Track if we've seen a tool use
   }
   
   init(messageStore: MessageStore, sessionManager: SessionManager, onSessionChange: ((String) -> Void)? = nil) {
@@ -127,11 +128,11 @@ final class StreamProcessor {
   }
   
   /// Handles initialization system messages from Claude's streaming response.
-  /// 
+  ///
   /// This method is crucial for maintaining session continuity. It handles two scenarios:
   /// 1. Starting a new conversation when no session exists
   /// 2. Updating our local session ID when Claude returns a different one
-  /// 
+  ///
   /// The second scenario often occurs after stream interruptions or when Claude's internal
   /// session management creates a new session. By updating our local session ID to match
   /// Claude's, we ensure subsequent messages use the correct session and avoid creating
@@ -164,6 +165,15 @@ final class StreamProcessor {
     // since different content types (thinking, text, tools) can share the same message ID
     // in the streaming response. Each content type should be processed independently.
     
+    // Check if we need to create a new message after tool use
+    if state.hasProcessedToolUse && containsTextContent(message) {
+      // Reset state to create a new assistant message after tool interaction
+      state.assistantMessageCreated = false
+      state.contentBuffer = ""
+      state.currentLocalMessageId = nil
+      state.hasProcessedToolUse = false
+    }
+    
     // For multi-part responses, we want to treat all assistant messages in a single
     // streaming session as one continuous message, regardless of the message IDs
     // sent by the API. This prevents multiple answer bubbles for multi-question prompts.
@@ -175,6 +185,9 @@ final class StreamProcessor {
       if state.currentMessageId == nil {
         state.currentMessageId = msgId
         state.currentLocalMessageId = messageId  // Use the provided messageId instead of creating new ones
+      } else if state.currentLocalMessageId == nil {
+        // We need a new local message ID after tool use
+        state.currentLocalMessageId = UUID()
       }
     }
     
@@ -216,6 +229,9 @@ final class StreamProcessor {
         }
         
       case .toolUse(let toolUse):
+        // Mark that we've processed a tool use
+        state.hasProcessedToolUse = true
+        
         // Extract structured data from tool input
         var parameters: [String: String] = [:]
         
@@ -292,5 +308,15 @@ final class StreamProcessor {
       let firstMessage = firstMessageInSession ?? "New conversation"
       sessionManager.startNewSession(id: resultMessage.sessionId, firstMessage: firstMessage)
     }
+  }
+  
+  /// Checks if an assistant message contains text content
+  private func containsTextContent(_ message: AssistantMessage) -> Bool {
+    for content in message.message.content {
+      if case .text(_, _) = content {
+        return true
+      }
+    }
+    return false
   }
 }

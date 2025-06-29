@@ -11,13 +11,14 @@ import SwiftUI
 struct ClaudeCodeUIApp: App {
   @State private var globalPreferences = GlobalPreferencesStorage()
   @Environment(\.openWindow) private var openWindow
-  
+  @Environment(\.colorScheme) private var colorScheme
+
   var body: some Scene {
     WindowGroup(id: "main") {
       RootView()
         .toolbar(removing: .title)
         .containerBackground(
-          .thinMaterial, for: .window
+          Color.backgroundDark, for: .window
         )
         .toolbarBackgroundVisibility(
           .hidden, for: .windowToolbar

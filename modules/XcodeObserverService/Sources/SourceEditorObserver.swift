@@ -50,6 +50,11 @@ class SourceEditorObserver: ObservableObject {
   func update(tabs: [String]) {
     updateStateWith(tabs: tabs)
   }
+  
+  @XcodeInspectorActor
+  func update(tabs: [String], activeTab: String?) {
+    updateStateWith(tabs: tabs, activeTab: activeTab)
+  }
 
   @XcodeInspectorActor
   func update(documentURL: URL?) {

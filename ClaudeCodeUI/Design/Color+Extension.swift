@@ -41,4 +41,6 @@ extension Color {
   static let bookCloth = Color(hex: "#CC785C")
   static let kraft = Color(hex: "#D4A27F")
   static let manilla = Color(hex: "#EBDBBC")
+  static let backgroundDark = Color(hex: "#191716")
+  static let backgroundLight = Color(hex: "#FDFFFC")
 }

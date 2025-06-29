@@ -55,7 +55,7 @@ struct ChatMessageRow: View {
         standardMessageView
       }
     }
-    .padding(.horizontal, 4)
+    .padding(.horizontal, 12)
     .padding(.vertical, 4)
     .onHover { hovering in
       withAnimation(.easeInOut(duration: 0.2)) {
@@ -181,7 +181,6 @@ struct ChatMessageRow: View {
         // Avatar for user messages only
         if message.role == .user {
           avatarView
-            .frame(width: 20, height: 20)
             .transition(.scale.combined(with: .opacity))
         }
         
@@ -348,7 +347,7 @@ struct ChatMessageRow: View {
   
   private var avatarIcon: String {
     switch message.messageType {
-    case .text: return "chevron.right.circle"
+    case .text: return "chevron.right"
     case .toolUse: return "hammer.fill"
     case .toolResult: return "checkmark.circle.fill"
     case .toolError: return "exclamationmark.triangle.fill"
