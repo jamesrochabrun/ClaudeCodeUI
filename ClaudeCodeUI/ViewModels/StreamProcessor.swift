@@ -40,7 +40,9 @@ final class StreamProcessor {
     _ publisher: AnyPublisher<ResponseChunk, Error>,
     messageId: UUID,
     firstMessageInSession: String? = nil,
-    onError: ((Error) -> Void)? = nil
+    onError: ((Error) -> Void)? = nil,
+    onTokenUsageUpdate: ((Int, Int) -> Void)? = nil,
+    onCostUpdate: ((Double) -> Void)? = nil
   ) async {
     await withCheckedContinuation { continuation in
       let state = StreamState()
@@ -104,26 +106,26 @@ final class StreamProcessor {
           },
           receiveValue: { [weak self] chunk in
             guard let self = self else { return }
-            self.processChunk(chunk, messageId: messageId, state: state, firstMessageInSession: firstMessageInSession)
+            self.processChunk(chunk, messageId: messageId, state: state, firstMessageInSession: firstMessageInSession, onTokenUsageUpdate: onTokenUsageUpdate, onCostUpdate: onCostUpdate)
           }
         )
         .store(in: &cancellables)
     }
   }
   
-  private func processChunk(_ chunk: ResponseChunk, messageId: UUID, state: StreamState, firstMessageInSession: String?) {
+  private func processChunk(_ chunk: ResponseChunk, messageId: UUID, state: StreamState, firstMessageInSession: String?, onTokenUsageUpdate: ((Int, Int) -> Void)?, onCostUpdate: ((Double) -> Void)?) {
     switch chunk {
     case .initSystem(let initMessage):
       handleInitSystem(initMessage, firstMessageInSession: firstMessageInSession)
       
     case .assistant(let message):
-      handleAssistantMessage(message, messageId: messageId, state: state)
+      handleAssistantMessage(message, messageId: messageId, state: state, onTokenUsageUpdate: onTokenUsageUpdate)
       
     case .user(let userMessage):
       handleUserMessage(userMessage)
       
     case .result(let resultMessage):
-      handleResult(resultMessage, firstMessageInSession: firstMessageInSession)
+      handleResult(resultMessage, firstMessageInSession: firstMessageInSession, onTokenUsageUpdate: onTokenUsageUpdate, onCostUpdate: onCostUpdate)
     }
   }
   
@@ -160,10 +162,17 @@ final class StreamProcessor {
     }
   }
   
-  private func handleAssistantMessage(_ message: AssistantMessage, messageId: UUID, state: StreamState) {
+  private func handleAssistantMessage(_ message: AssistantMessage, messageId: UUID, state: StreamState, onTokenUsageUpdate: ((Int, Int) -> Void)?) {
     // Process all content in the message - no need to skip based on message ID
     // since different content types (thinking, text, tools) can share the same message ID
     // in the streaming response. Each content type should be processed independently.
+    
+    // Check if usage data is available in the message
+    let usage = message.message.usage
+    logger.debug("Assistant message usage - input: \(usage.inputTokens ?? 0), output: \(usage.outputTokens)")
+    if let inputTokens = usage.inputTokens {
+      onTokenUsageUpdate?(inputTokens, usage.outputTokens)
+    }
     
     // Check if we need to create a new message after tool use
     if state.hasProcessedToolUse && containsTextContent(message) {
@@ -303,11 +312,23 @@ final class StreamProcessor {
     }
   }
   
-  private func handleResult(_ resultMessage: ResultMessage, firstMessageInSession: String?) {
+  private func handleResult(_ resultMessage: ResultMessage, firstMessageInSession: String?, onTokenUsageUpdate: ((Int, Int) -> Void)?, onCostUpdate: ((Double) -> Void)?) {
     if sessionManager.currentSessionId == nil {
       let firstMessage = firstMessageInSession ?? "New conversation"
       sessionManager.startNewSession(id: resultMessage.sessionId, firstMessage: firstMessage)
     }
+    
+    // Update token usage if available
+    if let usage = resultMessage.usage {
+      logger.info("Result message usage - input: \(usage.inputTokens), output: \(usage.outputTokens)")
+      onTokenUsageUpdate?(usage.inputTokens, usage.outputTokens)
+    } else {
+      logger.warning("No usage data in result message")
+    }
+    
+    // Update cost
+    logger.info("Result message cost: $\(String(format: "%.6f", resultMessage.totalCostUsd))")
+    onCostUpdate?(resultMessage.totalCostUsd)
   }
   
   /// Checks if an assistant message contains text content
