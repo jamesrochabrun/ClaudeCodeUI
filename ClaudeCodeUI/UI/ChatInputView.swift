@@ -98,10 +98,6 @@ struct ChatInputView: View {
     ) { result in
       handleFileImport(result)
     }
-    .onDrop(of: [.fileURL, .image, .data], isTargeted: $isDragging) { providers in
-      handleDroppedProviders(providers)
-      return true
-    }
   }
   
   // MARK: - Computed Properties
@@ -198,7 +194,7 @@ struct ChatInputView: View {
   }
   
   private var allowedFileTypes: [UTType] {
-    [.image, .pdf, .text, .plainText, .sourceCode, .data]
+    [.folder, .image, .pdf, .text, .plainText, .sourceCode, .data, .item]
   }
   
   private var contextBar: some View {
@@ -269,6 +265,35 @@ struct ChatInputView: View {
             return .handled
           }
           return .ignored
+        }
+        .overlay {
+          Color.clear
+            .allowsHitTesting(true)
+            .onDrop(of: [.fileURL], isTargeted: $isDragging) { providers in
+              handleDroppedProviders(providers)
+              return true
+            }
+            .dropDestination(for: Data.self) { items, _ in
+              // Handle raw data drops (e.g., images from web browsers)
+              Task { @MainActor in
+                for data in items {
+                  // Save data to temporary file
+                  let tempDirectory = FileManager.default.temporaryDirectory
+                  let fileName = "dropped_file_\(UUID().uuidString)"
+                  let tempURL = tempDirectory.appendingPathComponent(fileName)
+                  
+                  do {
+                    try data.write(to: tempURL)
+                    let attachment = FileAttachment(url: tempURL, isTemporary: true)
+                    attachments.append(attachment)
+                    await processor.process(attachment)
+                  } catch {
+                    print("Failed to save dropped data: \(error)")
+                  }
+                }
+              }
+              return true
+            }
         }
       
       if text.isEmpty {
@@ -350,40 +375,48 @@ struct ChatInputView: View {
   private func handleFileImport(_ result: Result<[URL], Error>) {
     switch result {
     case .success(let urls):
-      handleDroppedFiles(urls)
+      Task {
+        for url in urls {
+          var isDirectory: ObjCBool = false
+          if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) {
+            if isDirectory.boolValue {
+              await handleDroppedFolder(url)
+            } else {
+              let attachment = FileAttachment(url: url)
+              attachments.append(attachment)
+              await processor.process(attachment)
+            }
+          }
+        }
+      }
     case .failure(let error):
       print("Failed to import files: \(error)")
     }
   }
   
-  private func handleDroppedFiles(_ urls: [URL]) {
-    Task {
-      for url in urls {
-        // Limit to 10 attachments
-        guard attachments.count < 10 else { break }
-        
-        let attachment = FileAttachment(url: url)
-        attachments.append(attachment)
-        await processor.process(attachment)
-      }
-    }
-  }
   
   private func handleDroppedProviders(_ providers: [NSItemProvider]) {
     Task {
       for provider in providers {
-        // Limit to 10 attachments
-        guard attachments.count < 10 else { break }
-        
-        // Try to load as file URL first
+        // Try to load as file URL (this should handle both files and folders)
         if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
           _ = provider.loadObject(ofClass: URL.self) { url, error in
             guard let url = url, error == nil else { return }
             
             Task { @MainActor in
-              let attachment = FileAttachment(url: url)
-              attachments.append(attachment)
-              await processor.process(attachment)
+              // Check if it's a directory
+              var isDirectory: ObjCBool = false
+              if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) {
+                if isDirectory.boolValue {
+                  // Handle folder
+                  await handleDroppedFolder(url)
+                } else {
+                  // Handle single file
+                  let attachment = FileAttachment(url: url)
+                  attachments.append(attachment)
+                  await processor.process(attachment)
+                }
+              }
             }
           }
         }
@@ -413,5 +446,56 @@ struct ChatInputView: View {
     }
   }
   
+  @MainActor
+  private func handleDroppedFolder(_ folderURL: URL) async {
+    // Collect files synchronously first
+    let filesToAdd = collectFilesFromFolder(folderURL)
+    
+    // Add files to attachments asynchronously
+    for fileURL in filesToAdd {
+      let attachment = FileAttachment(url: fileURL)
+      attachments.append(attachment)
+      await processor.process(attachment)
+    }
+  }
+  
+  private func collectFilesFromFolder(_ folderURL: URL) -> [URL] {
+    let fileManager = FileManager.default
+    
+    // Get all files in the folder recursively
+    guard let enumerator = fileManager.enumerator(
+      at: folderURL,
+      includingPropertiesForKeys: [.isRegularFileKey, .isHiddenKey],
+      options: [.skipsHiddenFiles, .skipsPackageDescendants]
+    ) else { return [] }
+    
+    var filesToAdd: [URL] = []
+    
+    for case let fileURL as URL in enumerator {
+      do {
+        let resourceValues = try fileURL.resourceValues(forKeys: [.isRegularFileKey, .isHiddenKey])
+        
+        // Only add regular files (not directories or special files)
+        if let isRegularFile = resourceValues.isRegularFile, isRegularFile,
+           let isHidden = resourceValues.isHidden, !isHidden {
+          
+          // Skip system files
+          let fileName = fileURL.lastPathComponent
+          if !isSystemFile(fileName) {
+            filesToAdd.append(fileURL)
+          }
+        }
+      } catch {
+        print("Error checking file properties: \(error)")
+      }
+    }
+    
+    return filesToAdd
+  }
+  
+  private func isSystemFile(_ fileName: String) -> Bool {
+    let systemFiles = [".DS_Store", ".localized", "Thumbs.db", "desktop.ini", ".git", ".svn"]
+    return systemFiles.contains(fileName) || fileName.hasPrefix("~$")
+  }
 }
 
