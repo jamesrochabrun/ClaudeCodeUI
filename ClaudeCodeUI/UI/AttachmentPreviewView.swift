@@ -15,62 +15,117 @@ struct AttachmentPreviewView: View {
   @State private var isHovering = false
   @State private var showFullImage = false
   
+  var iconColor: Color {
+    switch attachment.type {
+    case .pdf: return .red
+    case .text: return .gray
+    case .markdown: return .gray
+    case .code: return .blue
+    case .json: return .orange
+    case .xml: return .purple
+    case .yaml: return .indigo
+    case .archive: return .green
+    case .video: return .pink
+    case .audio: return .cyan
+    case .spreadsheet: return .green
+    case .presentation: return .orange
+    case .document: return .blue
+    default: return .gray
+    }
+  }
+  
   var body: some View {
-    VStack(spacing: 4) {
-      ZStack(alignment: .topTrailing) {
-        // Main content
-        Group {
-          switch attachment.state {
-          case .initial, .loading:
-            LoadingView()
-          case .ready(let content):
-            ContentView(content: content, attachment: attachment)
-              .onTapGesture {
-                if case .image = content {
-                  showFullImage = true
-                }
+    Group {
+      if attachment.type == .image {
+        // Image preview style (original)
+        VStack(spacing: 4) {
+          ZStack(alignment: .topTrailing) {
+            // Main content
+            Group {
+              switch attachment.state {
+              case .initial, .loading:
+                LoadingView(isImage: true)
+              case .ready(let content):
+                ContentView(content: content, attachment: attachment)
+                  .onTapGesture {
+                    if case .image = content {
+                      showFullImage = true
+                    }
+                  }
+              case .error(let error):
+                ErrorView(error: error, isImage: true)
               }
-          case .error(let error):
-            ErrorView(error: error)
+            }
+            .frame(width: 80, height: 80)
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(8)
+            .overlay(
+              RoundedRectangle(cornerRadius: 8)
+                .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+            )
+            
+            // Remove button
+            if isHovering {
+              Button(action: onRemove) {
+                Image(systemName: "xmark.circle.fill")
+                  .font(.system(size: 16))
+                  .foregroundColor(.white)
+                  .background(Circle().fill(Color.black.opacity(0.7)))
+              }
+              .buttonStyle(PlainButtonStyle())
+              .offset(x: 8, y: -8)
+              .transition(.opacity)
+            }
           }
+          .animation(.easeInOut(duration: 0.2), value: isHovering)
+          .onHover { hovering in
+            isHovering = hovering
+          }
+          
+          // File name
+          Text(attachment.fileName)
+            .font(.caption)
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .frame(maxWidth: 80)
+          
+          // File size
+          Text(attachment.formattedFileSize)
+            .font(.caption2)
+            .foregroundColor(.secondary)
         }
-        .frame(width: 80, height: 80)
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(8)
-        .overlay(
-          RoundedRectangle(cornerRadius: 8)
-            .stroke(Color(NSColor.separatorColor), lineWidth: 1)
-        )
-        
-        // Remove button
-        if isHovering {
+      } else {
+        // Non-image file chip style (like ActiveFileView)
+        HStack(spacing: 6) {
+          Image(systemName: attachment.type.systemImageName)
+            .foregroundColor(iconColor)
+            .font(.system(size: 12))
+          
+          Text(attachment.fileName)
+            .font(.system(size: 12, weight: .medium))
+            .lineLimit(1)
+            .truncationMode(.middle)
+          
+          Text(attachment.formattedFileSize)
+            .font(.system(size: 10))
+            .foregroundColor(.secondary)
+          
           Button(action: onRemove) {
             Image(systemName: "xmark.circle.fill")
-              .font(.system(size: 16))
-              .foregroundColor(.white)
-              .background(Circle().fill(Color.black.opacity(0.7)))
+              .foregroundColor(.secondary.opacity(0.6))
+              .font(.system(size: 12))
           }
-          .buttonStyle(PlainButtonStyle())
-          .offset(x: 8, y: -8)
-          .transition(.opacity)
+          .buttonStyle(.plain)
+          .help("Remove attachment")
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 4)
+        .background(Color.secondary.opacity(0.1))
+        .cornerRadius(12)
+        .onHover { hovering in
+          isHovering = hovering
         }
       }
-      .animation(.easeInOut(duration: 0.2), value: isHovering)
-      .onHover { hovering in
-        isHovering = hovering
-      }
-      
-      // File name
-      Text(attachment.fileName)
-        .font(.caption)
-        .lineLimit(1)
-        .truncationMode(.middle)
-        .frame(maxWidth: 80)
-      
-      // File size
-      Text(attachment.formattedFileSize)
-        .font(.caption2)
-        .foregroundColor(.secondary)
     }
     .sheet(isPresented: $showFullImage) {
       if case .ready(.image(_, let base64URL, _)) = attachment.state {
@@ -83,11 +138,12 @@ struct AttachmentPreviewView: View {
 // MARK: - Content Views
 
 private struct LoadingView: View {
+  let isImage: Bool
   @State private var isAnimating = false
   
   var body: some View {
     ProgressView()
-      .scaleEffect(0.7)
+      .scaleEffect(isImage ? 0.7 : 0.5)
       .frame(maxWidth: .infinity, maxHeight: .infinity)
       .onAppear {
         isAnimating = true
@@ -116,22 +172,22 @@ private struct ContentView: View {
       }
       
     case .text(_, _):
-      VStack {
+      VStack(spacing: 2) {
         Image(systemName: attachment.type.systemImageName)
-          .font(.title2)
+          .font(.body)
           .foregroundColor(.secondary)
         Text(attachment.type.displayName)
-          .font(.caption2)
+          .font(.system(size: 8))
           .foregroundColor(.secondary)
       }
       
     case .data(_, _):
-      VStack {
-        Image(systemName: "doc")
-          .font(.title2)
+      VStack(spacing: 2) {
+        Image(systemName: attachment.type.systemImageName)
+          .font(.body)
           .foregroundColor(.secondary)
-        Text("File")
-          .font(.caption2)
+        Text(attachment.type.displayName)
+          .font(.system(size: 8))
           .foregroundColor(.secondary)
       }
     }
@@ -140,14 +196,15 @@ private struct ContentView: View {
 
 private struct ErrorView: View {
   let error: AttachmentError
+  let isImage: Bool
   
   var body: some View {
-    VStack(spacing: 4) {
+    VStack(spacing: isImage ? 4 : 2) {
       Image(systemName: "exclamationmark.triangle")
-        .font(.title2)
+        .font(isImage ? .title2 : .body)
         .foregroundColor(.red)
       Text("Error")
-        .font(.caption2)
+        .font(isImage ? .caption2 : .system(size: 8))
         .foregroundColor(.red)
     }
   }
@@ -206,18 +263,44 @@ struct AttachmentListView: View {
   let processor = AttachmentProcessor()
   
   var body: some View {
-    ScrollView(.horizontal, showsIndicators: false) {
-      HStack(spacing: 12) {
-        ForEach(attachments) { attachment in
-          AttachmentPreviewView(attachment: attachment) {
-            withAnimation(.easeOut(duration: 0.2)) {
-              attachments.removeAll { $0.id == attachment.id }
+    VStack(alignment: .leading, spacing: 0) {
+      // Header with count and clear all button
+      HStack {
+        Text("\(attachments.count) file\(attachments.count == 1 ? "" : "s")")
+          .font(.caption)
+          .foregroundColor(.secondary)
+        
+        Spacer()
+        
+        Button {
+          withAnimation(.easeOut(duration: 0.2)) {
+            attachments.removeAll()
+          }
+        } label: {
+          Label("Clear All", systemImage: "xmark.circle.fill")
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
+        .buttonStyle(.plain)
+        .help("Remove all attachments")
+      }
+      .padding(.horizontal, 12)
+      .padding(.top, 8)
+      .padding(.bottom, 4)
+      
+      ScrollView(.horizontal, showsIndicators: false) {
+        HStack(spacing: 6) {
+          ForEach(attachments) { attachment in
+            AttachmentPreviewView(attachment: attachment) {
+              withAnimation(.easeOut(duration: 0.2)) {
+                attachments.removeAll { $0.id == attachment.id }
+              }
             }
           }
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
       }
-      .padding(.horizontal, 12)
-      .padding(.vertical, 8)
     }
     .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
     .cornerRadius(8)

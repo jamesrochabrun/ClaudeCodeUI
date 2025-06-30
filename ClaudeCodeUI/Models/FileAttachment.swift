@@ -16,6 +16,15 @@ public enum AttachmentType: String, CaseIterable, Codable {
   case text = "text"
   case markdown = "markdown"
   case code = "code"
+  case json = "json"
+  case xml = "xml"
+  case yaml = "yaml"
+  case archive = "archive"
+  case video = "video"
+  case audio = "audio"
+  case spreadsheet = "spreadsheet"
+  case presentation = "presentation"
+  case document = "document"
   case other = "other"
   
   var displayName: String {
@@ -25,6 +34,15 @@ public enum AttachmentType: String, CaseIterable, Codable {
     case .text: return "Text"
     case .markdown: return "Markdown"
     case .code: return "Code"
+    case .json: return "JSON"
+    case .xml: return "XML"
+    case .yaml: return "YAML"
+    case .archive: return "Archive"
+    case .video: return "Video"
+    case .audio: return "Audio"
+    case .spreadsheet: return "Spreadsheet"
+    case .presentation: return "Presentation"
+    case .document: return "Document"
     case .other: return "Other"
     }
   }
@@ -36,12 +54,50 @@ public enum AttachmentType: String, CaseIterable, Codable {
     case .text: return "doc.text"
     case .markdown: return "doc.text.fill"
     case .code: return "chevron.left.forwardslash.chevron.right"
+    case .json: return "curlybraces"
+    case .xml: return "chevron.left.slash.chevron.right"
+    case .yaml: return "doc.text.below.ecg"
+    case .archive: return "archivebox"
+    case .video: return "video"
+    case .audio: return "waveform"
+    case .spreadsheet: return "tablecells"
+    case .presentation: return "play.rectangle"
+    case .document: return "doc.fill"
     case .other: return "doc"
     }
   }
   
   static func from(url: URL) -> AttachmentType {
-    guard let utType = UTType(filenameExtension: url.pathExtension) else {
+    let ext = url.pathExtension.lowercased()
+    
+    // Check specific extensions first
+    switch ext {
+    case "json":
+      return .json
+    case "xml", "plist":
+      return .xml
+    case "yaml", "yml":
+      return .yaml
+    case "md", "markdown":
+      return .markdown
+    case "zip", "tar", "gz", "bz2", "7z", "rar", "dmg":
+      return .archive
+    case "mp4", "mov", "avi", "mkv", "webm", "m4v":
+      return .video
+    case "mp3", "wav", "m4a", "aac", "flac", "ogg":
+      return .audio
+    case "xls", "xlsx", "csv", "numbers":
+      return .spreadsheet
+    case "ppt", "pptx", "key":
+      return .presentation
+    case "doc", "docx", "pages", "rtf":
+      return .document
+    default:
+      break
+    }
+    
+    // Then check UTType conformance
+    guard let utType = UTType(filenameExtension: ext) else {
       return .other
     }
     
@@ -49,19 +105,23 @@ public enum AttachmentType: String, CaseIterable, Codable {
       return .image
     } else if utType.conforms(to: .pdf) {
       return .pdf
-    } else if url.pathExtension == "md" {
-      return .markdown
-    } else if utType.conforms(to: .sourceCode) || isCodeExtension(url.pathExtension) {
+    } else if utType.conforms(to: .sourceCode) || isCodeExtension(ext) {
       return .code
-    } else if utType.conforms(to: .text) {
+    } else if utType.conforms(to: .text) || utType.conforms(to: .plainText) {
       return .text
+    } else if utType.conforms(to: .archive) {
+      return .archive
+    } else if utType.conforms(to: .movie) || utType.conforms(to: .video) {
+      return .video
+    } else if utType.conforms(to: .audio) {
+      return .audio
     } else {
       return .other
     }
   }
   
   private static func isCodeExtension(_ ext: String) -> Bool {
-    let codeExtensions = ["swift", "js", "ts", "jsx", "tsx", "py", "java", "cpp", "c", "h", "m", "mm", "go", "rs", "rb", "php", "cs", "sh", "yaml", "yml", "json", "xml", "html", "css", "scss", "sql"]
+    let codeExtensions = ["swift", "js", "ts", "jsx", "tsx", "py", "java", "cpp", "c", "h", "hpp", "m", "mm", "go", "rs", "rb", "php", "cs", "sh", "bash", "zsh", "fish", "html", "htm", "css", "scss", "sass", "less", "sql", "r", "scala", "kt", "dart", "lua", "perl", "pl", "vb", "pas", "asm", "s", "makefile", "cmake", "gradle", "rake", "dockerfile", "gitignore", "env"]
     return codeExtensions.contains(ext.lowercased())
   }
 }
@@ -142,12 +202,22 @@ public class FileAttachment: Identifiable {
       if size > Self.maxImageSize {
         return .fileTooLarge(maxSize: Self.maxImageSize)
       }
-    case .pdf, .text, .markdown, .code:
+    case .pdf, .text, .markdown, .code, .json, .xml, .yaml:
+      if size > Self.maxDocumentSize {
+        return .fileTooLarge(maxSize: Self.maxDocumentSize)
+      }
+    case .video, .audio, .archive:
+      // Skip size validation for media files - just inform about the file
+      break
+    case .spreadsheet, .presentation, .document:
       if size > Self.maxDocumentSize {
         return .fileTooLarge(maxSize: Self.maxDocumentSize)
       }
     default:
-      break
+      // For other files, apply document size limit
+      if size > Self.maxDocumentSize {
+        return .fileTooLarge(maxSize: Self.maxDocumentSize)
+      }
     }
     
     return nil

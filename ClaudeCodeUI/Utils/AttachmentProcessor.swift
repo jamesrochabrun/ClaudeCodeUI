@@ -42,13 +42,18 @@ public actor AttachmentProcessor {
         let content = try await processPDF(at: attachment.url)
         attachment.state = .ready(content: content)
         
-      case .text, .markdown, .code:
+      case .text, .markdown, .code, .json, .xml, .yaml:
         let content = try await processTextFile(at: attachment.url)
         attachment.state = .ready(content: content)
         
+      case .archive, .video, .audio, .spreadsheet, .presentation, .document:
+        // For binary files, just provide file info without encoding
+        let content = try await processGenericFile(at: attachment.url, skipEncoding: true)
+        attachment.state = .ready(content: content)
+        
       case .other:
-        // For other file types, just encode as base64 data
-        let content = try await processGenericFile(at: attachment.url)
+        // For other file types, provide basic file info
+        let content = try await processGenericFile(at: attachment.url, skipEncoding: true)
         attachment.state = .ready(content: content)
       }
     } catch {
@@ -171,9 +176,15 @@ public actor AttachmentProcessor {
   
   // MARK: - Generic File Processing
   
-  private func processGenericFile(at url: URL) async throws -> AttachmentContent {
-    let data = try Data(contentsOf: url)
-    return .data(path: url.path, base64: data.base64EncodedString())
+  private func processGenericFile(at url: URL, skipEncoding: Bool = false) async throws -> AttachmentContent {
+    if skipEncoding {
+      // For binary files, just return the file path without encoding
+      // This avoids encoding large binary files that won't be useful as base64
+      return .data(path: url.path, base64: "")
+    } else {
+      let data = try Data(contentsOf: url)
+      return .data(path: url.path, base64: data.base64EncodedString())
+    }
   }
   
   // MARK: - Batch Processing
