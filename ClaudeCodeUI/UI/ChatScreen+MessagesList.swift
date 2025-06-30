@@ -40,7 +40,7 @@ extension ChatScreen {
         .id("welcome-row")
         
         ForEach(viewModel.messages) { message in
-          ChatMessageRow(
+          ChatMessageView(
             message: message,
             settingsStorage: viewModel.settingsStorage,
             fontSize: 13.0  // Default font size for now
