@@ -63,14 +63,7 @@ struct ChatMessageView: View {
           }
       }.frame(height: 0)
       
-      HStack(alignment: .firstTextBaseline) {
-        // Avatar for user messages
-        if message.role == .user {
-          avatarView
-            .transition(.scale.combined(with: .opacity))
-        }
-        
-        VStack(alignment: .leading, spacing: 0) {
+      VStack(alignment: .leading, spacing: 0) {
           if isCollapsible {
             collapsibleHeader
             
@@ -122,7 +115,7 @@ struct ChatMessageView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         
         Spacer(minLength: 0)
-      }
+      
       .background(Color.clear)
       .clipShape(RoundedRectangle(cornerRadius: Constants.cornerRadius))
       
@@ -181,6 +174,21 @@ struct ChatMessageView: View {
       return true
     case .text:
       return false
+    }
+  }
+  
+  // Check if this is a user or assistant text message
+  private var isUserOrAssistantTextMessage: Bool {
+    return (message.role == .user || message.role == .assistant) && message.messageType == .text
+  }
+  
+  // Message prefix based on role
+  private var messagePrefix: String {
+    switch message.role {
+    case .user:
+      return "> "
+    default:
+      return ""
     }
   }
   
@@ -256,7 +264,8 @@ struct ChatMessageView: View {
       }
     } else {
       // Use plain text for other messages
-      Text(message.content)
+      let displayContent = message.role == .user && !message.content.isEmpty ? "\(messagePrefix)\(message.content)" : message.content
+      Text(displayContent)
         .textSelection(.enabled)
         .font(messageFont)
         .padding(.horizontal, horizontalPadding)
@@ -268,7 +277,6 @@ struct ChatMessageView: View {
   private func textElementView(_ element: TextFormatter.Element) -> some View {
     switch element {
     case .text(let text):
-      // Only format text for assistant messages
       let attributedText = message.role == .user ? plainText(for: text) : markdown(for: text)
       LongText(attributedText, maxWidth: size.width - 2 * horizontalPadding)
         .textSelection(.enabled)
@@ -299,13 +307,6 @@ struct ChatMessageView: View {
     // NSFont can be used directly with Font initializer
     attrs.font = Font(style.baseFont as CTFont)
     return attrs
-  }
-  
-  @ViewBuilder
-  private var avatarView: some View {
-    Image(systemName: avatarIcon)
-      .font(.system(size: 16, weight: .regular))
-      .foregroundStyle(.primary)
   }
   
   @ViewBuilder
@@ -387,17 +388,6 @@ struct ChatMessageView: View {
       return .red
     default:
       return .secondary
-    }
-  }
-  
-  private var avatarIcon: String {
-    switch message.messageType {
-    case .text: return "chevron.right"
-    case .toolUse: return "hammer.fill"
-    case .toolResult: return "checkmark.circle.fill"
-    case .toolError: return "exclamationmark.triangle.fill"
-    case .thinking: return "brain"
-    case .webSearch: return "globe"
     }
   }
   
