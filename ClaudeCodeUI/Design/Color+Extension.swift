@@ -43,4 +43,7 @@ extension Color {
   static let manilla = Color(hex: "#EBDBBC")
   static let backgroundDark = Color(hex: "#191716")
   static let backgroundLight = Color(hex: "#FDFFFC")
+  static let expandedContentBackgroundDark = Color(hex: "#222222")
+  static let expandedContentBackgroundLight = Color(hex: "#F8F4E3")
+
 }

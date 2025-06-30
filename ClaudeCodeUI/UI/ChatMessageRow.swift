@@ -5,6 +5,8 @@
 //  Created by James Rochabrun on 5/25/25.
 //
 
+// LEGACY: This view is now legacy. Use ChatMessageView instead.
+
 import Foundation
 import SwiftUI
 
