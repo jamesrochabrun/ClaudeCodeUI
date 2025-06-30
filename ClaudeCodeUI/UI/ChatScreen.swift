@@ -60,17 +60,20 @@ struct ChatScreen: View {
         .padding(.horizontal)
         .padding(.bottom, 8)
       }
-      // Thinking indicator overlay
-      if viewModel.isLoading {
-        ThinkingIndicator(message: "")
-          .background(.clear)
-          .padding(.horizontal)
-          .padding(.bottom, 8)
-          .transition(.asymmetric(
-            insertion: .move(edge: .bottom).combined(with: .opacity),
-            removal: .move(edge: .bottom).combined(with: .opacity)
-          ))
-          .zIndex(1)
+      // Loading indicator
+      if viewModel.isLoading, let startTime = viewModel.streamingStartTime {
+        LoadingIndicator(
+          startTime: startTime,
+          inputTokens: viewModel.currentInputTokens,
+          outputTokens: viewModel.currentOutputTokens,
+          costUSD: viewModel.currentCostUSD
+        )
+        .padding(.horizontal)
+        .padding(.bottom, 8)
+        .transition(.asymmetric(
+          insertion: .move(edge: .bottom).combined(with: .opacity),
+          removal: .move(edge: .bottom).combined(with: .opacity)
+        ))
       }
       
       ChatInputView(

@@ -224,6 +224,13 @@ struct ChatInputView: View {
           sendMessage()
           return .handled
         }
+        .onKeyPress(.escape) {
+          if viewModel.isLoading {
+            viewModel.cancelRequest()
+            return .handled
+          }
+          return .ignored
+        }
       
       if text.isEmpty {
         placeholderView

@@ -36,7 +36,9 @@ struct SessionsListView: View {
       if viewModel.isLoadingSessions {
         VStack {
           Spacer()
-          LoadingIndicator()
+          ProgressView()
+            .progressViewStyle(CircularProgressViewStyle())
+            .scaleEffect(0.8)
           Text("Loading sessions...")
             .font(.callout)
             .foregroundColor(.secondary)

@@ -65,6 +65,12 @@ public final class ChatViewModel {
   /// Current project path (observable)
   public private(set) var projectPath: String = ""
   
+  /// Streaming metrics
+  public private(set) var streamingStartTime: Date?
+  public private(set) var currentInputTokens: Int = 0
+  public private(set) var currentOutputTokens: Int = 0
+  public private(set) var currentCostUSD: Double = 0.0
+  
   
   // MARK: - Initialization
   
@@ -161,8 +167,12 @@ public final class ChatViewModel {
     let assistantId = UUID()
     currentMessageId = assistantId
     
-    // Set loading state
+    // Set loading state and initialize streaming metrics
     isLoading = true
+    streamingStartTime = Date()
+    currentInputTokens = 0
+    currentOutputTokens = 0
+    currentCostUSD = 0.0
     
     // Start conversation
     Task {
@@ -195,6 +205,20 @@ public final class ChatViewModel {
   public func cancelRequest() {
     claudeClient.cancel()
     isLoading = false
+    streamingStartTime = nil
+  }
+  
+  /// Updates token usage from streaming response
+  public func updateTokenUsage(inputTokens: Int, outputTokens: Int) {
+    logger.info("Updating token usage - input: \(inputTokens), output: \(outputTokens)")
+    currentInputTokens = inputTokens
+    currentOutputTokens = outputTokens
+  }
+  
+  /// Updates cost from streaming response
+  public func updateCost(_ costUSD: Double) {
+    logger.info("Updating cost: $\(String(format: "%.6f", costUSD))")
+    currentCostUSD = costUSD
   }
   
   /// Loads all available sessions
@@ -310,6 +334,8 @@ public final class ChatViewModel {
       // If the conversation doesn't exist in Claude, just select the session
       // This allows us to continue with the session even if Claude doesn't have it
       self.isLoading = false
+    self.streamingStartTime = nil
+      self.streamingStartTime = nil
       
       // Check if it's a "conversation not found" error
       let errorMessage = error.localizedDescription.lowercased()
@@ -382,10 +408,21 @@ public final class ChatViewModel {
           Task { @MainActor in
             self?.handleError(error)
           }
+        },
+        onTokenUsageUpdate: { [weak self] inputTokens, outputTokens in
+          Task { @MainActor in
+            self?.updateTokenUsage(inputTokens: inputTokens, outputTokens: outputTokens)
+          }
+        },
+        onCostUpdate: { [weak self] costUSD in
+          Task { @MainActor in
+            self?.updateCost(costUSD)
+          }
         }
       )
       await MainActor.run {
         self.isLoading = false
+        self.streamingStartTime = nil
         // Clear first message after it's been saved
         self.firstMessageInSession = nil
       }
@@ -398,6 +435,7 @@ public final class ChatViewModel {
           userInfo: [NSLocalizedDescriptionKey: "Unexpected response format"]
         )
         isLoading = false
+        streamingStartTime = nil
       }
     }
   }
@@ -407,6 +445,7 @@ public final class ChatViewModel {
     logger.error("handleError called with: \(error.localizedDescription)")
     self.error = error
     self.isLoading = false
+    self.streamingStartTime = nil
     
     // Remove incomplete assistant message if there was an error
     if let currentMessageId = currentMessageId {

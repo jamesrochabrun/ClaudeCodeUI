@@ -49,6 +49,18 @@ struct ChatMessageRow: View {
     return (message.role == .user || message.role == .assistant) && message.messageType == .text
   }
   
+  // Message prefix based on role
+  private var messagePrefix: String {
+    switch message.role {
+    case .user:
+      return ">"
+    case .assistant:
+      return "⏺"
+    default:
+      return ""
+    }
+  }
+  
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       if isCollapsible {
@@ -179,11 +191,12 @@ struct ChatMessageRow: View {
           .padding(.top, 6)
       }
       
-      HStack(alignment: .firstTextBaseline, spacing: isUserOrAssistantMessage ? 4 : 12) {
-        // Avatar for user messages only
-        if message.role == .user {
-          avatarView
-            .transition(.scale.combined(with: .opacity))
+      HStack(alignment: .firstTextBaseline, spacing: 8) {
+        // Prefix for user and assistant messages
+        if isUserOrAssistantMessage {
+          Text(messagePrefix)
+            .font(messageFont)
+            .foregroundStyle(.secondary)
         }
         
         // Main message content
@@ -254,13 +267,6 @@ struct ChatMessageRow: View {
       }
     }
     .padding(.vertical, 4)
-  }
-  
-  @ViewBuilder
-  private var avatarView: some View {
-    Image(systemName: avatarIcon)
-      .font(.system(size: 16, weight: .regular))
-      .foregroundStyle(.primary)
   }
   
   @ViewBuilder
@@ -345,17 +351,6 @@ struct ChatMessageRow: View {
     colorScheme == .dark
     ? Color(white: 0.25)
     : Color(white: 0.85)
-  }
-  
-  private var avatarIcon: String {
-    switch message.messageType {
-    case .text: return "chevron.right"
-    case .toolUse: return "hammer.fill"
-    case .toolResult: return "checkmark.circle.fill"
-    case .toolError: return "exclamationmark.triangle.fill"
-    case .thinking: return "brain"
-    case .webSearch: return "globe"
-    }
   }
   
   private var messageTint: Color {
