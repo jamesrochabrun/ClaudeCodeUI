@@ -2,7 +2,7 @@
 //  MCPConfiguration.swift
 //  ClaudeCodeUI
 //
-//  Created by Assistant on 12/19/24.
+//  Created by Claude on 12/19/24.
 //
 
 import Foundation

@@ -8,6 +8,7 @@
 import SwiftUI
 import ClaudeCodeSDK
 import PermissionsServiceInterface
+import UniformTypeIdentifiers
 
 struct ChatInputView: View {
   
@@ -25,6 +26,11 @@ struct ChatInputView: View {
   @State private var showingSessionsList = false
   @State private var showingProjectPathAlert = false
   @State private var showingSettings = false
+  @State private var attachments: [FileAttachment] = []
+  @State private var isDragging = false
+  @State private var showingFilePicker = false
+  
+  private let processor = AttachmentProcessor()
   
   // MARK: - Constants
   
@@ -55,8 +61,14 @@ struct ChatInputView: View {
       if shouldShowContextBar {
         contextBar
       }
+      if !attachments.isEmpty {
+        AttachmentListView(attachments: $attachments)
+          .padding(.horizontal, 8)
+          .padding(.top, 4)
+      }
       HStack {
         sessionsButton
+        attachmentButton
         textEditor
         actionButton
       }
@@ -79,6 +91,17 @@ struct ChatInputView: View {
     .sheet(isPresented: $showingSettings) {
       settingsSheet
     }
+    .fileImporter(
+      isPresented: $showingFilePicker,
+      allowedContentTypes: allowedFileTypes,
+      allowsMultipleSelection: true
+    ) { result in
+      handleFileImport(result)
+    }
+    .onDrop(of: [.fileURL, .image, .data], isTargeted: $isDragging) { providers in
+      handleDroppedProviders(providers)
+      return true
+    }
   }
   
   // MARK: - Computed Properties
@@ -96,6 +119,17 @@ struct ChatInputView: View {
       SessionsListView(viewModel: $viewModel)
         .frame(width: 300, height: 400)
     }
+  }
+  
+  private var attachmentButton: some View {
+    Button(action: {
+      showingFilePicker = true
+    }) {
+      Image(systemName: "paperclip")
+        .foregroundColor(.gray)
+    }
+    .buttonStyle(.plain)
+    .help("Attach files")
   }
   
   private var actionButton: some View {
@@ -133,7 +167,8 @@ struct ChatInputView: View {
   
   private var inputBorder: some View {
     RoundedRectangle(cornerRadius: 12)
-      .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+      .stroke(isDragging ? Color.accentColor : Color(NSColor.separatorColor), lineWidth: isDragging ? 2 : 1)
+      .animation(.easeInOut(duration: 0.2), value: isDragging)
   }
   
   private var workingDirectoryAlertButtons: some View {
@@ -160,6 +195,10 @@ struct ChatInputView: View {
   
   private var shouldShowContextBar: Bool {
     xcodeObservationViewModel.workspaceModel.activeFile != nil || !contextManager.context.codeSelections.isEmpty
+  }
+  
+  private var allowedFileTypes: [UTType] {
+    [.image, .pdf, .text, .plainText, .sourceCode, .data]
   }
   
   private var contextBar: some View {
@@ -294,12 +333,85 @@ struct ChatInputView: View {
     
     let codeSelections = allSelections.isEmpty ? nil : allSelections
     
-    viewModel.sendMessage(trimmedText, context: formattedContext, hiddenContext: hiddenContext, codeSelections: codeSelections)
+    // Include attachments if any
+    let messageAttachments = attachments.isEmpty ? nil : attachments
+    
+    viewModel.sendMessage(trimmedText, context: formattedContext, hiddenContext: hiddenContext, codeSelections: codeSelections, attachments: messageAttachments)
     DispatchQueue.main.async {
       self.text = ""
-      // Clear context after sending
+      // Clear context and attachments after sending
       contextManager.clearAll()
+      self.attachments.removeAll()
     }
   }
+  
+  // MARK: - File Handling
+  
+  private func handleFileImport(_ result: Result<[URL], Error>) {
+    switch result {
+    case .success(let urls):
+      handleDroppedFiles(urls)
+    case .failure(let error):
+      print("Failed to import files: \(error)")
+    }
+  }
+  
+  private func handleDroppedFiles(_ urls: [URL]) {
+    Task {
+      for url in urls {
+        // Limit to 10 attachments
+        guard attachments.count < 10 else { break }
+        
+        let attachment = FileAttachment(url: url)
+        attachments.append(attachment)
+        await processor.process(attachment)
+      }
+    }
+  }
+  
+  private func handleDroppedProviders(_ providers: [NSItemProvider]) {
+    Task {
+      for provider in providers {
+        // Limit to 10 attachments
+        guard attachments.count < 10 else { break }
+        
+        // Try to load as file URL first
+        if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+          _ = provider.loadObject(ofClass: URL.self) { url, error in
+            guard let url = url, error == nil else { return }
+            
+            Task { @MainActor in
+              let attachment = FileAttachment(url: url)
+              attachments.append(attachment)
+              await processor.process(attachment)
+            }
+          }
+        }
+        // Try to load as image data
+        else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+          _ = provider.loadDataRepresentation(for: .image) { data, error in
+            guard let data = data, error == nil else { return }
+            
+            Task { @MainActor in
+              // Save image data to temporary file
+              let tempDirectory = FileManager.default.temporaryDirectory
+              let fileName = "dropped_image_\(UUID().uuidString).png"
+              let tempURL = tempDirectory.appendingPathComponent(fileName)
+              
+              do {
+                try data.write(to: tempURL)
+                let attachment = FileAttachment(url: tempURL, isTemporary: true)
+                attachments.append(attachment)
+                await processor.process(attachment)
+              } catch {
+                print("Failed to save dropped image: \(error)")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  
 }
 

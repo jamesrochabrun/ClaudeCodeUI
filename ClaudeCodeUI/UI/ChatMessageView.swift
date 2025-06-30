@@ -55,6 +55,12 @@ struct ChatMessageView: View {
           .padding(.top, 6)
       }
       
+      // File attachments for user messages
+      if message.role == .user, let attachments = message.attachments, !attachments.isEmpty {
+        attachmentsView(attachments: attachments)
+          .padding(.top, 6)
+      }
+      
       GeometryReader { geometry in
         Color.clear
           .onAppear { size = geometry.size }
@@ -64,60 +70,60 @@ struct ChatMessageView: View {
       }.frame(height: 0)
       
       VStack(alignment: .leading, spacing: 0) {
-          if isCollapsible {
-            collapsibleHeader
-            
-            // Expandable content with indentation
-            if isExpanded {
-              VStack(alignment: .leading, spacing: 0) {
-                // Connection line
-                HStack(spacing: 0) {
-                  Color.clear
-                    .frame(width: 20)
-                  
+        if isCollapsible {
+          collapsibleHeader
+          
+          // Expandable content with indentation
+          if isExpanded {
+            VStack(alignment: .leading, spacing: 0) {
+              // Connection line
+              HStack(spacing: 0) {
+                Color.clear
+                  .frame(width: 20)
+                
+                Rectangle()
+                  .fill(borderColor)
+                  .frame(width: 2)
+                  .padding(.vertical, -1)
+              }
+              .frame(height: 8)
+              
+              // Content area
+              HStack(alignment: .top, spacing: 0) {
+                Color.clear
+                  .frame(width: 20)
+                
+                VStack(alignment: .leading, spacing: 0) {
                   Rectangle()
                     .fill(borderColor)
-                    .frame(width: 2)
-                    .padding(.vertical, -1)
-                }
-                .frame(height: 8)
-                
-                // Content area
-                HStack(alignment: .top, spacing: 0) {
-                  Color.clear
-                    .frame(width: 20)
+                    .frame(height: 1)
+                    .frame(maxWidth: .infinity)
                   
-                  VStack(alignment: .leading, spacing: 0) {
-                    Rectangle()
-                      .fill(borderColor)
-                      .frame(height: 1)
-                      .frame(maxWidth: .infinity)
-                    
-                    // Message content
-                    ScrollView {
-                      messageContentView
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .frame(maxHeight: 400)
-                    .background(contentBackgroundColor)
+                  // Message content
+                  ScrollView {
+                    messageContentView
+                      .frame(maxWidth: .infinity, alignment: .leading)
                   }
+                  .frame(maxHeight: 400)
+                  .background(contentBackgroundColor)
                 }
               }
-              .transition(.asymmetric(
-                insertion: .push(from: .top).combined(with: .opacity),
-                removal: .push(from: .bottom).combined(with: .opacity)
-              ))
             }
-          } else {
-            messageContentView
+            .transition(.asymmetric(
+              insertion: .push(from: .top).combined(with: .opacity),
+              removal: .push(from: .bottom).combined(with: .opacity)
+            ))
           }
+        } else {
+          messageContentView
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        
-        Spacer(minLength: 0)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
       
-      .background(Color.clear)
-      .clipShape(RoundedRectangle(cornerRadius: Constants.cornerRadius))
+      Spacer(minLength: 0)
+      
+        .background(Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: Constants.cornerRadius))
       
       if message.isError {
         Text("Error occurred")
@@ -448,6 +454,18 @@ struct ChatMessageView: View {
             removal: .scale(scale: 0.95).combined(with: .opacity)
           ))
       }
+    }
+  }
+  
+  private func attachmentsView(attachments: [FileAttachment]) -> some View {
+    ScrollView(.horizontal, showsIndicators: false) {
+      HStack(spacing: 12) {
+        ForEach(attachments) { attachment in
+          AttachmentPreviewView(attachment: attachment, onRemove: {})
+            .allowsHitTesting(false) // Disable interaction in message view
+        }
+      }
+      .padding(.horizontal, 12)
     }
   }
 }

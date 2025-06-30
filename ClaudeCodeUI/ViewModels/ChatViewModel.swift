@@ -115,7 +115,8 @@ public final class ChatViewModel {
   ///   - context: Optional context to include with the message
   ///   - hiddenContext: Optional hidden context to send to API but not display
   ///   - codeSelections: Optional code selections to display in UI
-  public func sendMessage(_ text: String, context: String? = nil, hiddenContext: String? = nil, codeSelections: [TextSelection]? = nil) {
+  ///   - attachments: Optional file attachments (images, PDFs, etc.)
+  public func sendMessage(_ text: String, context: String? = nil, hiddenContext: String? = nil, codeSelections: [TextSelection]? = nil, attachments: [FileAttachment]? = nil) {
     guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
     
     // Store first message if this is a new session
@@ -126,38 +127,37 @@ public final class ChatViewModel {
     // Build message content for display (just the user's text)
     let displayContent = text
     
-    // Build message content for API (with all context)
-    let apiContent: String
-    if let context = context, !context.isEmpty {
-      if let hiddenContext = hiddenContext, !hiddenContext.isEmpty {
-        apiContent = """
-        \(text)
-        
-        --- Context ---
-        \(context)
-        
-        \(hiddenContext)
-        """
-      } else {
-        apiContent = """
-        \(text)
-        
-        --- Context ---
-        \(context)
-        """
-      }
-    } else if let hiddenContext = hiddenContext, !hiddenContext.isEmpty {
-      apiContent = """
-      \(text)
-      
-      \(hiddenContext)
-      """
-    } else {
-      apiContent = text
+    // Build message content for API (with all context and attachments)
+    var apiContentParts: [String] = [text]
+    
+    // Add image paths to the message text for Claude Code
+    if let attachments = attachments, !attachments.isEmpty,
+       let imagePaths = AttachmentProcessor.formatImagePathsForMessage(attachments) {
+      apiContentParts.insert(imagePaths, at: 1)
     }
     
-    // Add user message with code selections for UI display
-    let userMessage = MessageFactory.userMessage(content: displayContent, codeSelections: codeSelections)
+    // Add context if present
+    if let context = context, !context.isEmpty {
+      apiContentParts.append("--- Context ---\n\(context)")
+    }
+    
+    // Add hidden context if present
+    if let hiddenContext = hiddenContext, !hiddenContext.isEmpty {
+      apiContentParts.append(hiddenContext)
+    }
+    
+    // Add attachments metadata in XML format
+    if let attachments = attachments, !attachments.isEmpty {
+      let attachmentContent = AttachmentProcessor.formatAttachmentsForXML(attachments)
+      if !attachmentContent.isEmpty {
+        apiContentParts.append(attachmentContent)
+      }
+    }
+    
+    let apiContent = apiContentParts.joined(separator: "\n\n")
+    
+    // Add user message with code selections and attachments for UI display
+    let userMessage = MessageFactory.userMessage(content: displayContent, codeSelections: codeSelections, attachments: attachments)
     messageStore.addMessage(userMessage)
     
     // Clear any previous errors
