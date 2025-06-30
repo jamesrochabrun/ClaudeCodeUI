@@ -45,6 +45,9 @@ public struct ChatMessage: Identifiable, Equatable {
   /// Code selections associated with this message (for user messages)
   public var codeSelections: [TextSelection]?
   
+  /// File attachments associated with this message (images, PDFs, etc.)
+  public var attachments: [FileAttachment]?
+  
   public init(
     id: UUID = UUID(),
     role: MessageRole,
@@ -55,7 +58,8 @@ public struct ChatMessage: Identifiable, Equatable {
     toolName: String? = nil,
     toolInputData: ToolInputData? = nil,
     isError: Bool = false,
-    codeSelections: [TextSelection]? = nil
+    codeSelections: [TextSelection]? = nil,
+    attachments: [FileAttachment]? = nil
   ) {
     self.id = id
     self.role = role
@@ -67,17 +71,19 @@ public struct ChatMessage: Identifiable, Equatable {
     self.toolInputData = toolInputData
     self.isError = isError
     self.codeSelections = codeSelections
+    self.attachments = attachments
   }
   
   public static func == (lhs: ChatMessage, rhs: ChatMessage) -> Bool {
     return lhs.content == rhs.content &&
-           lhs.id == rhs.id &&
-           lhs.isComplete == rhs.isComplete &&
-           lhs.messageType == rhs.messageType &&
-           lhs.toolName == rhs.toolName &&
-           lhs.toolInputData == rhs.toolInputData &&
-           lhs.isError == rhs.isError &&
-           lhs.codeSelections == rhs.codeSelections
+    lhs.id == rhs.id &&
+    lhs.isComplete == rhs.isComplete &&
+    lhs.messageType == rhs.messageType &&
+    lhs.toolName == rhs.toolName &&
+    lhs.toolInputData == rhs.toolInputData &&
+    lhs.isError == rhs.isError &&
+    lhs.codeSelections == rhs.codeSelections &&
+    lhs.attachments?.map { $0.id } == rhs.attachments?.map { $0.id }
   }
 }
 

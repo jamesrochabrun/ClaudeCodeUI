@@ -15,9 +15,10 @@ struct MessageFactory {
   /// - Parameters:
   ///   - content: The text content of the user's message
   ///   - codeSelections: Optional code selections to display with the message
+  ///   - attachments: Optional file attachments to display with the message
   /// - Returns: A ChatMessage configured as a user message
-  static func userMessage(content: String, codeSelections: [TextSelection]? = nil) -> ChatMessage {
-    ChatMessage(role: .user, content: content, codeSelections: codeSelections)
+  static func userMessage(content: String, codeSelections: [TextSelection]? = nil, attachments: [FileAttachment]? = nil) -> ChatMessage {
+    ChatMessage(role: .user, content: content, codeSelections: codeSelections, attachments: attachments)
   }
   
   /// Creates an assistant message with streaming support
