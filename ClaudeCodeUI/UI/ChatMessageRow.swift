@@ -54,8 +54,6 @@ struct ChatMessageRow: View {
     switch message.role {
     case .user:
       return ">"
-    case .assistant:
-      return "⏺"
     default:
       return ""
     }
