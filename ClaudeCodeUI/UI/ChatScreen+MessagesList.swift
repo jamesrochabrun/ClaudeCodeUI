@@ -43,7 +43,7 @@ extension ChatScreen {
           ChatMessageView(
             message: message,
             settingsStorage: viewModel.settingsStorage,
-            diffService: diffService,
+            terminalService: terminalService,
             fontSize: 13.0  // Default font size for now
           )
           .listRowSeparator(.hidden)

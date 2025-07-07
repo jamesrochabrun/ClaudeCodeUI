@@ -26,7 +26,7 @@ struct RootView: View {
         contextManager: container.contextManager,
         xcodeObservationViewModel: container.xcodeObservationViewModel,
         permissionsService: container.permissionsService,
-        diffService: container.diffService
+        terminalService: container.terminalService
       )
       .environment(container.xcodeObservationViewModel)
     } else {

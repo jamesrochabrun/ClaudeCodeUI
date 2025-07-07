@@ -24,7 +24,6 @@ final class DependencyContainer {
   let sessionStorage: SessionStorageProtocol
   let globalPreferences: GlobalPreferencesStorage
   let terminalService: TerminalService
-  let diffService: DiffService
   let permissionsService: PermissionsService
   let accessibilityService: AccessibilityService
   let xcodeObserver: XcodeObserver
@@ -38,7 +37,6 @@ final class DependencyContainer {
     
     // Initialize core services
     self.terminalService = DefaultTerminalService()
-    self.diffService = DiffService(terminalService: terminalService)
     
     // Initialize permissions service
     self.permissionsService = DefaultPermissionsService(

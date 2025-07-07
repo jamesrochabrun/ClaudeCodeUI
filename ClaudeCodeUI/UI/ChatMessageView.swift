@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import Down
+import TerminalServiceInterface
 
 struct ChatMessageView: View {
   
@@ -15,7 +16,7 @@ struct ChatMessageView: View {
   let message: ChatMessage
   let settingsStorage: SettingsStorage
   let fontSize: Double
-  let diffService: DiffService
+  let terminalService: TerminalService
   
   @State private var size = CGSize.zero
   @State private var isHovered = false
@@ -23,16 +24,17 @@ struct ChatMessageView: View {
   @State private var isExpanded = false
   @State private var textFormatter: TextFormatter
   @State private var hasProcessedInitialContent = false
+  @State private var diffViewModel: DiffRenderViewModel?
   
   init(
     message: ChatMessage,
     settingsStorage: SettingsStorage,
-    diffService: DiffService,
+    terminalService: TerminalService,
     fontSize: Double = 13.0)
   {
     self.message = message
     self.settingsStorage = settingsStorage
-    self.diffService = diffService
+    self.terminalService = terminalService
     self.fontSize = fontSize
     
     // Initialize text formatter with project root if available
@@ -262,13 +264,24 @@ struct ChatMessageView: View {
          let newString = rawParams["new_string"],
          let filePath = rawParams["file_path"] {
         // Show diff view for Edit tool
-        DiffView(
-          oldContent: oldString,
-          newContent: newString,
-          fileName: URL(fileURLWithPath: filePath).lastPathComponent,
-          diffService: diffService
-        )
-        .padding(8)
+        if let viewModel = diffViewModel {
+          DiffView(
+            formattedDiff: viewModel.formattedDiff,
+            fileName: URL(fileURLWithPath: filePath).lastPathComponent
+          )
+          .padding(8)
+        } else {
+          ProgressView()
+            .frame(maxWidth: .infinity, minHeight: 100)
+            .onAppear {
+              // Create diff view model when the view appears
+              diffViewModel = DiffRenderViewModel(
+                oldContent: oldString,
+                newContent: newString,
+                terminalService: terminalService
+              )
+            }
+        }
       } else {
         // For other collapsible messages (tool use, thinking, etc.), show plain text with appropriate styling
         Text(message.content)
