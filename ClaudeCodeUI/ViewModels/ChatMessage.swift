@@ -139,8 +139,13 @@ public struct ToolInputData: Equatable {
   /// - Note: Complex nested structures are flattened to strings for display
   public let parameters: [String: String]
   
-  public init(parameters: [String: String]) {
+  /// Raw parameter values for tools that need special processing (e.g., Edit tool diffs)
+  /// - Note: Stores unformatted values that can be used for specialized visualizations
+  public let rawParameters: [String: String]?
+  
+  public init(parameters: [String: String], rawParameters: [String: String]? = nil) {
     self.parameters = parameters
+    self.rawParameters = rawParameters
   }
   
   /// Extracts the most important parameters for display in collapsible headers

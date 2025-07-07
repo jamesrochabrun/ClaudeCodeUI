@@ -15,6 +15,7 @@ struct ChatMessageView: View {
   let message: ChatMessage
   let settingsStorage: SettingsStorage
   let fontSize: Double
+  let diffService: DiffService
   
   @State private var size = CGSize.zero
   @State private var isHovered = false
@@ -26,10 +27,12 @@ struct ChatMessageView: View {
   init(
     message: ChatMessage,
     settingsStorage: SettingsStorage,
+    diffService: DiffService,
     fontSize: Double = 13.0)
   {
     self.message = message
     self.settingsStorage = settingsStorage
+    self.diffService = diffService
     self.fontSize = fontSize
     
     // Initialize text formatter with project root if available
@@ -251,13 +254,30 @@ struct ChatMessageView: View {
   @ViewBuilder
   private var messageContentView: some View {
     if isCollapsible {
-      // For collapsible messages (tool use, thinking, etc.), show plain text with appropriate styling
-      Text(message.content)
-        .font(.system(size: fontSize - 1, design: .monospaced))
-        .foregroundColor(contentTextColor)
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .textSelection(.enabled)
+      // Check if this is an Edit tool message with diff data
+      if message.messageType == .toolUse && 
+         message.toolName == "Edit",
+         let rawParams = message.toolInputData?.rawParameters,
+         let oldString = rawParams["old_string"],
+         let newString = rawParams["new_string"],
+         let filePath = rawParams["file_path"] {
+        // Show diff view for Edit tool
+        DiffView(
+          oldContent: oldString,
+          newContent: newString,
+          fileName: URL(fileURLWithPath: filePath).lastPathComponent,
+          diffService: diffService
+        )
+        .padding(8)
+      } else {
+        // For other collapsible messages (tool use, thinking, etc.), show plain text with appropriate styling
+        Text(message.content)
+          .font(.system(size: fontSize - 1, design: .monospaced))
+          .foregroundColor(contentTextColor)
+          .padding(16)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .textSelection(.enabled)
+      }
     } else if message.role == .assistant && message.messageType == .text {
       // Use formatted text for assistant messages
       ForEach(textFormatter.elements) { element in

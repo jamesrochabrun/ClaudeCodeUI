@@ -13,17 +13,19 @@ import KeyboardShortcuts
 
 struct ChatScreen: View {
   
-  init(viewModel: ChatViewModel, contextManager: ContextManager, xcodeObservationViewModel: XcodeObservationViewModel, permissionsService: PermissionsService) {
+  init(viewModel: ChatViewModel, contextManager: ContextManager, xcodeObservationViewModel: XcodeObservationViewModel, permissionsService: PermissionsService, diffService: DiffService) {
     self.viewModel = viewModel
     self.contextManager = contextManager
     self.xcodeObservationViewModel = xcodeObservationViewModel
     self.permissionsService = permissionsService
+    self.diffService = diffService
   }
   
   @State var viewModel: ChatViewModel
   @State var contextManager: ContextManager
   let xcodeObservationViewModel: XcodeObservationViewModel
   let permissionsService: PermissionsService
+  let diffService: DiffService
   @State private var messageText: String = ""
   @State var showingSettings = false
   @State private var keyboardManager = KeyboardShortcutManager()
