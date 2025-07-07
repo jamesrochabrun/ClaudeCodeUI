@@ -36,12 +36,16 @@ public class DiffRenderViewModel {
         isLoading = true
         error = nil
         
+        logger.debug("Starting diff generation for content lengths: old=\(self.oldContent.count), new=\(self.newContent.count)")
+        
         do {
             let diff = try await FileDiff.getColoredDiff(
                 oldContent: oldContent,
                 newContent: newContent,
                 terminalService: terminalService
             )
+            
+            logger.debug("Diff generated successfully with \(diff.changes.count) changes")
             
             await MainActor.run {
                 self.formattedDiff = diff

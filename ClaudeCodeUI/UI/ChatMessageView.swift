@@ -265,11 +265,45 @@ struct ChatMessageView: View {
          let filePath = rawParams["file_path"] {
         // Show diff view for Edit tool
         if let viewModel = diffViewModel {
-          DiffView(
-            formattedDiff: viewModel.formattedDiff,
-            fileName: URL(fileURLWithPath: filePath).lastPathComponent
-          )
-          .padding(8)
+          if viewModel.isLoading {
+            VStack {
+              ProgressView()
+              Text("Generating diff...")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, minHeight: 100)
+          } else if let error = viewModel.error {
+            VStack {
+              Image(systemName: "exclamationmark.triangle")
+                .foregroundStyle(.red)
+              Text("Error generating diff: \(error)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            .padding()
+            .frame(maxWidth: .infinity)
+          } else if viewModel.formattedDiff != nil {
+            DiffView(
+              formattedDiff: viewModel.formattedDiff,
+              fileName: URL(fileURLWithPath: filePath).lastPathComponent
+            )
+            .padding(8)
+          } else {
+            // Fallback to raw text display
+            VStack(alignment: .leading, spacing: 8) {
+              Text("File: \(URL(fileURLWithPath: filePath).lastPathComponent)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+              Text("Changes to be applied:")
+                .font(.caption.bold())
+              Text(message.content)
+                .font(.system(size: fontSize - 1, design: .monospaced))
+                .foregroundColor(contentTextColor)
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+          }
         } else {
           ProgressView()
             .frame(maxWidth: .infinity, minHeight: 100)

@@ -102,7 +102,7 @@ public struct DiffView: View {
                 )
             }
         }
-        .readSize(.init(get: { .zero }, set: { desiredTextWidth = $0.width }))
+        .readSize(.init(get: { CGSize(width: desiredTextWidth, height: 0) }, set: { desiredTextWidth = $0.width }))
         
         // Actual content
         ScrollView([.horizontal, .vertical]) {

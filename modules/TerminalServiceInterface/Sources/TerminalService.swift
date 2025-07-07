@@ -55,25 +55,18 @@ extension TerminalService {
   }
 }
 
+
 // MARK: - TerminalServiceProviding
 
-/// A protocol that ensures conforming types provide access to a `TerminalService` instance.
-///
-/// This protocol is typically adopted by dependency injection containers or service providers
-/// that need to expose terminal functionality to other components in the application.
-///
-/// Example usage:
-/// ```swift
-/// class AppContainer: TerminalServiceProviding {
-///     lazy var terminalService: TerminalService = {
-///         TerminalService()
-///     }()
-/// }
-/// ```
+/// A protocol that defines a provider for terminal service instances.
+/// 
+/// Types conforming to this protocol must provide access to a `TerminalService` instance,
+/// enabling dependency injection and testability for components that require terminal functionality.
 public protocol TerminalServiceProviding {
-  /// The terminal service instance that provides terminal functionality.
+
+  /// The terminal service instance provided by this conforming type.
   /// 
-  /// This property should return a configured `TerminalService` instance
-  /// that can be used to execute terminal commands and manage terminal sessions.
+  /// This property gives access to terminal operations such as executing commands,
+  /// managing terminal sessions, and handling terminal output.
   var terminalService: TerminalService { get }
 }
