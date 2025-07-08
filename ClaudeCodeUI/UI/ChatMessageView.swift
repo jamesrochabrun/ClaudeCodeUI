@@ -284,7 +284,7 @@ struct ChatMessageView: View {
             .padding()
             .frame(maxWidth: .infinity)
           } else if viewModel.formattedDiff != nil {
-            DiffView(
+            UnifiedDiffView(
               formattedDiff: viewModel.formattedDiff,
               fileName: URL(fileURLWithPath: filePath).lastPathComponent
             )
