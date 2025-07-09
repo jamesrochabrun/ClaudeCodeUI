@@ -23,6 +23,7 @@ struct ChatInputView: View {
   @FocusState private var isFocused: Bool
   let placeholder: String
   @State private var shouldSubmit = false
+  @Binding var triggerFocus: Bool
   @State private var showingSessionsList = false
   @State private var showingProjectPathAlert = false
   @State private var showingSettings = false
@@ -52,7 +53,8 @@ struct ChatInputView: View {
     contextManager: ContextManager,
     xcodeObservationViewModel: XcodeObservationViewModel,
     permissionsService: PermissionsService,
-    placeholder: String = "Type a message...")
+    placeholder: String = "Type a message...",
+    triggerFocus: Binding<Bool> = .constant(false))
   {
     _text = text
     _viewModel = chatViewModel
@@ -60,6 +62,7 @@ struct ChatInputView: View {
     self.xcodeObservationViewModel = xcodeObservationViewModel
     self.permissionsService = permissionsService
     self.placeholder = placeholder
+    _triggerFocus = triggerFocus
   }
   // MARK: - Body
   var body: some View {
@@ -277,6 +280,12 @@ extension ChatInputView {
         .padding(textAreaEdgeInsets)
         .onAppear {
           isFocused = true
+        }
+        .onChange(of: triggerFocus) { _, shouldFocus in
+          if shouldFocus {
+            isFocused = true
+            triggerFocus = false
+          }
         }
         .onChange(of: text) { oldValue, newValue in
           // Simple check to avoid freezing

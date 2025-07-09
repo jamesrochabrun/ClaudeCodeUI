@@ -13,6 +13,7 @@ import AppKit
 class KeyboardShortcutManager {
   var capturedText: String = ""
   var showCaptureAnimation = false
+  var shouldFocusTextEditor = false
   
   init() {
     setupShortcuts()
@@ -51,6 +52,20 @@ class KeyboardShortcutManager {
         self?.capturedText = selectedText
         self?.showCaptureAnimation = true
         
+        // Activate the app more reliably
+        NSRunningApplication.current.activate()
+        
+        // Ensure window comes to front
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+          // Find and activate the key window
+          if let keyWindow = NSApplication.shared.keyWindow ?? NSApplication.shared.windows.first {
+            keyWindow.makeKeyAndOrderFront(nil)
+          }
+        }
+        
+        // Trigger focus on text editor
+        self?.shouldFocusTextEditor = true
+        
         // Hide animation after 2 seconds
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
           self?.showCaptureAnimation = false
@@ -70,3 +85,4 @@ class KeyboardShortcutManager {
 extension KeyboardShortcuts.Name {
   static let captureWithI = Self("captureWithI", default: .init(.i, modifiers: [.command]))
 }
+
