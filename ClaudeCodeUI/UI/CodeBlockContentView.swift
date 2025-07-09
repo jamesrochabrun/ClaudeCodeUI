@@ -7,8 +7,6 @@ struct CodeBlockContentView: View {
   let role: MessageRole
   let iconSizes: CGFloat = 15
   
-  @State private var isApplyingChange = false
-  @State private var hasAppliedChanges: Bool? = nil
   @Environment(\.colorScheme) private var colorScheme
   
   var body: some View {
@@ -45,26 +43,8 @@ struct CodeBlockContentView: View {
           .help("Copy code")
         }
         
-        // Apply changes button (for file diffs)
-        if code.isComplete && code.fileChange != nil {
-          if isApplyingChange {
-            ProgressView()
-              .controlSize(.small)
-              .frame(width: iconSizes, height: iconSizes)
-          } else if hasAppliedChanges == true {
-            Image(systemName: "checkmark")
-              .font(.system(size: iconSizes))
-              .foregroundStyle(.green)
-          } else {
-            Button(action: applyFileChange) {
-              Image(systemName: "play")
-                .font(.system(size: iconSizes))
-            }
-            .buttonStyle(.plain)
-            .help("Apply changes")
-          }
-        } else if !code.isComplete {
-          // Loading indicator for incomplete code blocks
+        // Loading indicator for incomplete code blocks
+        if !code.isComplete {
           ProgressView()
             .controlSize(.small)
             .frame(width: iconSizes, height: iconSizes)
@@ -150,15 +130,4 @@ struct CodeBlockContentView: View {
     }
   }
   
-  private func applyFileChange() {
-    isApplyingChange = true
-    Task {
-      // TODO: Implement file change application when FileDiffViewModel is ready
-      // try await code.fileChange?.handleApplyAllChange()
-      await MainActor.run {
-        isApplyingChange = false
-        hasAppliedChanges = true
-      }
-    }
-  }
 }

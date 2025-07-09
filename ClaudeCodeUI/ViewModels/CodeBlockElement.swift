@@ -75,7 +75,7 @@ class CodeBlockElement {
   private(set) var copyableContent: String?
   
   /// View model for handling file diff operations (future feature)
-  var fileChange: FileDiffViewModel?
+  // var fileChange: FileDiffViewModel?
   
   /// The file path associated with this code block, if any
   /// When set, relative paths are automatically resolved to absolute paths

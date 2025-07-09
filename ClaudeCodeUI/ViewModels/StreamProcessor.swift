@@ -243,6 +243,13 @@ final class StreamProcessor {
         
         // Extract structured data from tool input
         var parameters: [String: String] = [:]
+        var rawParameters: [String: String]? = nil
+        
+        // Check if this is an Edit or MultiEdit tool
+        let isEditTool = toolUse.name == "Edit" || toolUse.name == "MultiEdit"
+        if isEditTool {
+          rawParameters = [:]
+        }
         
         // Since toolUse.input is [String: MessageResponse.Content.DynamicContent],
         // we need to extract the actual values from DynamicContent
@@ -255,6 +262,12 @@ final class StreamProcessor {
             formattedValue = formatter.format(dynamicContent)
           }
           parameters[key] = formattedValue
+          
+          // For Edit tools, also store raw values for old_string and new_string
+          if isEditTool && (key == "old_string" || key == "new_string" || key == "file_path" || key == "edits") {
+            rawParameters?[key] = formattedValue
+          }
+          
           logger.debug("Key: \(key), formatted value: \(formattedValue)")
         }
         
@@ -268,7 +281,7 @@ final class StreamProcessor {
         let toolMessage = MessageFactory.toolUseMessage(
           toolName: toolUse.name,
           input: toolUse.input.formattedDescription(),
-          toolInputData: ToolInputData(parameters: parameters)
+          toolInputData: ToolInputData(parameters: parameters, rawParameters: rawParameters)
         )
         messageStore.addMessage(toolMessage)
         
