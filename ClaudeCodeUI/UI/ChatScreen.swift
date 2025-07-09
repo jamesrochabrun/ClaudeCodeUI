@@ -33,6 +33,7 @@ struct ChatScreen: View {
   @State var hasShownAutoDetectionAlert = false
   @State var detectedProjectPath: String?
   @State var showingPathDetectionAlert = false
+  @State private var triggerTextEditorFocus = false
   
   var body: some View {
     VStack {
@@ -85,7 +86,8 @@ struct ChatScreen: View {
         contextManager: contextManager,
         xcodeObservationViewModel: xcodeObservationViewModel,
         permissionsService: permissionsService,
-        placeholder: "Type a message...")
+        placeholder: "Type a message...",
+        triggerFocus: $triggerTextEditorFocus)
     }
     .navigationTitle("Claude Code Chat")
     .toolbar {
@@ -129,6 +131,13 @@ struct ChatScreen: View {
           // No Xcode selection, use clipboard text
           contextManager.addCapturedText(newValue)
         }
+      }
+    }
+    .onChange(of: keyboardManager.shouldFocusTextEditor) { _, shouldFocus in
+      if shouldFocus {
+        triggerTextEditorFocus = true
+        // Reset the flag after using it
+        keyboardManager.shouldFocusTextEditor = false
       }
     }
   }
