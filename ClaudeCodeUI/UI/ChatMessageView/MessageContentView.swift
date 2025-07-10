@@ -46,6 +46,7 @@ struct MessageContentView: View {
   @ViewBuilder
   private var collapsibleContent: some View {
     // Check if this is an Edit tool message with diff data
+    // TODO: Handle Multi edit and Write tool once we fix UI for simple edti
     if message.messageType == .toolUse &&
         message.toolName == "Edit",
        let rawParams = message.toolInputData?.rawParameters,
@@ -62,13 +63,12 @@ struct MessageContentView: View {
         terminalService: terminalService
       )
     } else {
-      // For other collapsible messages (tool use, thinking, etc.), show plain text
-      Text(message.content)
-        .font(.system(size: fontSize - 1, design: .monospaced))
-        .foregroundColor(contentTextColor)
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .textSelection(.enabled)
+      // Use the new ToolDisplayView for sophisticated formatting
+      ToolDisplayView(
+        message: message,
+        fontSize: fontSize,
+        textFormatter: textFormatter
+      )
     }
   }
   

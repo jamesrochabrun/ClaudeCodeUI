@@ -8,10 +8,13 @@ struct CollapsibleHeaderView: View {
   let isExpanded: Binding<Bool>
   let fontSize: Double
   
+  private let toolRegistry = ToolRegistry.shared
+  private let formatter = ToolDisplayFormatter()
+  
   var body: some View {
     HStack(spacing: 12) {
-      // Checkmark indicator
-      Image(systemName: isExpanded.wrappedValue ? "checkmark.circle.fill" : "checkmark.circle")
+      // Tool icon
+      Image(systemName: toolIcon)
         .font(.system(size: 14))
         .foregroundStyle(statusColor)
         .frame(width: 20, height: 20)
@@ -60,18 +63,53 @@ struct CollapsibleHeaderView: View {
   private var headerText: String {
     switch messageType {
     case .toolUse:
-      let name = toolName ?? "Tool Use"
-      return toolInputData?.headerText(for: name) ?? name
+      if let toolName = toolName {
+        // Use the formatter to create a proper header
+        let header = formatter.toolRequestHeader(toolName: toolName, toolInputData: toolInputData)
+        return header.formattedContent
+      }
+      return "Tool Use"
+      
     case .toolResult:
+      if let toolName = toolName {
+        let tool = toolRegistry.tool(for: toolName)
+        return "\(tool?.friendlyName ?? toolName) completed"
+      }
       return "Processing result"
+      
     case .toolError:
+      if let toolName = toolName {
+        let tool = toolRegistry.tool(for: toolName)
+        return "\(tool?.friendlyName ?? toolName) failed"
+      }
       return "Error occurred"
+      
     case .thinking:
       return "Thinking..."
+      
     case .webSearch:
       return "Searching the web"
+      
     default:
       return "Processing"
+    }
+  }
+  
+  private var toolIcon: String {
+    if let toolName = toolName {
+      let tool = toolRegistry.tool(for: toolName)
+      return tool?.icon ?? "hammer"
+    }
+    
+    switch messageType {
+    case .thinking:
+      return "brain"
+    case .webSearch:
+      return "globe"
+    case .toolError:
+      return "exclamationmark.triangle"
+    default:
+      return isExpanded.wrappedValue ? "checkmark.circle.fill" : "checkmark.circle"
     }
   }
   
