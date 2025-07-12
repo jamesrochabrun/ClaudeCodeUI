@@ -58,10 +58,10 @@ struct RootView: View {
       container.settingsStorage.setProjectPath(sessionPath)
       print("[RootView] Loaded working directory '\(sessionPath)' for session '\(sessionId)'")
     } else {
-      // New session starts with empty working directory
+      // New session starts with empty working directory to allow auto-detection
       workingDirectory = ""
       container.settingsStorage.clearProjectPath()
-      print("[RootView] No working directory found. Session ID: \(sessionId ?? "nil")")
+      print("[RootView] No saved working directory found. Will attempt auto-detection. Session ID: \(sessionId ?? "nil")")
     }
     
 #if DEBUG

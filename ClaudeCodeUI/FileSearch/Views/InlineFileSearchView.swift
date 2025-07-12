@@ -93,7 +93,10 @@ struct InlineFileSearchView: View {
       searchQuery: viewModel.searchQuery
     )
     .id(result.id)
-    .onTapGesture { onSelect(result) }
+    .onTapGesture { 
+      viewModel.selectedIndex = index
+      onSelect(result) 
+    }
     .onHover { handleHover($0, at: index) }
   }
   
@@ -101,9 +104,7 @@ struct InlineFileSearchView: View {
   
   private func handleHover(_ isHovering: Bool, at index: Int) {
     hoveredIndex = isHovering ? index : nil
-    if isHovering {
-      viewModel.selectedIndex = index
-    }
+    // Don't update selection on hover - let keyboard navigation work independently
   }
   
   private func handleSelectionChange(_ proxy: ScrollViewProxy) -> (Int, Int) -> Void {
