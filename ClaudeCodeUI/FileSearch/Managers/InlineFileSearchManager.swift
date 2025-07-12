@@ -21,7 +21,6 @@ final class InlineFileSearchManager: InlineFileSearchProtocol {
   // MARK: Internal
   
   func updateSearchPath(_ path: String) {
-    print("[InlineFileSearchManager] Updating search path to: '\(path)'")
     projectPath = path
   }
   
@@ -52,11 +51,8 @@ final class InlineFileSearchManager: InlineFileSearchProtocol {
         continuation = cont
         let queryObject = NSMetadataQuery()
         
-        print("[InlineFileSearchManager] Performing search with query: '\(trimmedQuery)' in path: '\(projectPath ?? "nil")' ")
-        
         // Set search scope using the same pattern as the working implementation
         queryObject.searchScopes = [projectPath as Any].compactMap { $0 }
-        print("[InlineFileSearchManager] Search scope set to: '\(projectPath ?? "nil")'")
         
         // Build the base predicate: Name contains query
         let namePredicate = NSPredicate(format: "%K CONTAINS[cd] %@", NSMetadataItemFSNameKey, trimmedQuery)
@@ -152,11 +148,8 @@ final class InlineFileSearchManager: InlineFileSearchProtocol {
         continuation = cont
         let queryObject = NSMetadataQuery()
         
-        print("[InlineFileSearchManager] Performing search with query: '\(trimmedQuery)' in path: '\(projectPath ?? "nil")' ")
-        
         // Set search scope using the same pattern as the working implementation
         queryObject.searchScopes = [projectPath as Any].compactMap { $0 }
-        print("[InlineFileSearchManager] Search scope set to: '\(projectPath ?? "nil")'")
         
         // Build the predicate to search file contents
         let contentPredicate = NSPredicate(format: "%K CONTAINS[cd] %@", NSMetadataItemTextContentKey, trimmedQuery)

@@ -122,7 +122,6 @@ struct ChatInputView: View {
     .animation(.easeInOut(duration: 0.2), value: contextManager.context.codeSelections.count)
     .onChange(of: viewModel.projectPath) { oldValue, newValue in
       if !newValue.isEmpty && newValue != oldValue {
-        print("[ChatInputView] Project path changed from '\(oldValue)' to '\(newValue)'")
         fileSearchViewModel?.updateProjectPath(newValue)
       }
     }
