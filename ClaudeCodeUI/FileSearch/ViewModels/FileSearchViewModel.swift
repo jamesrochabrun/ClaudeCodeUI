@@ -55,10 +55,15 @@ final class FileSearchViewModel {
       searchPath = xcodeObservationViewModel.getProjectRootPath()
     }
     
-    // If still no path, try to use current working directory
+    // If still no path, use current working directory as fallback
     if searchPath == nil || searchPath?.isEmpty == true {
       searchPath = FileManager.default.currentDirectoryPath
       print("[FileSearchViewModel] No project path provided, using current directory: '\(searchPath ?? "")'")
+    }
+    
+    // Ensure we always have a valid path
+    if searchPath?.isEmpty == true {
+      searchPath = FileManager.default.currentDirectoryPath
     }
     
     self.projectPath = searchPath

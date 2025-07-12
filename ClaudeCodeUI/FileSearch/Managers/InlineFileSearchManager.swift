@@ -21,7 +21,6 @@ final class InlineFileSearchManager: InlineFileSearchProtocol {
   // MARK: Internal
   
   func updateSearchPath(_ path: String) {
-    print("[InlineFileSearchManager] Updating search path to: '\(path)'")
     projectPath = path
   }
   
@@ -52,18 +51,8 @@ final class InlineFileSearchManager: InlineFileSearchProtocol {
         continuation = cont
         let queryObject = NSMetadataQuery()
         
-        print("[InlineFileSearchManager] Performing search with query: '\(trimmedQuery)' in path: '\(projectPath ?? "nil")' ")
-        
-        // Set search scope - if no project path, use current directory
-        if let projectPath = projectPath, !projectPath.isEmpty {
-            queryObject.searchScopes = [projectPath]
-            print("[InlineFileSearchManager] Search scope set to: '\(projectPath)'")
-        } else {
-            // If no project path, use current directory as fallback
-            let currentDir = FileManager.default.currentDirectoryPath
-            print("[InlineFileSearchManager] WARNING: No project path set, using current directory: '\(currentDir)'")
-            queryObject.searchScopes = [currentDir]
-        }
+        // Set search scope using the same pattern as the working implementation
+        queryObject.searchScopes = [projectPath as Any].compactMap { $0 }
         
         // Build the base predicate: Name contains query
         let namePredicate = NSPredicate(format: "%K CONTAINS[cd] %@", NSMetadataItemFSNameKey, trimmedQuery)
@@ -89,9 +78,8 @@ final class InlineFileSearchManager: InlineFileSearchProtocol {
         observer = NotificationCenter.default.addObserver(
           forName: .NSMetadataQueryDidFinishGathering,
           object: queryObject,
-          queue: .main
+          queue: nil
         ) { [weak self] notification in
-          Task { @MainActor in
             guard let self else {
               if !isContinuationResumed {
                 isContinuationResumed = true
@@ -117,7 +105,6 @@ final class InlineFileSearchManager: InlineFileSearchProtocol {
               isContinuationResumed = true
               continuation?.resume(returning: results)
             }
-          }
         }
         
         // Start the query
@@ -161,18 +148,8 @@ final class InlineFileSearchManager: InlineFileSearchProtocol {
         continuation = cont
         let queryObject = NSMetadataQuery()
         
-        print("[InlineFileSearchManager] Performing search with query: '\(trimmedQuery)' in path: '\(projectPath ?? "nil")' ")
-        
-        // Set search scope - if no project path, use current directory
-        if let projectPath = projectPath, !projectPath.isEmpty {
-            queryObject.searchScopes = [projectPath]
-            print("[InlineFileSearchManager] Search scope set to: '\(projectPath)'")
-        } else {
-            // If no project path, use current directory as fallback
-            let currentDir = FileManager.default.currentDirectoryPath
-            print("[InlineFileSearchManager] WARNING: No project path set, using current directory: '\(currentDir)'")
-            queryObject.searchScopes = [currentDir]
-        }
+        // Set search scope using the same pattern as the working implementation
+        queryObject.searchScopes = [projectPath as Any].compactMap { $0 }
         
         // Build the predicate to search file contents
         let contentPredicate = NSPredicate(format: "%K CONTAINS[cd] %@", NSMetadataItemTextContentKey, trimmedQuery)
@@ -199,9 +176,8 @@ final class InlineFileSearchManager: InlineFileSearchProtocol {
         observer = NotificationCenter.default.addObserver(
           forName: .NSMetadataQueryDidFinishGathering,
           object: queryObject,
-          queue: .main
+          queue: nil
         ) { [weak self] notification in
-          Task { @MainActor in
             guard let self else {
               if !isContinuationResumed {
                 isContinuationResumed = true
@@ -232,7 +208,6 @@ final class InlineFileSearchManager: InlineFileSearchProtocol {
               isContinuationResumed = true
               continuation?.resume(returning: results)
             }
-          }
         }
         
         // Start the query

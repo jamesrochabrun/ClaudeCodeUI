@@ -44,9 +44,6 @@ struct RootView: View {
     // Set the current session for settings storage
     if let sessionId = sessionId {
       container.setCurrentSession(sessionId)
-      print("[RootView] Setting up with session ID: \(sessionId)")
-    } else {
-      print("[RootView] Setting up with no session ID (new session)")
     }
     
     // Get session-specific working directory if available
@@ -56,12 +53,10 @@ struct RootView: View {
       workingDirectory = sessionPath
       // Also set it as the active path for this session
       container.settingsStorage.setProjectPath(sessionPath)
-      print("[RootView] Loaded working directory '\(sessionPath)' for session '\(sessionId)'")
     } else {
-      // New session starts with empty working directory
+      // New session starts with empty working directory to allow auto-detection
       workingDirectory = ""
       container.settingsStorage.clearProjectPath()
-      print("[RootView] No working directory found. Session ID: \(sessionId ?? "nil")")
     }
     
 #if DEBUG
