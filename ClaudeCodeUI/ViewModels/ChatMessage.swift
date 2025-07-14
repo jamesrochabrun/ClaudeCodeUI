@@ -48,6 +48,14 @@ public struct ChatMessage: Identifiable, Equatable {
   /// File attachments associated with this message (images, PDFs, etc.)
   public var attachments: [FileAttachment]?
   
+  /// Identifier for grouping related task messages together
+  /// - Note: Messages with the same taskGroupId belong to the same Task execution
+  public var taskGroupId: UUID?
+  
+  /// Whether this message is a Task tool that contains other tool executions
+  /// - Note: Only true for the initial Task tool message that starts a group
+  public var isTaskContainer: Bool
+  
   public init(
     id: UUID = UUID(),
     role: MessageRole,
@@ -59,7 +67,9 @@ public struct ChatMessage: Identifiable, Equatable {
     toolInputData: ToolInputData? = nil,
     isError: Bool = false,
     codeSelections: [TextSelection]? = nil,
-    attachments: [FileAttachment]? = nil
+    attachments: [FileAttachment]? = nil,
+    taskGroupId: UUID? = nil,
+    isTaskContainer: Bool = false
   ) {
     self.id = id
     self.role = role
@@ -72,6 +82,8 @@ public struct ChatMessage: Identifiable, Equatable {
     self.isError = isError
     self.codeSelections = codeSelections
     self.attachments = attachments
+    self.taskGroupId = taskGroupId
+    self.isTaskContainer = isTaskContainer
   }
   
   public static func == (lhs: ChatMessage, rhs: ChatMessage) -> Bool {
@@ -83,7 +95,9 @@ public struct ChatMessage: Identifiable, Equatable {
     lhs.toolInputData == rhs.toolInputData &&
     lhs.isError == rhs.isError &&
     lhs.codeSelections == rhs.codeSelections &&
-    lhs.attachments?.map { $0.id } == rhs.attachments?.map { $0.id }
+    lhs.attachments?.map { $0.id } == rhs.attachments?.map { $0.id } &&
+    lhs.taskGroupId == rhs.taskGroupId &&
+    lhs.isTaskContainer == rhs.isTaskContainer
   }
 }
 

@@ -42,9 +42,17 @@ struct MessageFactory {
   ///   - toolName: The name of the tool being used (e.g., "Bash", "TodoWrite")
   ///   - input: The formatted input parameters for the tool
   ///   - toolInputData: Optional structured data containing the tool's parameters
+  ///   - taskGroupId: Optional group ID for Task tool execution tracking
+  ///   - isTaskContainer: Whether this is a Task tool that contains other tools
   /// - Returns: A ChatMessage configured as a tool use message
   /// - Note: Empty inputs (like "[:] " or "{}") are handled gracefully by omitting the input display
-  static func toolUseMessage(toolName: String, input: String, toolInputData: ToolInputData? = nil) -> ChatMessage {
+  static func toolUseMessage(
+    toolName: String, 
+    input: String, 
+    toolInputData: ToolInputData? = nil,
+    taskGroupId: UUID? = nil,
+    isTaskContainer: Bool = false
+  ) -> ChatMessage {
     // For tools with no parameters, don't show empty input
     let content: String
     if input.isEmpty || input == "[:]" || input == "{}" {
@@ -58,7 +66,9 @@ struct MessageFactory {
       content: content,
       messageType: .toolUse,
       toolName: toolName,
-      toolInputData: toolInputData
+      toolInputData: toolInputData,
+      taskGroupId: taskGroupId,
+      isTaskContainer: isTaskContainer
     )
   }
   
@@ -66,9 +76,10 @@ struct MessageFactory {
   /// - Parameters:
   ///   - content: The result content from the tool execution
   ///   - isError: Whether the tool execution resulted in an error
+  ///   - taskGroupId: Optional group ID for Task tool execution tracking
   /// - Returns: A ChatMessage configured as either a tool result or tool error
   /// - Note: Handles both string results and structured item results
-  static func toolResultMessage(content: MessageResponse.Content.ToolResultContent, isError: Bool) -> ChatMessage {
+  static func toolResultMessage(content: MessageResponse.Content.ToolResultContent, isError: Bool, taskGroupId: UUID? = nil) -> ChatMessage {
     var contentString = ""
     switch content {
     case .string(let stringValue):
@@ -83,7 +94,8 @@ struct MessageFactory {
       role: isError ? .toolError : .toolResult,
       content: contentString,
       messageType: isError ? .toolError : .toolResult,
-      isError: isError
+      isError: isError,
+      taskGroupId: taskGroupId
     )
   }
   

@@ -28,6 +28,8 @@ final class StreamProcessor {
     var currentMessageId: String?
     var currentLocalMessageId: UUID?
     var hasProcessedToolUse = false  // Track if we've seen a tool use
+    var currentTaskGroupId: UUID?    // Track the current task group
+    var isInTaskExecution = false    // Track if we're currently in a Task execution
   }
   
   init(messageStore: MessageStore, sessionManager: SessionManager, onSessionChange: ((String) -> Void)? = nil) {
@@ -58,6 +60,10 @@ final class StreamProcessor {
             
             switch completion {
             case .finished:
+              // End any active task execution
+              state.isInTaskExecution = false
+              state.currentTaskGroupId = nil
+              
               if state.assistantMessageCreated && !state.contentBuffer.isEmpty {
                 let finalMessageId = state.currentLocalMessageId ?? messageId
                 // Check if the content is just "(no content)"
@@ -122,7 +128,7 @@ final class StreamProcessor {
       handleAssistantMessage(message, messageId: messageId, state: state, onTokenUsageUpdate: onTokenUsageUpdate)
       
     case .user(let userMessage):
-      handleUserMessage(userMessage)
+      handleUserMessage(userMessage, state: state)
       
     case .result(let resultMessage):
       handleResult(resultMessage, firstMessageInSession: firstMessageInSession, onTokenUsageUpdate: onTokenUsageUpdate, onCostUpdate: onCostUpdate)
@@ -181,6 +187,9 @@ final class StreamProcessor {
       state.contentBuffer = ""
       state.currentLocalMessageId = nil
       state.hasProcessedToolUse = false
+      // End task execution when we see text content
+      state.isInTaskExecution = false
+      state.currentTaskGroupId = nil
     }
     
     // For multi-part responses, we want to treat all assistant messages in a single
@@ -241,6 +250,15 @@ final class StreamProcessor {
         // Mark that we've processed a tool use
         state.hasProcessedToolUse = true
         
+        // Check if this is a Task tool starting
+        let isTaskTool = toolUse.name == "Task"
+        if isTaskTool {
+          // Start a new task group
+          state.currentTaskGroupId = UUID()
+          state.isInTaskExecution = true
+          logger.debug("Starting new Task group with ID: \(state.currentTaskGroupId?.uuidString ?? "nil")")
+        }
+        
         // Extract structured data from tool input
         var parameters: [String: String] = [:]
         var rawParameters: [String: String]? = nil
@@ -281,14 +299,17 @@ final class StreamProcessor {
         let toolMessage = MessageFactory.toolUseMessage(
           toolName: toolUse.name,
           input: toolUse.input.formattedDescription(),
-          toolInputData: ToolInputData(parameters: parameters, rawParameters: rawParameters)
+          toolInputData: ToolInputData(parameters: parameters, rawParameters: rawParameters),
+          taskGroupId: state.currentTaskGroupId,
+          isTaskContainer: isTaskTool
         )
         messageStore.addMessage(toolMessage)
         
       case .toolResult(let toolResult):
         let resultMessage = MessageFactory.toolResultMessage(
           content: toolResult.content,
-          isError: toolResult.isError == true
+          isError: toolResult.isError == true,
+          taskGroupId: state.currentTaskGroupId
         )
         messageStore.addMessage(resultMessage)
         
@@ -306,7 +327,7 @@ final class StreamProcessor {
     }
   }
   
-  private func handleUserMessage(_ userMessage: UserMessage) {
+  private func handleUserMessage(_ userMessage: UserMessage, state: StreamState) {
     for content in userMessage.message.content {
       switch content {
       case .text(let textContent, _):
@@ -315,7 +336,8 @@ final class StreamProcessor {
       case .toolResult(let toolResult):
         let resultMessage = MessageFactory.toolResultMessage(
           content: toolResult.content,
-          isError: toolResult.isError == true
+          isError: toolResult.isError == true,
+          taskGroupId: state.currentTaskGroupId
         )
         messageStore.addMessage(resultMessage)
         
