@@ -52,7 +52,7 @@ final class DependencyContainer {
     // Initialize XcodeObserver with dependencies
     self.xcodeObserver = DefaultXcodeObserver(
       accessibilityService: accessibilityService,
-      permissionsService: permissionsService,
+      permissionsService: permissionsService
     )
     self.xcodeObservationViewModel = XcodeObservationViewModel(xcodeObserver: xcodeObserver)
     self.contextManager = ContextManager(xcodeObservationViewModel: xcodeObservationViewModel)
