@@ -1,5 +1,5 @@
 {
-  "originHash" : "b480f81e9205c422f4b57f9243c27323d6bb2f115587df290fad129efa59c92d",
+  "originHash" : "79123290c29ff40f9f6d7944a9621313e895611c6b48779561eeeae1d98aaeed",
   "pins" : [
     {
       "identity" : "claudecodesdk",
@@ -7,7 +7,7 @@
       "location" : "https://github.com/jamesrochabrun/ClaudeCodeSDK",
       "state" : {
         "branch" : "main",
-        "revision" : "5f50e80ab52ed08b0e5d544462bc19aedadf7f4e"
+        "revision" : "79cc7f2ae0aeaf9a5243cc3e5391b5089aeee530"
       }
     },
     {
@@ -34,24 +34,6 @@
       "state" : {
         "revision" : "045cf174010beb335fa1d2567d18c057b8787165",
         "version" : "2.3.0"
-      }
-    },
-    {
-      "identity" : "swift-subprocess",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swiftlang/swift-subprocess.git",
-      "state" : {
-        "branch" : "main",
-        "revision" : "ca05b234076a7813ac1a661e51f5893375effbf0"
-      }
-    },
-    {
-      "identity" : "swift-system",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-system",
-      "state" : {
-        "revision" : "61e4ca4b81b9e09e2ec863b00c340eb13497dac6",
-        "version" : "1.5.0"
       }
     },
     {
