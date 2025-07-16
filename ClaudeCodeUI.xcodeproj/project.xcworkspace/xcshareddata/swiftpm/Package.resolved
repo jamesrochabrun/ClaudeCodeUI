@@ -1,0 +1,50 @@
+{
+  "originHash" : "eee14e90fb08cee7ce6a7c7e134b26afe1aa7f62f4c35602fbea4fb5e935fab5",
+  "pins" : [
+    {
+      "identity" : "claudecodesdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/jamesrochabrun/ClaudeCodeSDK",
+      "state" : {
+        "branch" : "main",
+        "revision" : "b28803e03877fdc1434f0cfa40c81934498b7121"
+      }
+    },
+    {
+      "identity" : "down",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/gsabran/Down",
+      "state" : {
+        "revision" : "14309dd8781c7613063344727454ffbbebc8e8bd"
+      }
+    },
+    {
+      "identity" : "highlightswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/appstefan/highlightswift",
+      "state" : {
+        "revision" : "784ca3ccfc8a2cf724fbb2f06cb6ec3329424da3",
+        "version" : "1.1.0"
+      }
+    },
+    {
+      "identity" : "keyboardshortcuts",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/sindresorhus/KeyboardShortcuts",
+      "state" : {
+        "revision" : "045cf174010beb335fa1d2567d18c057b8787165",
+        "version" : "2.3.0"
+      }
+    },
+    {
+      "identity" : "swiftanthropic",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/jamesrochabrun/SwiftAnthropic",
+      "state" : {
+        "revision" : "c069979c681de4434b6611c091c0cab01f141213",
+        "version" : "2.1.7"
+      }
+    }
+  ],
+  "version" : 3
+}
