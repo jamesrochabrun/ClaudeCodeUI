@@ -45,7 +45,7 @@ struct MCPServerEditView: View {
           
           if isURLBased {
             TextField("URL", text: $url)
-              .help("The server URL (e.g., http://127.0.0.1:3845/sse)")
+
           } else {
             TextField("Command", text: $command)
               .help("The command to execute (e.g., npx, node)")
