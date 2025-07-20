@@ -6,11 +6,13 @@
 //
 
 import SwiftUI
+import CustomPermissionServiceInterface
 
 struct MCPConfigurationView: View {
   // MARK: - Properties
   @Binding var isPresented: Bool
   let mcpConfigStorage: MCPConfigStorage
+  let globalPreferences: GlobalPreferencesStorage?
   @State private var configManager = MCPConfigurationManager()
   @State private var selectedServer: MCPServerConfig?
   @State private var showingAddServer = false
@@ -23,6 +25,12 @@ struct MCPConfigurationView: View {
           serversSection
           quickAddSection
           configurationSection
+          
+          // Custom permission section (only show if globalPreferences is available)
+          if globalPreferences != nil {
+            customPermissionSection
+          }
+          
           notesSection
         }
         .formStyle(.grouped)
@@ -169,12 +177,89 @@ struct MCPConfigurationView: View {
       .foregroundColor(.orange)
   }
   
+  private var customPermissionSection: some View {
+    Section("Custom Permission Settings") {
+      if let preferences = globalPreferences {
+        VStack(alignment: .leading, spacing: 12) {
+          // Auto-approve settings
+          VStack(alignment: .leading, spacing: 8) {
+            Toggle("Auto-approve all tool calls", isOn: Binding(
+              get: { preferences.autoApproveToolCalls },
+              set: { preferences.autoApproveToolCalls = $0 }
+            ))
+            .help("Automatically approve all tool requests without showing permission prompts")
+            
+            Toggle("Auto-approve low-risk operations", isOn: Binding(
+              get: { preferences.autoApproveLowRisk },
+              set: { preferences.autoApproveLowRisk = $0 }
+            ))
+            .help("Automatically approve operations classified as low-risk (e.g., reading files)")
+            .disabled(preferences.autoApproveToolCalls) // Disable if auto-approve all is on
+          }
+          
+          Divider()
+          
+          // Display settings
+          Toggle("Show detailed permission information", isOn: Binding(
+            get: { preferences.showDetailedPermissionInfo },
+            set: { preferences.showDetailedPermissionInfo = $0 }
+          ))
+          .help("Show detailed information about tools and their parameters in permission prompts")
+          
+          Divider()
+          
+          // Timeout and limits
+          VStack(alignment: .leading, spacing: 8) {
+            HStack {
+              Text("Permission request timeout:")
+              Spacer()
+              TextField("Seconds", value: Binding(
+                get: { Int(preferences.permissionRequestTimeout) },
+                set: { preferences.permissionRequestTimeout = TimeInterval($0) }
+              ), format: .number)
+              .textFieldStyle(.roundedBorder)
+              .frame(width: 80)
+              Text("seconds")
+                .foregroundColor(.secondary)
+            }
+            .help("How long to wait for user response before timing out permission requests")
+            
+            HStack {
+              Text("Max concurrent requests:")
+              Spacer()
+              TextField("Count", value: Binding(
+                get: { preferences.maxConcurrentPermissionRequests },
+                set: { preferences.maxConcurrentPermissionRequests = $0 }
+              ), format: .number)
+              .textFieldStyle(.roundedBorder)
+              .frame(width: 80)
+            }
+            .help("Maximum number of simultaneous permission requests allowed")
+          }
+          
+          // Permission system status
+          Divider()
+          
+          HStack {
+            Image(systemName: "checkmark.shield.fill")
+              .foregroundColor(.green)
+            Text("Custom permission system is active")
+              .font(.caption)
+              .foregroundColor(.secondary)
+            Spacer()
+          }
+        }
+      }
+    }
+  }
+  
   private var notesSection: some View {
     Section(header: Text("Notes")) {
       VStack(alignment: .leading, spacing: 4) {
         noteItem("MCP tools must be explicitly allowed using allowedTools")
         noteItem("MCP tool names follow the pattern: mcp__<serverName>__<toolName>")
         noteItem("Use mcp__<serverName>__* to allow all tools from a server")
+        noteItem("Custom permission prompts will appear for non-whitelisted tools")
       }
     }
   }
@@ -327,5 +412,9 @@ struct QuickAddServerRow: View {
     }
   }
   
-  return MCPConfigurationView(isPresented: .constant(true), mcpConfigStorage: PreviewMCPStorage())
+  return MCPConfigurationView(
+    isPresented: .constant(true), 
+    mcpConfigStorage: PreviewMCPStorage(),
+    globalPreferences: nil
+  )
 }

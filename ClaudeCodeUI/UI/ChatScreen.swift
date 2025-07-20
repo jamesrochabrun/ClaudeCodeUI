@@ -11,15 +11,17 @@ import SwiftUI
 import PermissionsServiceInterface
 import TerminalServiceInterface
 import KeyboardShortcuts
+import CustomPermissionServiceInterface
 
 struct ChatScreen: View {
   
-  init(viewModel: ChatViewModel, contextManager: ContextManager, xcodeObservationViewModel: XcodeObservationViewModel, permissionsService: PermissionsService, terminalService: TerminalService) {
+  init(viewModel: ChatViewModel, contextManager: ContextManager, xcodeObservationViewModel: XcodeObservationViewModel, permissionsService: PermissionsService, terminalService: TerminalService, customPermissionService: CustomPermissionService) {
     self.viewModel = viewModel
     self.contextManager = contextManager
     self.xcodeObservationViewModel = xcodeObservationViewModel
     self.permissionsService = permissionsService
     self.terminalService = terminalService
+    self.customPermissionService = customPermissionService
   }
   
   @State var viewModel: ChatViewModel
@@ -27,6 +29,7 @@ struct ChatScreen: View {
   let xcodeObservationViewModel: XcodeObservationViewModel
   let permissionsService: PermissionsService
   let terminalService: TerminalService
+  let customPermissionService: CustomPermissionService
   @State private var messageText: String = ""
   @State var showingSettings = false
   @State private var keyboardManager = KeyboardShortcutManager()
@@ -92,11 +95,15 @@ struct ChatScreen: View {
     .navigationTitle("Claude Code Chat")
     .toolbar {
       ToolbarItem(placement: .automatic) {
-        Button(action: clearChat) {
-          Image(systemName: "trash")
-            .font(.title2)
+        HStack(spacing: 8) {
+          PermissionStatusView(customPermissionService: customPermissionService)
+          
+          Button(action: clearChat) {
+            Image(systemName: "trash")
+              .font(.title2)
+          }
+          .disabled(viewModel.messages.isEmpty)
         }
-        .disabled(viewModel.messages.isEmpty)
       }
     }
     .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)

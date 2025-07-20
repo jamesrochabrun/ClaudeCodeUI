@@ -8,6 +8,8 @@
 import ClaudeCodeSDK
 import Foundation
 import os.log
+import CustomPermissionService
+import CustomPermissionServiceInterface
 
 @Observable
 @MainActor
@@ -20,6 +22,7 @@ public final class ChatViewModel {
   let sessionStorage: SessionStorageProtocol
   let settingsStorage: SettingsStorage
   let globalPreferences: GlobalPreferencesStorage
+  let customPermissionService: CustomPermissionService
   private let onSessionChange: ((String) -> Void)?
   
   private let streamProcessor: StreamProcessor
@@ -79,12 +82,14 @@ public final class ChatViewModel {
     sessionStorage: SessionStorageProtocol,
     settingsStorage: SettingsStorage,
     globalPreferences: GlobalPreferencesStorage,
+    customPermissionService: CustomPermissionService,
     onSessionChange: ((String) -> Void)? = nil)
   {
     self.claudeClient = claudeClient
     self.sessionStorage = sessionStorage
     self.settingsStorage = settingsStorage
     self.globalPreferences = globalPreferences
+    self.customPermissionService = customPermissionService
     self.onSessionChange = onSessionChange
     self.sessionManager = SessionManager(sessionStorage: sessionStorage)
     self.streamProcessor = StreamProcessor(
@@ -388,12 +393,23 @@ public final class ChatViewModel {
     if !globalPreferences.appendSystemPrompt.isEmpty {
       options.appendSystemPrompt = globalPreferences.appendSystemPrompt
     }
+    
+    // Configure MCP with custom permission service integration
+    let mcpHelper = ApprovalMCPHelper(permissionService: customPermissionService)
+    
     if !globalPreferences.mcpConfigPath.isEmpty {
       print("[MCP] Setting mcpConfigPath in options: \(globalPreferences.mcpConfigPath)")
       options.mcpConfigPath = globalPreferences.mcpConfigPath
+      
+      // Also configure approval tool integration
+      mcpHelper.configureOptions(&options)
     } else {
-      print("[MCP] No mcpConfigPath found in settings")
+      print("[MCP] No mcpConfigPath found in settings, configuring approval tool only")
+      // Configure just the approval tool
+      mcpHelper.configureOptions(&options)
     }
+    
+    print("[CustomPermission] Custom permission service integration configured")
     return options
   }
   

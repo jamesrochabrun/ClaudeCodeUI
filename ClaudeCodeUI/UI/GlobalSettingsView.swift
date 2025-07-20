@@ -106,7 +106,8 @@ struct GlobalSettingsView: View {
   private var mcpConfigurationSheet: some View {
     MCPConfigurationView(
       isPresented: $showingMCPConfig,
-      mcpConfigStorage: globalPreferences
+      mcpConfigStorage: globalPreferences,
+      globalPreferences: globalPreferences
     )
   }
   

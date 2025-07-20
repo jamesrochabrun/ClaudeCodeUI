@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		08627C1C2E2AEE1800D5C3B4 /* CustomPermissionServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 08627C1B2E2AEE1800D5C3B4 /* CustomPermissionServiceInterface */; };
+		08627C1F2E2AF1A500D5C3B4 /* CustomPermissionService in Frameworks */ = {isa = PBXBuildFile; productRef = 08627C1E2E2AF1A500D5C3B4 /* CustomPermissionService */; };
+		08627C222E2B18E800D5C3B4 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = 08627C212E2B18E800D5C3B4 /* MCP */; };
 		7B7EE9962E09D27700B25B8D /* TerminalServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 7B7EE9952E09D27700B25B8D /* TerminalServiceInterface */; };
 		7B7EE9982E09D27D00B25B8D /* TerminalService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B7EE9972E09D27D00B25B8D /* TerminalService */; };
 		7B8F56E52E11114200A11A68 /* Down in Frameworks */ = {isa = PBXBuildFile; productRef = 7B8F56E42E11114200A11A68 /* Down */; };
@@ -76,7 +79,10 @@
 				7B90FE1F2E09385B00764905 /* AccessibilityService in Frameworks */,
 				7B90FE1D2E09384F00764905 /* AccessibilityFoundation in Frameworks */,
 				7B90FE2A2E0938E200764905 /* XcodeObserverServiceInterface in Frameworks */,
+				08627C222E2B18E800D5C3B4 /* MCP in Frameworks */,
 				7B90FE252E09388000764905 /* PermissionsService in Frameworks */,
+				08627C1F2E2AF1A500D5C3B4 /* CustomPermissionService in Frameworks */,
+				08627C1C2E2AEE1800D5C3B4 /* CustomPermissionServiceInterface in Frameworks */,
 				7B90FE212E09386900764905 /* AccessibilityServiceInterface in Frameworks */,
 				7BE462B62E08AAD100FD421C /* KeyboardShortcuts in Frameworks */,
 			);
@@ -159,6 +165,9 @@
 				7B7EE9972E09D27D00B25B8D /* TerminalService */,
 				7B8F56E42E11114200A11A68 /* Down */,
 				7B8F56E72E11116600A11A68 /* HighlightSwift */,
+				08627C1B2E2AEE1800D5C3B4 /* CustomPermissionServiceInterface */,
+				08627C1E2E2AF1A500D5C3B4 /* CustomPermissionService */,
+				08627C212E2B18E800D5C3B4 /* MCP */,
 			);
 			productName = ClaudeCodeUI;
 			productReference = 7B3764CC2DE3D2B200F32C87 /* ClaudeCodeUI.app */;
@@ -255,6 +264,9 @@
 				7B7EE80E2E09D04500B25B8D /* XCLocalSwiftPackageReference "modules/TerminalService" */,
 				7B8F56E32E11114200A11A68 /* XCRemoteSwiftPackageReference "Down" */,
 				7B8F56E62E11116600A11A68 /* XCRemoteSwiftPackageReference "highlightswift" */,
+				08627C1A2E2AEE1800D5C3B4 /* XCLocalSwiftPackageReference "modules/CustomPermissionServiceInterface" */,
+				08627C1D2E2AF1A500D5C3B4 /* XCLocalSwiftPackageReference "modules/CustomPermissionService" */,
+				08627C202E2B18E800D5C3B4 /* XCRemoteSwiftPackageReference "swift-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7B3764CD2DE3D2B200F32C87 /* Products */;
@@ -614,6 +626,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
+		08627C1A2E2AEE1800D5C3B4 /* XCLocalSwiftPackageReference "modules/CustomPermissionServiceInterface" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = modules/CustomPermissionServiceInterface;
+		};
+		08627C1D2E2AF1A500D5C3B4 /* XCLocalSwiftPackageReference "modules/CustomPermissionService" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = modules/CustomPermissionService;
+		};
 		7B5698F02E07D17C00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityFoundation" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = modules/AccessibilityFoundation;
@@ -649,6 +669,14 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		08627C202E2B18E800D5C3B4 /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/modelcontextprotocol/swift-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.9.0;
+			};
+		};
 		7B8F56E32E11114200A11A68 /* XCRemoteSwiftPackageReference "Down" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/gsabran/Down";
@@ -684,6 +712,19 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		08627C1B2E2AEE1800D5C3B4 /* CustomPermissionServiceInterface */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CustomPermissionServiceInterface;
+		};
+		08627C1E2E2AF1A500D5C3B4 /* CustomPermissionService */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CustomPermissionService;
+		};
+		08627C212E2B18E800D5C3B4 /* MCP */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 08627C202E2B18E800D5C3B4 /* XCRemoteSwiftPackageReference "swift-sdk" */;
+			productName = MCP;
+		};
 		7B7EE9952E09D27700B25B8D /* TerminalServiceInterface */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7B7EE80D2E09D03800B25B8D /* XCLocalSwiftPackageReference "modules/TerminalServiceInterface" */;

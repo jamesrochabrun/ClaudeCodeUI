@@ -64,7 +64,6 @@ public struct UnifiedDiffView: View {
         }
         .background(colorScheme.xcodeEditorBackground)
         .cornerRadius(4)
-        .frame(maxHeight: 600)
       }
     }
   }

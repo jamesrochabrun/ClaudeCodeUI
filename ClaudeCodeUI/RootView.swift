@@ -26,7 +26,8 @@ struct RootView: View {
         contextManager: container.contextManager,
         xcodeObservationViewModel: container.xcodeObservationViewModel,
         permissionsService: container.permissionsService,
-        terminalService: container.terminalService
+        terminalService: container.terminalService,
+        customPermissionService: container.customPermissionService
       )
       .environment(container.xcodeObservationViewModel)
     } else {
@@ -88,6 +89,7 @@ struct RootView: View {
       sessionStorage: container.sessionStorage,
       settingsStorage: container.settingsStorage,
       globalPreferences: container.globalPreferences,
+      customPermissionService: container.customPermissionService,
       onSessionChange: { newSessionId in
         container.setCurrentSession(newSessionId)
       }

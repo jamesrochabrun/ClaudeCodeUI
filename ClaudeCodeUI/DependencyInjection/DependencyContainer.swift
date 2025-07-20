@@ -16,6 +16,8 @@ import AccessibilityServiceInterface
 import TerminalService
 import TerminalServiceInterface
 import ApplicationServices
+import CustomPermissionService
+import CustomPermissionServiceInterface
 
 @MainActor
 final class DependencyContainer {
@@ -29,6 +31,12 @@ final class DependencyContainer {
   let xcodeObserver: XcodeObserver
   let xcodeObservationViewModel: XcodeObservationViewModel
   let contextManager: ContextManager
+  
+  // Custom permission service
+  let customPermissionService: CustomPermissionService
+  
+  // Approval bridge for MCP IPC
+  let approvalBridge: ApprovalBridge
   
   init(globalPreferences: GlobalPreferencesStorage) {
     self.settingsStorage = SettingsStorageManager()
@@ -48,6 +56,12 @@ final class DependencyContainer {
     
     // Initialize accessibility service
     self.accessibilityService = DefaultAccessibilityService()
+    
+    // Initialize custom permission service
+    self.customPermissionService = DefaultCustomPermissionService()
+    
+    // Initialize approval bridge for MCP IPC
+    self.approvalBridge = ApprovalBridge(permissionService: customPermissionService)
     
     // Initialize XcodeObserver with dependencies
     self.xcodeObserver = DefaultXcodeObserver(
