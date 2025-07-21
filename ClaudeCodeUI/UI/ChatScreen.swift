@@ -12,6 +12,7 @@ import PermissionsServiceInterface
 import TerminalServiceInterface
 import KeyboardShortcuts
 import CustomPermissionServiceInterface
+import CustomPermissionService
 
 struct ChatScreen: View {
   
@@ -22,6 +23,8 @@ struct ChatScreen: View {
     self.permissionsService = permissionsService
     self.terminalService = terminalService
     self.customPermissionService = customPermissionService
+    // Cast to DefaultCustomPermissionService for @ObservedObject support
+    self.observedPermissionService = customPermissionService as! DefaultCustomPermissionService
   }
   
   @State var viewModel: ChatViewModel
@@ -30,6 +33,7 @@ struct ChatScreen: View {
   let permissionsService: PermissionsService
   let terminalService: TerminalService
   let customPermissionService: CustomPermissionService
+  @ObservedObject private var observedPermissionService: DefaultCustomPermissionService
   @State private var messageText: String = ""
   @State var showingSettings = false
   @State private var keyboardManager = KeyboardShortcutManager()
@@ -92,6 +96,22 @@ struct ChatScreen: View {
         placeholder: "Type a message...",
         triggerFocus: $triggerTextEditorFocus)
     }
+    .overlay(
+      // Approval Toast Overlay
+      ToastContainer(isPresented: $observedPermissionService.isToastVisible) {
+        if let request = observedPermissionService.currentToastRequest {
+          ApprovalToast(
+            request: request,
+            onApprove: {
+              observedPermissionService.approveCurrentToast()
+            },
+            onDeny: {
+              observedPermissionService.denyCurrentToast()
+            }
+          )
+        }
+      }
+    )
     .navigationTitle("Claude Code Chat")
     .toolbar {
       ToolbarItem(placement: .automatic) {

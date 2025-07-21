@@ -143,7 +143,7 @@ actor ApprovalServer {
             // Convert IPC response to MCP format
             let mcpResponse: [String: Any] = [
                 "behavior": ipcResponse.behavior,
-                "updatedInput": ipcResponse.updatedInput,
+                "updatedInput": convertSendableToAny(ipcResponse.updatedInput),
                 "message": ipcResponse.message
             ]
             
@@ -314,6 +314,35 @@ actor ApprovalServer {
             return convertValueToAny(obj)
         case .data(mimeType: let mimeType, let data):
             return ["mimeType": mimeType, "data": data]
+        case .null:
+            return NSNull()
+        }
+    }
+    
+    /// Convert SendableValue dictionary back to [String: Any] for JSON serialization
+    private func convertSendableToAny(_ sendableDict: [String: SendableValue]) -> [String: Any] {
+        var result: [String: Any] = [:]
+        for (key, value) in sendableDict {
+            result[key] = convertSendableValueToAny(value)
+        }
+        return result
+    }
+    
+    /// Convert SendableValue to Any
+    private func convertSendableValueToAny(_ value: SendableValue) -> Any {
+        switch value {
+        case .string(let str):
+            return str
+        case .integer(let num):
+            return num
+        case .double(let num):
+            return num
+        case .boolean(let bool):
+            return bool
+        case .array(let arr):
+            return arr.map { convertSendableValueToAny($0) }
+        case .dictionary(let dict):
+            return convertSendableToAny(dict)
         case .null:
             return NSNull()
         }

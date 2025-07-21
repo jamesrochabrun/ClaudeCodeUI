@@ -29,10 +29,11 @@ public final class MCPApprovalTool: @unchecked Sendable {
             options.mcpServers = [:]
         }
         
-        // Configure the approval server
+        // Configure the approval server to use our Swift MCP executable
+        let approvalServerPath = getApprovalServerExecutablePath()
         options.mcpServers?["approval_server"] = .stdio(McpStdioServerConfig(
-            command: "node",
-            args: ["-e", createApprovalServerScript()]
+            command: approvalServerPath,
+            args: []
         ))
         
         // Ensure the approval tool is allowed
@@ -44,105 +45,47 @@ public final class MCPApprovalTool: @unchecked Sendable {
         }
     }
     
-    /// Create the JavaScript MCP server script that handles approval requests
-    /// This creates a simple Node.js MCP server that bridges to our Swift service
-    private func createApprovalServerScript() -> String {
-        return """
-        const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
-        const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
+    /// Get the path to the compiled Swift MCP approval server executable
+    /// This locates our ApprovalMCPServer binary that handles approval requests
+    private func getApprovalServerExecutablePath() -> String {
+        // Try to find the built executable in the project structure
+        let possiblePaths = [
+            // Architecture-specific debug build path
+            "/Users/james_rochabrun/Desktop/ClaudeCodeUI/modules/ApprovalMCPServer/.build/arm64-apple-macosx/debug/ApprovalMCPServer",
+            // Architecture-specific release build path
+            "/Users/james_rochabrun/Desktop/ClaudeCodeUI/modules/ApprovalMCPServer/.build/arm64-apple-macosx/release/ApprovalMCPServer",
+            // Generic debug build path
+            "/Users/james_rochabrun/Desktop/ClaudeCodeUI/modules/ApprovalMCPServer/.build/debug/ApprovalMCPServer",
+            // Generic release build path
+            "/Users/james_rochabrun/Desktop/ClaudeCodeUI/modules/ApprovalMCPServer/.build/release/ApprovalMCPServer",
+            // Relative paths from working directory
+            "./modules/ApprovalMCPServer/.build/arm64-apple-macosx/debug/ApprovalMCPServer",
+            "./modules/ApprovalMCPServer/.build/arm64-apple-macosx/release/ApprovalMCPServer",
+            "./modules/ApprovalMCPServer/.build/debug/ApprovalMCPServer",
+            "./modules/ApprovalMCPServer/.build/release/ApprovalMCPServer",
+            // Application bundle paths
+            Bundle.main.path(forResource: "ApprovalMCPServer", ofType: nil) ?? ""
+        ]
         
-        class ApprovalServer {
-          constructor() {
-            this.server = new Server(
-              {
-                name: 'approval-server',
-                version: '1.0.0',
-              },
-              {
-                capabilities: {
-                  tools: {},
-                },
-              }
-            );
-            
-            this.setupHandlers();
-          }
-          
-          setupHandlers() {
-            this.server.setRequestHandler('tools/list', async () => {
-              return {
-                tools: [
-                  {
-                    name: '\(toolName)',
-                    description: 'Handle permission approval requests for Claude Code tools',
-                    inputSchema: {
-                      type: 'object',
-                      properties: {
-                        tool_name: {
-                          type: 'string',
-                          description: 'The name of the tool requesting permission'
-                        },
-                        input: {
-                          type: 'object',
-                          description: 'The input parameters for the tool'
-                        },
-                        tool_use_id: {
-                          type: 'string',
-                          description: 'Unique identifier for this tool use request'
-                        }
-                      },
-                      required: ['tool_name', 'input', 'tool_use_id']
-                    }
-                  }
-                ]
-              };
-            });
-            
-            this.server.setRequestHandler('tools/call', async (request) => {
-              if (request.params.name !== '\(toolName)') {
-                throw new Error(`Unknown tool: ${request.params.name}`);
-              }
-              
-              const { tool_name, input, tool_use_id } = request.params.arguments;
-              
-              // In a real implementation, this would communicate with the Swift service
-              // For now, we'll return a default response that can be customized
-              const response = {
-                behavior: 'allow',
-                updatedInput: input,
-                message: 'Handled by MCP approval server'
-              };
-              
-              return {
-                content: [
-                  {
-                    type: 'text',
-                    text: JSON.stringify(response)
-                  }
-                ]
-              };
-            });
-          }
-          
-          async run() {
-            const transport = new StdioServerTransport();
-            await this.server.connect(transport);
-          }
+        for path in possiblePaths {
+            if FileManager.default.fileExists(atPath: path) {
+                return path
+            }
         }
         
-        const server = new ApprovalServer();
-        server.run().catch(console.error);
-        """
+        // Fallback to architecture-specific debug build path
+        return "/Users/james_rochabrun/Desktop/ClaudeCodeUI/modules/ApprovalMCPServer/.build/arm64-apple-macosx/debug/ApprovalMCPServer"
     }
     
     /// Create a custom MCP configuration for the approval tool
     /// - Returns: MCP configuration dictionary
     public func createMCPConfiguration() -> [String: Any] {
+        let approvalServerPath = getApprovalServerExecutablePath()
         return [
             "mcpServers": [
                 "approval_server": [
-                    "command": "node",
-                    "args": ["-e", createApprovalServerScript()],
+                    "command": approvalServerPath,
+                    "args": [],
                     "env": [:]
                 ]
             ]

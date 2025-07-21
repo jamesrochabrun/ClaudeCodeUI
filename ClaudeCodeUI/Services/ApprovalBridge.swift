@@ -56,8 +56,8 @@ public final class ApprovalBridge: ObservableObject {
             
             logger.info("Processing approval request for tool: \\(ipcRequest.toolName), ID: \\(ipcRequest.toolUseId)")
             
-            // Process the request asynchronously
-            Task {
+            // Process the request asynchronously on main actor for UI updates
+            Task { @MainActor in
                 await processApprovalRequest(ipcRequest)
             }
             
@@ -68,6 +68,7 @@ public final class ApprovalBridge: ObservableObject {
     }
     
     /// Process the approval request using CustomPermissionService
+    @MainActor
     private func processApprovalRequest(_ ipcRequest: IPCRequest) async {
         do {
             // Create ApprovalRequest from IPC request
