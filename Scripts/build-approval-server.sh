@@ -8,11 +8,8 @@ set -e
 # Get the project directory
 PROJECT_DIR="${PROJECT_DIR:-$(pwd)}"
 APPROVAL_SERVER_DIR="${PROJECT_DIR}/modules/ApprovalMCPServer"
-BUILT_PRODUCTS_DIR="${BUILT_PRODUCTS_DIR:-${PROJECT_DIR}/build}"
 
-echo "Building ApprovalMCPServer..."
-echo "Project directory: ${PROJECT_DIR}"
-echo "Approval server directory: ${APPROVAL_SERVER_DIR}"
+echo "Checking ApprovalMCPServer..."
 
 # Check if the approval server directory exists
 if [ ! -d "${APPROVAL_SERVER_DIR}" ]; then
@@ -20,27 +17,33 @@ if [ ! -d "${APPROVAL_SERVER_DIR}" ]; then
     exit 1
 fi
 
-# Build the approval server
-cd "${APPROVAL_SERVER_DIR}"
-swift build -c debug
-
-# Find the built executable
+# Determine architecture
 ARCH=$(uname -m)
 BUILT_EXECUTABLE="${APPROVAL_SERVER_DIR}/.build/${ARCH}-apple-macosx/debug/ApprovalMCPServer"
 
-if [ ! -f "${BUILT_EXECUTABLE}" ]; then
-    # Try generic path
-    BUILT_EXECUTABLE="${APPROVAL_SERVER_DIR}/.build/debug/ApprovalMCPServer"
+# Check if already built
+if [ -f "${BUILT_EXECUTABLE}" ]; then
+    echo "ApprovalMCPServer already built at: ${BUILT_EXECUTABLE}"
+else
+    # Build the approval server
+    echo "Building ApprovalMCPServer..."
+    cd "${APPROVAL_SERVER_DIR}"
+    swift build -c debug
+    
+    # Verify build succeeded
+    if [ ! -f "${BUILT_EXECUTABLE}" ]; then
+        # Try generic path
+        BUILT_EXECUTABLE="${APPROVAL_SERVER_DIR}/.build/debug/ApprovalMCPServer"
+        if [ ! -f "${BUILT_EXECUTABLE}" ]; then
+            echo "Error: Build failed - executable not found"
+            exit 1
+        fi
+    fi
+    
+    echo "ApprovalMCPServer built successfully"
 fi
 
-if [ ! -f "${BUILT_EXECUTABLE}" ]; then
-    echo "Error: Built executable not found"
-    exit 1
-fi
-
-echo "ApprovalMCPServer built successfully at: ${BUILT_EXECUTABLE}"
-
-# Copy to app bundle if building for release
+# For release builds, copy to app bundle
 if [ "${CONFIGURATION}" = "Release" ] && [ -n "${BUILT_PRODUCTS_DIR}" ]; then
     APP_BUNDLE="${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app"
     if [ -d "${APP_BUNDLE}" ]; then

@@ -8,7 +8,7 @@
 import Foundation
 
 /// Protocol defining the interface for managing application settings storage.
-/// 
+///
 /// This protocol provides methods for storing and retrieving project paths,
 /// both globally (for the current active session) and on a per-session basis.
 /// All operations are performed on the main actor to ensure thread safety

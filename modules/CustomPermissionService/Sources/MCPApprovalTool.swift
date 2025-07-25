@@ -33,7 +33,9 @@ public final class MCPApprovalTool: @unchecked Sendable {
     /// - Parameter options: The ClaudeCodeOptions to configure
     public func configure(options: inout ClaudeCodeOptions) {
         // Set up the permission prompt tool name
-        options.permissionPromptToolName = "mcp__approval_server__\(toolName)"
+        let permissionToolName = "mcp__approval_server__\(toolName)"
+        options.permissionPromptToolName = permissionToolName
+        print("[MCPApprovalTool] Setting permissionPromptToolName: \(permissionToolName)")
         
         // Add the approval server to MCP servers if not already present
         if options.mcpServers == nil {
@@ -46,6 +48,7 @@ public final class MCPApprovalTool: @unchecked Sendable {
             command: approvalServerPath,
             args: []
         ))
+        print("[MCPApprovalTool] Configured approval server at: \(approvalServerPath)")
         
         // Ensure the approval tool is allowed
         var allowedTools = options.allowedTools ?? []
@@ -53,7 +56,11 @@ public final class MCPApprovalTool: @unchecked Sendable {
         if !allowedTools.contains(approvalToolName) {
             allowedTools.append(approvalToolName)
             options.allowedTools = allowedTools
+            print("[MCPApprovalTool] Added \(approvalToolName) to allowed tools")
+        } else {
+            print("[MCPApprovalTool] Tool \(approvalToolName) already in allowed tools")
         }
+        print("[MCPApprovalTool] Final allowed tools: \(options.allowedTools ?? [])")
     }
     
     /// Get the path to the compiled Swift MCP approval server executable
@@ -193,7 +200,10 @@ public final class MCPApprovalTool: @unchecked Sendable {
         
         // Final fallback - return expected debug path and let the app handle the error
         let fallbackPath = "\(currentPath)/modules/ApprovalMCPServer/.build/\(architecture)-apple-macosx/debug/ApprovalMCPServer"
-        print("MCPApprovalTool: WARNING - Using fallback path (server may not exist): \(fallbackPath)")
+        print("MCPApprovalTool: WARNING - Approval server not found!")
+        print("MCPApprovalTool: To fix this issue, run the following command:")
+        print("MCPApprovalTool: cd \(currentPath)/modules/ApprovalMCPServer && swift build -c debug")
+        print("MCPApprovalTool: Or open the project in Xcode and build - it will be built automatically")
         return fallbackPath
     }
     

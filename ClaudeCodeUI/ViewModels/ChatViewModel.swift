@@ -385,7 +385,18 @@ public final class ChatViewModel {
   
   private func createOptions() -> ClaudeCodeOptions {
     var options = ClaudeCodeOptions()
-    options.allowedTools = globalPreferences.allowedTools
+    
+    // Start with the allowed tools from preferences
+    var allowedTools = globalPreferences.allowedTools
+    
+    // Always ensure the approval tool is in the allowed list
+    let approvalToolName = "mcp__approval_server__approval_prompt"
+    if !allowedTools.contains(approvalToolName) {
+      print("[ChatViewModel] Adding approval tool to allowed tools: \(approvalToolName)")
+      allowedTools.append(approvalToolName)
+    }
+    
+    options.allowedTools = allowedTools
     options.maxTurns = globalPreferences.maxTurns
     if !globalPreferences.systemPrompt.isEmpty {
       options.systemPrompt = globalPreferences.systemPrompt
@@ -410,6 +421,7 @@ public final class ChatViewModel {
     }
     
     print("[CustomPermission] Custom permission service integration configured")
+    print("[ChatViewModel] Final allowed tools: \(options.allowedTools ?? [])")
     return options
   }
   

@@ -7,7 +7,6 @@
 
 import SwiftUI
 import ClaudeCodeSDK
-import CustomPermissionService
 
 struct RootView: View {
   @Environment(GlobalPreferencesStorage.self) private var globalPreferences
@@ -71,30 +70,6 @@ struct RootView: View {
     config.workingDirectory = workingDirectory
     config.enableDebugLogging = debugMode
     
-    // Load existing MCP servers from configuration
-    let mcpManager = MCPConfigurationManager()
-    var options = ClaudeCodeOptions()
-    
-    // Add existing MCP servers
-    if !mcpManager.configuration.mcpServers.isEmpty {
-      options.mcpServers = [:]
-      for (name, server) in mcpManager.configuration.mcpServers {
-        // Convert MCPServerConfig to ClaudeCodeSDK format
-        if !server.command.isEmpty {
-          let mcpConfig = McpStdioServerConfig(
-            command: server.command,
-            args: server.args,
-            env: server.env
-          )
-          options.mcpServers?[name] = .stdio(mcpConfig)
-        }
-      }
-    }
-    
-    // Configure MCP approval server
-    let approvalTool = MCPApprovalTool(permissionService: container.customPermissionService)
-    approvalTool.configure(options: &options)
-    
     // Add nvm paths to support npm installed via nvm
 //    let homeDir = NSHomeDirectory()
 //    config.additionalPaths = [
@@ -107,8 +82,7 @@ struct RootView: View {
 //      "\(homeDir)/.nvm/versions/node/v18.19.0/bin"
 //    ]
     
-    // Create the client with configuration and options
-    let claudeClient = ClaudeCodeClient(configuration: config, options: options)
+    let claudeClient = ClaudeCodeClient(configuration: config)
     let vm = ChatViewModel(
       claudeClient: claudeClient,
       sessionStorage: container.sessionStorage,

@@ -96,10 +96,11 @@ config.claudeOptions = options
 
 ### Developer Notes
 
-- No manual setup required - the approval server builds automatically
+- The approval server is built automatically via Xcode build phase
+- First-time setup: Add the build phase as described in [Getting Started](#getting-started)
 - The server executable is located at: `modules/ApprovalMCPServer/.build/*/debug/ApprovalMCPServer`
 - For release builds, the server is copied into the app bundle
-- If you encounter issues, try running `swift build` in the `modules/ApprovalMCPServer` directory
+- The build script only rebuilds when necessary, so builds stay fast
 
 ## Development
 
@@ -123,7 +124,14 @@ cd ClaudeCodeUI
 open ClaudeCodeUI.xcodeproj
 ```
 
-3. Build and run the project (⌘+R)
+3. **Important**: Add the MCP Approval Server build phase (first time only):
+   - Select the ClaudeCodeUI target → Build Phases tab
+   - Click "+" → "New Run Script Phase"
+   - Drag it to run **before** "Compile Sources"
+   - Paste: `"${PROJECT_DIR}/Scripts/build-approval-server.sh"`
+   - See [BUILD_PHASE_INSTRUCTIONS.md](BUILD_PHASE_INSTRUCTIONS.md) for details
+
+4. Build and run the project (⌘+R)
 
 ### Project Structure
 

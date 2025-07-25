@@ -98,7 +98,7 @@ final class GlobalPreferencesStorage: MCPConfigStorage {
     self.maxTurns = userDefaults.object(forKey: Keys.maxTurns) as? Int ?? 50
     self.systemPrompt = userDefaults.string(forKey: Keys.systemPrompt) ?? ""
     self.appendSystemPrompt = userDefaults.string(forKey: Keys.appendSystemPrompt) ?? ""
-    self.allowedTools = userDefaults.stringArray(forKey: Keys.allowedTools) ?? ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MultiEdit", "Write", "NotebookRead", "NotebookEdit", "WebSearch", "Task"]
+    self.allowedTools = userDefaults.stringArray(forKey: Keys.allowedTools) ?? ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MultiEdit", "Write", "NotebookRead", "NotebookEdit", "WebSearch", "Task", "mcp__approval_server__approval_prompt"]
     self.mcpConfigPath = userDefaults.string(forKey: Keys.mcpConfigPath) ?? ""
     
     // Load custom permission settings or use defaults
@@ -114,7 +114,7 @@ final class GlobalPreferencesStorage: MCPConfigStorage {
     maxTurns = 50
     systemPrompt = ""
     appendSystemPrompt = ""
-    allowedTools = ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MultiEdit", "Write", "NotebookRead", "NotebookEdit", "WebSearch", "Task"]
+    allowedTools = ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MultiEdit", "Write", "NotebookRead", "NotebookEdit", "WebSearch", "Task", "mcp__approval_server__approval_prompt"]
     mcpConfigPath = ""
     
     // Reset permission settings
