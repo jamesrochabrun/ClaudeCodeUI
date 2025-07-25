@@ -162,6 +162,11 @@ Please ensure your contributions:
 
 To enable debug logging, the app automatically detects if it's running in a debug configuration. You can also manually enable debug logging by modifying the configuration in `RootView.swift`.
 
+## TODOs
+
+- [ ] Fix diffing UI - improve visual diff presentation and user interaction
+- [ ] Improve MCP approval flow - enhance the permission dialog UX and add more context about what each MCP server does
+
 ## Acknowledgments
 
 Special thanks to [cmd](https://github.com/getcmd-dev/cmd) - The code for diff visualization and markdown rendering has been adapted from this excellent project. Their implementation provided a solid foundation for these features in ClaudeCodeUI.
