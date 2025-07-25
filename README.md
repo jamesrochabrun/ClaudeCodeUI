@@ -61,46 +61,98 @@ If Xcode integration isn't working:
 
 ### Overview
 
-The MCP approval tool provides a secure way for Claude Code to request permissions for various operations. It's automatically built and configured when you run the app.
+The MCP (Model Context Protocol) approval tool provides a secure permission system for Claude Code operations. When Claude needs to perform actions like file operations or execute commands, the approval tool presents a native macOS dialog for user consent.
 
 ### How It Works
 
-1. **Automatic Building**: The ApprovalMCPServer is automatically built when you first run the app
-2. **Dynamic Path Resolution**: The app finds the server executable using smart path detection
-3. **Permission Requests**: When Claude needs permissions, a native macOS dialog appears
-4. **Session Persistence**: Approved permissions are stored per chat session
+1. **Automatic Setup**: The approval server is built automatically via an Xcode build phase
+2. **Smart Path Detection**: The app finds the server using multiple fallback strategies
+3. **Permission Dialogs**: Native macOS UI for approving/denying Claude's requests
+4. **Session-Based**: Permissions are managed per chat session for security
 
-### Technical Details
+### First-Time Setup Required
 
-The approval tool is instantiated in `DependencyContainer.swift`:
+When you first clone the repo, you need to add a build phase in Xcode:
 
-```swift
-// Create the custom permission service
-let customPermissionService = CustomPermissionService()
+1. Open `ClaudeCodeUI.xcodeproj`
+2. Select the `ClaudeCodeUI` target
+3. Go to "Build Phases" tab
+4. Click "+" → "New Run Script Phase"
+5. **Important**: Drag the new phase to run **before** "Compile Sources"
+6. Paste this script: `"${PROJECT_DIR}/Scripts/build-approval-server.sh"`
+7. Rename to "Build MCP Approval Server" (optional)
+8. Build and run!
 
-// Pass it to ChatViewModel initialization
-let vm = ChatViewModel(
-    claudeClient: claudeClient,
-    customPermissionService: container.customPermissionService
-)
-```
+### Troubleshooting MCP Approval Server
 
-The MCP server configuration happens in `RootView.swift`:
+#### Error: "MCP tool mcp__approval_server__approval_prompt not found"
 
-```swift
-// Configure MCP approval server
-let approvalTool = MCPApprovalTool(permissionService: container.customPermissionService)
-approvalTool.configure(options: &options)
-config.claudeOptions = options
-```
+**Cause**: The approval server hasn't been built yet.
+
+**Solutions**:
+1. Ensure you've added the build phase (see setup above)
+2. Clean build folder (⇧⌘K) and rebuild
+3. Manually build the server:
+   ```bash
+   cd modules/ApprovalMCPServer
+   swift build -c debug
+   ```
+
+#### Error: "ApprovalMCPServer directory not found"
+
+**Cause**: The app can't find the project directory.
+
+**Solutions**:
+1. Ensure you're running from Xcode (not a standalone app)
+2. Check the project structure is intact
+3. Verify the `modules/ApprovalMCPServer` directory exists
+
+#### Build Phase Not Working
+
+**Symptoms**: The build phase runs but server isn't built.
+
+**Check**:
+1. Open Report Navigator (⌘9) in Xcode
+2. Look for "Build MCP Approval Server" in the build log
+3. Check for error messages
+
+**Common fixes**:
+- Ensure Swift is in your PATH: `which swift`
+- Check script permissions: `chmod +x Scripts/build-approval-server.sh`
+- Run the script manually to see errors:
+  ```bash
+  cd /path/to/ClaudeCodeUI
+  ./Scripts/build-approval-server.sh
+  ```
+
+#### Permission Dialogs Not Appearing
+
+**Check**:
+1. Ensure the approval server is running (check Console.app for logs)
+2. Verify MCP is configured in Claude Code settings
+3. Check that auto-approve isn't enabled in settings
+
+### Technical Architecture
+
+The MCP approval system consists of three components:
+
+1. **ApprovalMCPServer**: A Swift executable that implements the MCP protocol
+2. **CustomPermissionService**: Manages permission requests and UI
+3. **ApprovalBridge**: Handles IPC between the server and the app
+
+The flow:
+1. Claude Code requests a tool use via MCP
+2. ApprovalMCPServer receives the request
+3. IPC notification sent to the main app
+4. CustomPermissionService shows approval dialog
+5. User response sent back through the chain
 
 ### Developer Notes
 
-- The approval server is built automatically via Xcode build phase
-- First-time setup: Add the build phase as described in [Getting Started](#getting-started)
-- The server executable is located at: `modules/ApprovalMCPServer/.build/*/debug/ApprovalMCPServer`
-- For release builds, the server is copied into the app bundle
-- The build script only rebuilds when necessary, so builds stay fast
+- Build output: `modules/ApprovalMCPServer/.build/{arch}-apple-macosx/debug/ApprovalMCPServer`
+- The server is only built when needed (checks if executable exists)
+- For release builds, the server is copied into `ClaudeCodeUI.app/Contents/Resources/`
+- Logs available in Console.app under "MCPApprovalTool" category
 
 ## Development
 
@@ -124,14 +176,23 @@ cd ClaudeCodeUI
 open ClaudeCodeUI.xcodeproj
 ```
 
-3. **Important**: Add the MCP Approval Server build phase (first time only):
-   - Select the ClaudeCodeUI target → Build Phases tab
-   - Click "+" → "New Run Script Phase"
-   - Drag it to run **before** "Compile Sources"
-   - Paste: `"${PROJECT_DIR}/Scripts/build-approval-server.sh"`
-   - See [BUILD_PHASE_INSTRUCTIONS.md](BUILD_PHASE_INSTRUCTIONS.md) for details
+3. **REQUIRED: Add MCP Approval Server Build Phase**
+   
+   This is a one-time setup that ensures the MCP approval server is built:
+   
+   - Select `ClaudeCodeUI` target in project navigator
+   - Go to "Build Phases" tab
+   - Click "+" button → "New Run Script Phase"
+   - **IMPORTANT**: Drag the new phase above "Compile Sources"
+   - In the script editor, paste:
+     ```bash
+     "${PROJECT_DIR}/Scripts/build-approval-server.sh"
+     ```
+   - Optionally rename it to "Build MCP Approval Server"
 
-4. Build and run the project (⌘+R)
+4. Build and run (⌘+R)
+
+⚠️ **Note**: Without this build phase, you'll get "MCP tool not found" errors. See [MCP Troubleshooting](#troubleshooting-mcp-approval-server) if you encounter issues.
 
 ### Project Structure
 
@@ -172,6 +233,11 @@ Please ensure your contributions:
 ## Troubleshooting
 
 ### Common Issues
+
+**"MCP tool not found" error on first run**
+- You need to add the build phase! See step 3 in [Getting Started](#getting-started)
+- This is a one-time setup required for all developers
+- After adding, clean build (⇧⌘K) and run again
 
 **App doesn't launch**
 - Ensure you're running macOS 14.0 or later
