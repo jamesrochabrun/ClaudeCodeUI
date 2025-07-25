@@ -67,8 +67,6 @@ struct RootView: View {
 #endif
 
     var config = ClaudeCodeConfiguration.default
-    config.command = "airchat"
-    config.commandSuffix = "--"
     config.workingDirectory = workingDirectory
     config.enableDebugLogging = debugMode
     
