@@ -94,7 +94,6 @@ struct RootView: View {
     // Configure MCP approval server
     let approvalTool = MCPApprovalTool(permissionService: container.customPermissionService)
     approvalTool.configure(options: &options)
-    config.claudeOptions = options
     
     // Add nvm paths to support npm installed via nvm
 //    let homeDir = NSHomeDirectory()
@@ -107,7 +106,9 @@ struct RootView: View {
 //      "\(homeDir)/.nvm/versions/node/v20.11.1/bin",
 //      "\(homeDir)/.nvm/versions/node/v18.19.0/bin"
 //    ]
-    let claudeClient = ClaudeCodeClient(configuration: config)
+    
+    // Create the client with configuration and options
+    let claudeClient = ClaudeCodeClient(configuration: config, options: options)
     let vm = ChatViewModel(
       claudeClient: claudeClient,
       sessionStorage: container.sessionStorage,
