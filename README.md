@@ -2,6 +2,8 @@
 
 A native macOS application providing a graphical user interface for Claude Code SDK, enabling seamless AI-powered coding assistance with a beautiful, intuitive interface.
 
+https://github.com/user-attachments/assets/12a3a1ff-1ba5-41b2-b6af-897e53b18331
+
 ## Overview
 
 ClaudeCodeUI is a SwiftUI-based macOS application that wraps the Claude Code SDK, providing users with a desktop experience for interacting with Claude's coding capabilities. The app features markdown rendering, syntax highlighting, file management, and terminal integration - all within a native macOS interface.
