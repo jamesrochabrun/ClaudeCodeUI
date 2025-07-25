@@ -6,18 +6,6 @@ A native macOS application providing a graphical user interface for Claude Code 
 
 ClaudeCodeUI is a SwiftUI-based macOS application that wraps the Claude Code SDK, providing users with a desktop experience for interacting with Claude's coding capabilities. The app features markdown rendering, syntax highlighting, file management, and terminal integration - all within a native macOS interface.
 
-## Features
-
-- **Native macOS Experience**: Built with SwiftUI for a seamless Mac experience
-- **Session Management**: Create, save, and resume coding sessions with full context preservation
-- **Markdown Rendering**: Beautiful markdown rendering with syntax highlighting for code blocks
-- **File Diff Viewer**: Visual diff viewer to see file changes before applying them
-- **Terminal Integration**: Built-in terminal support for running commands
-- **Custom Permissions**: Fine-grained control over file system access and operations
-- **Project Path Management**: Automatic detection and management of working directories
-- **Dark/Light Mode Support**: Fully supports macOS appearance preferences
-- **Xcode Integration**: Observes and syncs with Xcode project selections
-
 ## How It Works
 
 ClaudeCodeUI communicates with the Claude Code SDK through the `ClaudeCodeClient` class. The app:
@@ -67,6 +55,23 @@ If Xcode integration isn't working:
 - Check that you have an Xcode project open (not just individual files)
 - Verify the integration status in the app's toolbar
 
+## MCP Approval Tool
+
+The MCP approval tool is instantiated in `DependencyContainer.swift`:
+
+```swift
+// Create the custom permission service
+let customPermissionService = CustomPermissionService()
+
+// Pass it to ChatViewModel initialization
+let vm = ChatViewModel(
+    claudeClient: claudeClient,
+    customPermissionService: container.customPermissionService
+)
+```
+
+When Claude Code SDK needs MCP permissions, it calls the `CustomPermissionService` which shows a native macOS approval dialog. The user's approval/denial is returned to the SDK to allow or block the MCP operation.
+
 ## Development
 
 ### Prerequisites
@@ -74,6 +79,7 @@ If Xcode integration isn't working:
 - macOS 14.0 or later
 - Xcode 15.0 or later
 - Swift 5.9 or later
+- Claude Code installed
 
 ### Getting Started
 
@@ -162,8 +168,4 @@ Special thanks to [cmd](https://github.com/getcmd-dev/cmd) - The code for diff v
 
 ## License
 
-[Add your license information here]
-
-## Contact
-
-[Add your contact information here]
+MIT License
