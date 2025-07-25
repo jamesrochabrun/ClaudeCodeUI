@@ -2,6 +2,17 @@ import Foundation
 import ClaudeCodeSDK
 import CustomPermissionServiceInterface
 
+// Extension to get machine architecture
+extension ProcessInfo {
+    var machineHardwareName: String? {
+        var sysinfo = utsname()
+        let result = uname(&sysinfo)
+        guard result == 0 else { return nil }
+        return String(bytes: Data(bytes: &sysinfo.machine, count: Int(_SYS_NAMELEN)), encoding: .ascii)?
+            .trimmingCharacters(in: .controlCharacters)
+    }
+}
+
 /// MCP tool integration for approval_prompt functionality
 /// This class provides the bridge between ClaudeCodeSDK's MCP system and our CustomPermissionService
 public final class MCPApprovalTool: @unchecked Sendable {
@@ -48,33 +59,82 @@ public final class MCPApprovalTool: @unchecked Sendable {
     /// Get the path to the compiled Swift MCP approval server executable
     /// This locates our ApprovalMCPServer binary that handles approval requests
     private func getApprovalServerExecutablePath() -> String {
-        // Try to find the built executable in the project structure
+        // First, check if it's in the app bundle (for packaged apps)
+        if let bundlePath = Bundle.main.path(forResource: "ApprovalMCPServer", ofType: nil) {
+            if FileManager.default.fileExists(atPath: bundlePath) {
+                return bundlePath
+            }
+        }
+        
+        // For development, find the project root directory
+        let fileManager = FileManager.default
+        var currentPath = fileManager.currentDirectoryPath
+        
+        // If we're running from Xcode, try to find the project root
+        if let xcodeProjectPath = ProcessInfo.processInfo.environment["BUILD_ROOT"] {
+            // Navigate from build directory to project root
+            let buildURL = URL(fileURLWithPath: xcodeProjectPath)
+            if let projectRoot = buildURL.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().path as String? {
+                currentPath = projectRoot
+            }
+        }
+        
+        // Try to find the project root by looking for ClaudeCodeUI.xcodeproj
+        var searchPath = URL(fileURLWithPath: currentPath)
+        for _ in 0..<5 {
+            let projectFile = searchPath.appendingPathComponent("ClaudeCodeUI.xcodeproj")
+            if fileManager.fileExists(atPath: projectFile.path) {
+                currentPath = searchPath.path
+                break
+            }
+            searchPath = searchPath.deletingLastPathComponent()
+        }
+        
+        // Determine the architecture
+        let architecture = ProcessInfo.processInfo.machineHardwareName ?? "arm64"
+        
+        // Build possible paths relative to project root
         let possiblePaths = [
-            // Architecture-specific debug build path
-            "/Users/james_rochabrun/Desktop/ClaudeCodeUI/modules/ApprovalMCPServer/.build/arm64-apple-macosx/debug/ApprovalMCPServer",
-            // Architecture-specific release build path
-            "/Users/james_rochabrun/Desktop/ClaudeCodeUI/modules/ApprovalMCPServer/.build/arm64-apple-macosx/release/ApprovalMCPServer",
-            // Generic debug build path
-            "/Users/james_rochabrun/Desktop/ClaudeCodeUI/modules/ApprovalMCPServer/.build/debug/ApprovalMCPServer",
-            // Generic release build path
-            "/Users/james_rochabrun/Desktop/ClaudeCodeUI/modules/ApprovalMCPServer/.build/release/ApprovalMCPServer",
-            // Relative paths from working directory
-            "./modules/ApprovalMCPServer/.build/arm64-apple-macosx/debug/ApprovalMCPServer",
-            "./modules/ApprovalMCPServer/.build/arm64-apple-macosx/release/ApprovalMCPServer",
-            "./modules/ApprovalMCPServer/.build/debug/ApprovalMCPServer",
-            "./modules/ApprovalMCPServer/.build/release/ApprovalMCPServer",
-            // Application bundle paths
-            Bundle.main.path(forResource: "ApprovalMCPServer", ofType: nil) ?? ""
+            // Architecture-specific paths
+            "\(currentPath)/modules/ApprovalMCPServer/.build/\(architecture)-apple-macosx/debug/ApprovalMCPServer",
+            "\(currentPath)/modules/ApprovalMCPServer/.build/\(architecture)-apple-macosx/release/ApprovalMCPServer",
+            // Generic paths
+            "\(currentPath)/modules/ApprovalMCPServer/.build/debug/ApprovalMCPServer",
+            "\(currentPath)/modules/ApprovalMCPServer/.build/release/ApprovalMCPServer",
         ]
         
+        // Check each path
         for path in possiblePaths {
-            if FileManager.default.fileExists(atPath: path) {
+            if fileManager.fileExists(atPath: path) {
                 return path
             }
         }
         
-        // Fallback to architecture-specific debug build path
-        return "/Users/james_rochabrun/Desktop/ClaudeCodeUI/modules/ApprovalMCPServer/.build/arm64-apple-macosx/debug/ApprovalMCPServer"
+        // If not found, try to build it
+        let buildPath = "\(currentPath)/modules/ApprovalMCPServer"
+        if fileManager.fileExists(atPath: buildPath) {
+            // Build the server (this will only work in development)
+            let task = Process()
+            task.launchPath = "/usr/bin/swift"
+            task.arguments = ["build", "-c", "debug"]
+            task.currentDirectoryPath = buildPath
+            
+            do {
+                try task.run()
+                task.waitUntilExit()
+                
+                // Check if build succeeded
+                let builtPath = "\(buildPath)/.build/\(architecture)-apple-macosx/debug/ApprovalMCPServer"
+                if fileManager.fileExists(atPath: builtPath) {
+                    return builtPath
+                }
+            } catch {
+                print("Failed to build ApprovalMCPServer: \(error)")
+            }
+        }
+        
+        // Final fallback - return expected debug path
+        return "\(currentPath)/modules/ApprovalMCPServer/.build/\(architecture)-apple-macosx/debug/ApprovalMCPServer"
     }
     
     /// Create a custom MCP configuration for the approval tool

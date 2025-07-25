@@ -84,6 +84,11 @@ struct MCPServerConfig: Identifiable {
 extension MCPServerConfig {
   static let predefinedServers = [
     MCPServerConfig(
+      name: "approval_server",
+      command: "/Users/jamesrochabrun/Desktop/git/ClaudeCodeUI/modules/ApprovalMCPServer/.build/arm64-apple-macosx/debug/ApprovalMCPServer",
+      args: []
+    ),
+    MCPServerConfig(
       name: "XcodeBuildMCP",
       command: "npx",
       args: ["-y", "xcodebuildmcp@latest"]

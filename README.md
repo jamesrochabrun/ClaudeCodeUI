@@ -57,7 +57,20 @@ If Xcode integration isn't working:
 
 ## MCP Approval Tool
 
-The MCP approval tool is instantiated in `DependencyContainer.swift`:
+### Overview
+
+The MCP approval tool provides a secure way for Claude Code to request permissions for various operations. It's automatically built and configured when you run the app.
+
+### How It Works
+
+1. **Automatic Building**: The ApprovalMCPServer is automatically built when you first run the app
+2. **Dynamic Path Resolution**: The app finds the server executable using smart path detection
+3. **Permission Requests**: When Claude needs permissions, a native macOS dialog appears
+4. **Session Persistence**: Approved permissions are stored per chat session
+
+### Technical Details
+
+The approval tool is instantiated in `DependencyContainer.swift`:
 
 ```swift
 // Create the custom permission service
@@ -70,7 +83,21 @@ let vm = ChatViewModel(
 )
 ```
 
-When Claude Code SDK needs MCP permissions, it calls the `CustomPermissionService` which shows a native macOS approval dialog. The user's approval/denial is returned to the SDK to allow or block the MCP operation.
+The MCP server configuration happens in `RootView.swift`:
+
+```swift
+// Configure MCP approval server
+let approvalTool = MCPApprovalTool(permissionService: container.customPermissionService)
+approvalTool.configure(options: &options)
+config.claudeOptions = options
+```
+
+### Developer Notes
+
+- No manual setup required - the approval server builds automatically
+- The server executable is located at: `modules/ApprovalMCPServer/.build/*/debug/ApprovalMCPServer`
+- For release builds, the server is copied into the app bundle
+- If you encounter issues, try running `swift build` in the `modules/ApprovalMCPServer` directory
 
 ## Development
 
