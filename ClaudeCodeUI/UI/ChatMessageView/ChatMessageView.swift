@@ -147,16 +147,6 @@ struct ChatMessageView: View {
       .frame(maxWidth: .infinity, alignment: .leading)
       
       Spacer(minLength: 0)
-      
-        .background(Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: Constants.cornerRadius))
-      
-      if message.isError {
-        Text("Error occurred")
-          .textSelection(.enabled)
-          .font(.system(size: 11))
-          .foregroundColor(.red)
-      }
     }
     .padding(.horizontal, 12)
     .padding(.vertical, 4)
