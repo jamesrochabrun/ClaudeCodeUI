@@ -10,6 +10,8 @@ import SwiftUI
 struct ActiveFileView: View {
     let model: FileDisplayModel
     var onRemove: (() -> Void)? = nil
+    var isPinned: Bool = false
+    var onTogglePin: (() -> Void)? = nil
     
     var fileExtension: String {
         model.fileExtension
@@ -69,20 +71,41 @@ struct ActiveFileView: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
             
-            if model.isRemovable, let onRemove = onRemove {
-                Button(action: onRemove) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary.opacity(0.6))
-                        .font(.system(size: 12))
+            if model.isRemovable {
+                if let onTogglePin = onTogglePin {
+                    Button(action: onTogglePin) {
+                        Image(systemName: isPinned ? "pin.fill" : "pin")
+                            .foregroundColor(isPinned ? .accentColor : .secondary.opacity(0.6))
+                            .font(.system(size: 12))
+                            .animation(.easeInOut(duration: 0.2), value: isPinned)
+                    }
+                    .buttonStyle(.plain)
+                    .help(isPinned ? "Unpin file" : "Pin file")
                 }
-                .buttonStyle(.plain)
-                .help("Remove from context")
+                
+                if let onRemove = onRemove {
+                    Button(action: onRemove) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary.opacity(0.6))
+                            .font(.system(size: 12))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Remove from context")
+                }
             }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 4)
-        .background(Color.secondary.opacity(0.1))
-        .cornerRadius(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.secondary.opacity(isPinned ? 0.15 : 0.1))
+                .animation(.easeInOut(duration: 0.2), value: isPinned)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.accentColor.opacity(isPinned ? 0.3 : 0), lineWidth: 1)
+                .animation(.easeInOut(duration: 0.2), value: isPinned)
+        )
         .help(model.isRemovable ? "Remove from context" : "Click to add to context")
     }
 }

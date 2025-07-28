@@ -74,6 +74,17 @@ final class XcodeObservationViewModel {
     updateWorkspaceModel(from: xcodeObserver.state)
   }
   
+  /// Clears the active file from the workspace model
+  func clearActiveFile() {
+    workspaceModel = XcodeWorkspaceModel(
+      workspaceName: workspaceModel.workspaceName,
+      activeFile: nil,
+      openFiles: workspaceModel.openFiles,
+      selectedText: workspaceModel.selectedText,
+      timestamp: workspaceModel.timestamp
+    )
+  }
+  
   /// Gets the current selection from Xcode
   func captureCurrentSelection() -> TextSelection? {
     guard let state = xcodeObserver.state.knownState?.first,
