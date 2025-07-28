@@ -15,7 +15,9 @@ struct SplitDiffView: View {
   
   private enum Constants {
     static let fontSize: CGFloat = 13
-    static let lineNumberWidth: CGFloat = 20
+    static let lineNumberWidth: CGFloat = 40
+    static let cornerRadius: CGFloat = 4
+    static let lineHeight: CGFloat = 20
   }
   
   private var syncedLines: [SyncedLine] {
@@ -54,28 +56,42 @@ struct SplitDiffView: View {
       // Line number
       Text(lineNumber(for: line, side: side))
         .font(.system(size: Constants.fontSize - 1, design: .monospaced))
-        .foregroundColor(.secondary)
-        .frame(width: Constants.lineNumberWidth, alignment: .center)
-        .padding(.horizontal, 8)
-        .background(Color.gray.opacity(0.1))
+        .foregroundColor(lineNumberColor(for: line, side: side))
+        .frame(width: Constants.lineNumberWidth, alignment: .trailing)
+        .padding(.trailing, 8)
+        .background(lineNumberBackground())
       
-      // Content
+      // Content with enhanced styling
       if shouldShowContent(for: line, side: side) {
         Text(line.content)
           .font(.system(size: Constants.fontSize, design: .monospaced))
-          .foregroundColor(contentColor(for: line, side: side))
+          .foregroundColor(contentTextColor(for: line, side: side))
+          .padding(.vertical, 2)
           .padding(.horizontal, 8)
           .frame(maxWidth: .infinity, alignment: .leading)
           .fixedSize(horizontal: false, vertical: true)
+          .textSelection(.enabled)
+          .background(
+            RoundedRectangle(cornerRadius: Constants.cornerRadius)
+              .fill(contentBackground(for: line, side: side))
+              .opacity(shouldHighlight(for: line, side: side) ? 1 : 0)
+          )
+          .overlay(
+            RoundedRectangle(cornerRadius: Constants.cornerRadius)
+              .strokeBorder(contentBorder(for: line, side: side), lineWidth: 1)
+              .opacity(shouldHighlight(for: line, side: side) ? 0.3 : 0)
+          )
       } else {
         // Empty space for alignment
         Text(" ")
           .font(.system(size: Constants.fontSize, design: .monospaced))
-          .padding(.horizontal, 4)
+          .padding(.vertical, 2)
+          .padding(.horizontal, 8)
           .frame(maxWidth: .infinity, alignment: .leading)
       }
     }
-    .background(backgroundColor(for: line, side: side))
+    .frame(minHeight: Constants.lineHeight)
+    .background(rowBackground(for: line, side: side))
   }
   
   private func lineNumber(for line: SyncedLine, side: ColumnSide) -> String {
@@ -100,27 +116,83 @@ struct SplitDiffView: View {
     }
   }
   
-  private func backgroundColor(for line: SyncedLine, side: ColumnSide) -> Color {
+  // MARK: - Styling Helpers
+  
+  private func shouldHighlight(for line: SyncedLine, side: ColumnSide) -> Bool {
     switch (line.type, side) {
-    case (.added, .right):
-      return colorScheme.addedLineDiffBackground
-    case (.removed, .left):
-      return colorScheme.removedLineDiffBackground
-    case (.added, .left), (.removed, .right):
-      return Color.gray.opacity(0.05) // Placeholder background
+    case (.added, .right), (.removed, .left):
+      return true
     default:
-      return Color.clear
+      return false
     }
   }
   
-  private func contentColor(for line: SyncedLine, side: ColumnSide) -> Color {
+  private func lineNumberColor(for line: SyncedLine, side: ColumnSide) -> Color {
+    guard shouldShowContent(for: line, side: side) else {
+      return .secondary.opacity(0.3)
+    }
+    
     switch line.type {
     case .added:
-      return colorScheme == .dark ? .green.opacity(0.9) : .green.opacity(0.8)
+      return colorScheme == .dark ? Color.green.opacity(0.8) : Color.green.opacity(0.7)
     case .removed:
-      return colorScheme == .dark ? .red.opacity(0.9) : .red.opacity(0.8)
+      return colorScheme == .dark ? Color.red.opacity(0.8) : Color.red.opacity(0.7)
     case .unchanged:
-      return .primary
+      return .secondary.opacity(0.7)
+    }
+  }
+  
+  private func lineNumberBackground() -> Color {
+    colorScheme == .dark ? Color.black.opacity(0.2) : Color.gray.opacity(0.05)
+  }
+  
+  private func contentBackground(for line: SyncedLine, side: ColumnSide) -> Color {
+    switch (line.type, side) {
+    case (.added, .right):
+      return colorScheme == .dark ? Color.green.opacity(0.15) : Color.green.opacity(0.12)
+    case (.removed, .left):
+      return colorScheme == .dark ? Color.red.opacity(0.15) : Color.red.opacity(0.12)
+    case (.added, .left), (.removed, .right):
+      return Color.gray.opacity(0.05) // Placeholder background
+    default:
+      return .clear
+    }
+  }
+  
+  private func contentBorder(for line: SyncedLine, side: ColumnSide) -> Color {
+    switch (line.type, side) {
+    case (.added, .right):
+      return colorScheme == .dark ? Color.green.opacity(0.5) : Color.green.opacity(0.3)
+    case (.removed, .left):
+      return colorScheme == .dark ? Color.red.opacity(0.5) : Color.red.opacity(0.3)
+    default:
+      return .clear
+    }
+  }
+  
+  private func contentTextColor(for line: SyncedLine, side: ColumnSide) -> Color {
+    guard shouldShowContent(for: line, side: side) else {
+      return .clear
+    }
+    
+    switch line.type {
+    case .added, .removed:
+      return colorScheme == .dark ? .primary : .primary.opacity(0.9)
+    case .unchanged:
+      return .primary.opacity(0.8)
+    }
+  }
+  
+  private func rowBackground(for line: SyncedLine, side: ColumnSide) -> Color {
+    switch (line.type, side) {
+    case (.added, .right):
+      return colorScheme == .dark ? Color.green.opacity(0.05) : Color.green.opacity(0.02)
+    case (.removed, .left):
+      return colorScheme == .dark ? Color.red.opacity(0.05) : Color.red.opacity(0.02)
+    case (.added, .left), (.removed, .right):
+      return Color.gray.opacity(0.02) // Subtle placeholder
+    default:
+      return .clear
     }
   }
   
