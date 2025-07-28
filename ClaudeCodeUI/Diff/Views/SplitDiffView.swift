@@ -14,8 +14,8 @@ struct SplitDiffView: View {
   @Environment(\.colorScheme) private var colorScheme
   
   private enum Constants {
-    static let fontSize: CGFloat = 11
-    static let lineNumberWidth: CGFloat = 50
+    static let fontSize: CGFloat = 13
+    static let lineNumberWidth: CGFloat = 20
   }
   
   private var syncedLines: [SyncedLine] {
@@ -55,8 +55,8 @@ struct SplitDiffView: View {
       Text(lineNumber(for: line, side: side))
         .font(.system(size: Constants.fontSize - 1, design: .monospaced))
         .foregroundColor(.secondary)
-        .frame(width: Constants.lineNumberWidth, alignment: .trailing)
-        .padding(.trailing, 8)
+        .frame(width: Constants.lineNumberWidth, alignment: .center)
+        .padding(.horizontal, 8)
         .background(Color.gray.opacity(0.1))
       
       // Content
@@ -64,7 +64,7 @@ struct SplitDiffView: View {
         Text(line.content)
           .font(.system(size: Constants.fontSize, design: .monospaced))
           .foregroundColor(contentColor(for: line, side: side))
-          .padding(.horizontal, 4)
+          .padding(.horizontal, 8)
           .frame(maxWidth: .infinity, alignment: .leading)
           .fixedSize(horizontal: false, vertical: true)
       } else {

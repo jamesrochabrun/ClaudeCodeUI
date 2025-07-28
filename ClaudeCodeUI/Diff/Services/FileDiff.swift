@@ -205,6 +205,25 @@ extension FileDiff {
 // MARK: - Colored Diff Generation
 
 extension FileDiff {
+  /// Generates a formatted diff with line-by-line change tracking between two versions of content.
+  ///
+  /// This method performs the following steps:
+  /// 1. Generates or uses a provided git diff to identify changes
+  /// 2. Parses the diff to extract line-level changes (added, removed, unchanged)
+  /// 3. Creates formatted line changes with attributed strings for UI rendering
+  ///
+  /// - Parameters:
+  ///   - oldContent: The original content to compare from
+  ///   - newContent: The new content to compare to
+  ///   - terminalService: Service for executing git commands to generate diffs
+  ///   - gitDiff: Optional pre-computed git diff string. If nil, a new diff will be generated
+  ///
+  /// - Returns: A `FormattedFileChange` containing all line changes with attributed strings
+  ///
+  /// - Throws: `DiffError.gitDiffFailed` if git diff generation fails
+  ///
+  /// - Note: The method currently creates attributed strings without syntax highlighting.
+  ///         Future versions may add syntax highlighting support.
   public static func getColoredDiff(
     oldContent: String,
     newContent: String,
@@ -239,7 +258,14 @@ extension FileDiff {
       guard let range = formattedContent.range(lineChange.characterRange) else {
         continue
       }
-      let line = AttributedString(formattedContent[range])
+      var line = AttributedString(formattedContent[range])
+      
+      // Remove trailing newlines from the attributed string
+      if let lastChar = line.characters.last, lastChar.isNewline {
+        let endIndex = line.characters.index(before: line.characters.endIndex)
+        line = AttributedString(line.characters[line.characters.startIndex..<endIndex])
+      }
+      
       formattedLineChanges.append(FormattedLineChange(formattedContent: line, change: lineChange))
     }
     

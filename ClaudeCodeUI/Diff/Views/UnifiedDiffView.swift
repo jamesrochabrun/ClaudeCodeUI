@@ -45,15 +45,12 @@ public struct UnifiedDiffView: View {
   }
   
   public var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
+    VStack(alignment: .leading, spacing: 4) {
       // Header with toggle
       diffHeader
       
       // Content based on selected mode
       if let formattedDiff = formattedDiff {
-        //        ScrollView([.horizontal, .vertical]) {
-        //
-        //        }
         Group {
           switch viewMode {
           case .inline:

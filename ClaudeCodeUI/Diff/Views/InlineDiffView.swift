@@ -15,8 +15,8 @@ struct InlineDiffView: View {
   @Environment(\.colorScheme) private var colorScheme
   
   private enum Constants {
-    static let fontSize: CGFloat = 11
-    static let lineNumberWidth: CGFloat = 60
+    static let fontSize: CGFloat = 13
+    static let lineNumberWidth: CGFloat = 20
     static let changeIndicatorWidth: CGFloat = 20
   }
   
@@ -41,8 +41,8 @@ struct InlineDiffView: View {
         Text(lineNumber(for: line))
           .font(.system(size: Constants.fontSize - 1, design: .monospaced))
           .foregroundColor(.secondary)
-          .frame(width: Constants.lineNumberWidth, alignment: .trailing)
-          .padding(.trailing, 8)
+          .frame(width: Constants.lineNumberWidth, alignment: .center)
+          .padding(.horizontal, 8)
       }
       .background(Color.gray.opacity(0.1))
       
@@ -60,6 +60,7 @@ struct InlineDiffView: View {
         .padding(.horizontal, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
+        .textSelection(.enabled)
     }
     .background(backgroundColor(for: line))
   }
