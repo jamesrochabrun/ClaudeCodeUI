@@ -281,9 +281,35 @@ final class StreamProcessor {
           }
           parameters[key] = formattedValue
           
-          // For Edit tools, also store raw values for old_string and new_string
-          if isEditTool && (key == "old_string" || key == "new_string" || key == "file_path" || key == "edits") {
-            rawParameters?[key] = formattedValue
+          // For Edit tools, also store raw values
+          if isEditTool {
+            if key == "old_string" || key == "new_string" || key == "file_path" {
+              rawParameters?[key] = formattedValue
+            } else if key == "edits" && toolUse.name == "MultiEdit" {
+              // For MultiEdit's edits array, convert to JSON
+              if case .array(let editsArray) = dynamicContent {
+                let jsonEdits = editsArray.compactMap { item -> [String: String]? in
+                  guard case .dictionary(let dict) = item else { return nil }
+                  var stringDict: [String: String] = [:]
+                  for (k, v) in dict {
+                    if case .string(let str) = v {
+                      stringDict[k] = str
+                    }
+                  }
+                  return stringDict.isEmpty ? nil : stringDict
+                }
+                
+                // Convert to JSON string
+                if let jsonData = try? JSONSerialization.data(withJSONObject: jsonEdits),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                  rawParameters?[key] = jsonString
+                } else {
+                  rawParameters?[key] = formattedValue
+                }
+              } else {
+                rawParameters?[key] = formattedValue
+              }
+            }
           }
           
           logger.debug("Key: \(key), formatted value: \(formattedValue)")

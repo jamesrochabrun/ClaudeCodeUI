@@ -90,19 +90,48 @@ public struct LineChange: Sendable, Codable {
   }
 }
 
+/// Represents a single line change with its formatted content for display.
+/// 
+/// This struct combines a `LineChange` with its visual representation as an `AttributedString`,
+/// allowing for rich text formatting (e.g., syntax highlighting, diff indicators) while
+/// maintaining the underlying change information.
+/// 
+/// - Note: Conforms to `Sendable` for safe concurrent access across actor boundaries.
 public struct FormattedLineChange: Sendable {
+  /// The formatted content of the line, including any syntax highlighting or styling.
+  /// This is typically used for display in UI components.
   public let formattedContent: AttributedString
+  
+  /// The underlying line change information, including the line number,
+  /// change type (addition/deletion), and raw content.
   public let change: LineChange
   
+  /// Creates a new formatted line change.
+  /// 
+  /// - Parameters:
+  ///   - formattedContent: The styled representation of the line content.
+  ///   - change: The underlying line change data.
   public init(formattedContent: AttributedString, change: LineChange) {
     self.formattedContent = formattedContent
     self.change = change
   }
 }
 
+/// Represents a collection of formatted line changes for an entire file.
+/// 
+/// This struct aggregates all the formatted line changes that make up a file's diff,
+/// providing a complete representation of how a file has been modified with
+/// rich formatting for each line.
+/// 
+/// - Note: Conforms to `Sendable` for safe concurrent access across actor boundaries.
 public struct FormattedFileChange: Sendable {
+  /// An ordered array of formatted line changes representing the complete diff.
+  /// The order preserves the sequence of changes as they appear in the file.
   public let changes: [FormattedLineChange]
   
+  /// Creates a new formatted file change.
+  /// 
+  /// - Parameter changes: An array of formatted line changes that comprise the file's diff.
   public init(changes: [FormattedLineChange]) {
     self.changes = changes
   }
@@ -110,4 +139,9 @@ public struct FormattedFileChange: Sendable {
 
 // MARK: - FileDiff Namespace
 
+/// A namespace enum for organizing file diff-related types and functionality.
+/// 
+/// This enum serves as a container for nested types, extensions, and utilities
+/// related to file diffing operations. Using an enum as a namespace prevents
+/// instantiation while providing a logical grouping for related functionality.
 public enum FileDiff { }
