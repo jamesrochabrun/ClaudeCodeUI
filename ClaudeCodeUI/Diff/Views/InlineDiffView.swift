@@ -15,9 +15,11 @@ struct InlineDiffView: View {
   @Environment(\.colorScheme) private var colorScheme
   
   private enum Constants {
-    static let fontSize: CGFloat = 11
-    static let lineNumberWidth: CGFloat = 60
+    static let fontSize: CGFloat = 13
+    static let lineNumberWidth: CGFloat = 40
     static let changeIndicatorWidth: CGFloat = 20
+    static let cornerRadius: CGFloat = 4
+    static let lineHeight: CGFloat = 20
   }
   
   private var changedLines: [FormattedLineChange] {
@@ -36,32 +38,49 @@ struct InlineDiffView: View {
   @ViewBuilder
   private func lineView(for line: FormattedLineChange, at index: Int) -> some View {
     HStack(alignment: .top, spacing: 0) {
-      // Line number - only show for non-deleted lines
-      HStack(spacing: 0) {
-        Text(lineNumber(for: line))
-          .font(.system(size: Constants.fontSize - 1, design: .monospaced))
-          .foregroundColor(.secondary)
-          .frame(width: Constants.lineNumberWidth, alignment: .trailing)
-          .padding(.trailing, 8)
+      // Line number
+      Text(lineNumber(for: line))
+        .font(.system(size: Constants.fontSize - 1, design: .monospaced))
+        .foregroundColor(lineNumberColor(for: line))
+        .frame(width: Constants.lineNumberWidth, alignment: .trailing)
+        .padding(.trailing, 8)
+        .background(lineNumberBackground(for: line))
+      
+      // Change indicator with enhanced styling
+      ZStack {
+        RoundedRectangle(cornerRadius: 2)
+          .fill(changeIndicatorBackground(for: line))
+          .frame(width: 16, height: 16)
+        
+        Text(changeIndicator(for: line))
+          .font(.system(size: Constants.fontSize - 1, weight: .medium, design: .monospaced))
+          .foregroundColor(changeIndicatorColor(for: line))
       }
-      .background(Color.gray.opacity(0.1))
+      .frame(width: Constants.changeIndicatorWidth)
+      .padding(.horizontal, 4)
       
-      // Change indicator
-      Text(changeIndicator(for: line))
-        .font(.system(size: Constants.fontSize, design: .monospaced))
-        .foregroundColor(changeColor(for: line))
-        .frame(width: Constants.changeIndicatorWidth)
-        .padding(.horizontal, 2)
-      
-      // Content
+      // Content with overlay effect
       Text(line.formattedContent)
         .font(.system(size: Constants.fontSize, design: .monospaced))
-        .foregroundColor(contentColor(for: line))
-        .padding(.horizontal, 4)
+        .foregroundColor(contentTextColor(for: line))
+        .padding(.vertical, 2)
+        .padding(.horizontal, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
+        .textSelection(.enabled)
+        .background(
+          RoundedRectangle(cornerRadius: Constants.cornerRadius)
+            .fill(contentBackground(for: line))
+            .opacity(line.change.type == .unchanged ? 0 : 1)
+        )
+        .overlay(
+          RoundedRectangle(cornerRadius: Constants.cornerRadius)
+            .strokeBorder(contentBorder(for: line), lineWidth: 1)
+            .opacity(line.change.type == .unchanged ? 0 : 0.3)
+        )
     }
-    .background(backgroundColor(for: line))
+    .frame(minHeight: Constants.lineHeight)
+    .background(rowBackground(for: line))
   }
   
   private func lineNumber(for line: FormattedLineChange) -> String {
@@ -74,14 +93,88 @@ struct InlineDiffView: View {
     return ""
   }
   
-  private func backgroundColor(for line: FormattedLineChange) -> Color {
+  // MARK: - Line Number Styling
+  
+  private func lineNumberColor(for line: FormattedLineChange) -> Color {
     switch line.change.type {
     case .added:
-      return colorScheme.addedLineDiffBackground
+      return colorScheme == .dark ? Color.green.opacity(0.8) : Color.green.opacity(0.7)
     case .removed:
-      return colorScheme.removedLineDiffBackground
+      return colorScheme == .dark ? Color.red.opacity(0.8) : Color.red.opacity(0.7)
     case .unchanged:
-      return Color.clear
+      return .secondary.opacity(0.7)
+    }
+  }
+  
+  private func lineNumberBackground(for line: FormattedLineChange) -> Color {
+    colorScheme == .dark ? Color.black.opacity(0.2) : Color.gray.opacity(0.05)
+  }
+  
+  // MARK: - Change Indicator Styling
+  
+  private func changeIndicatorBackground(for line: FormattedLineChange) -> Color {
+    switch line.change.type {
+    case .added:
+      return colorScheme == .dark ? Color.green.opacity(0.2) : Color.green.opacity(0.15)
+    case .removed:
+      return colorScheme == .dark ? Color.red.opacity(0.2) : Color.red.opacity(0.15)
+    case .unchanged:
+      return .clear
+    }
+  }
+  
+  private func changeIndicatorColor(for line: FormattedLineChange) -> Color {
+    switch line.change.type {
+    case .added:
+      return colorScheme == .dark ? Color.green : Color.green.opacity(0.8)
+    case .removed:
+      return colorScheme == .dark ? Color.red : Color.red.opacity(0.8)
+    case .unchanged:
+      return .clear
+    }
+  }
+  
+  // MARK: - Content Styling
+  
+  private func contentBackground(for line: FormattedLineChange) -> Color {
+    switch line.change.type {
+    case .added:
+      return colorScheme == .dark ? Color.green.opacity(0.15) : Color.green.opacity(0.12)
+    case .removed:
+      return colorScheme == .dark ? Color.red.opacity(0.15) : Color.red.opacity(0.12)
+    case .unchanged:
+      return .clear
+    }
+  }
+  
+  private func contentBorder(for line: FormattedLineChange) -> Color {
+    switch line.change.type {
+    case .added:
+      return colorScheme == .dark ? Color.green.opacity(0.5) : Color.green.opacity(0.3)
+    case .removed:
+      return colorScheme == .dark ? Color.red.opacity(0.5) : Color.red.opacity(0.3)
+    case .unchanged:
+      return .clear
+    }
+  }
+  
+  private func contentTextColor(for line: FormattedLineChange) -> Color {
+    switch line.change.type {
+    case .added, .removed:
+      return colorScheme == .dark ? .primary : .primary.opacity(0.9)
+    case .unchanged:
+      return .primary.opacity(0.8)
+    }
+  }
+  
+  private func rowBackground(for line: FormattedLineChange) -> Color {
+    switch line.change.type {
+    case .added:
+      return colorScheme == .dark ? Color.green.opacity(0.05) : Color.green.opacity(0.02)
+    case .removed:
+      return colorScheme == .dark ? Color.red.opacity(0.05) : Color.red.opacity(0.02)
+    case .unchanged:
+      return .clear
     }
   }
   
@@ -96,27 +189,6 @@ struct InlineDiffView: View {
     }
   }
   
-  private func changeColor(for line: FormattedLineChange) -> Color {
-    switch line.change.type {
-    case .added:
-      return .green
-    case .removed:
-      return .red
-    case .unchanged:
-      return .secondary
-    }
-  }
-  
-  private func contentColor(for line: FormattedLineChange) -> Color {
-    switch line.change.type {
-    case .added:
-      return colorScheme == .dark ? .green.opacity(0.9) : .green.opacity(0.8)
-    case .removed:
-      return colorScheme == .dark ? .red.opacity(0.9) : .red.opacity(0.8)
-    case .unchanged:
-      return .primary
-    }
-  }
 }
 
 // MARK: - Preview

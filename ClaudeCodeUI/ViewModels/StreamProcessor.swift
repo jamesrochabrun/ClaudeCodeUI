@@ -263,9 +263,9 @@ final class StreamProcessor {
         var parameters: [String: String] = [:]
         var rawParameters: [String: String]? = nil
         
-        // Check if this is an Edit or MultiEdit tool
-        let isEditTool = toolUse.name == "Edit" || toolUse.name == "MultiEdit"
-        if isEditTool {
+        // Check if this is an Edit, MultiEdit, or Write tool
+        let needsRawParams = toolUse.name == "Edit" || toolUse.name == "MultiEdit" || toolUse.name == "Write"
+        if needsRawParams {
           rawParameters = [:]
         }
         
@@ -281,9 +281,37 @@ final class StreamProcessor {
           }
           parameters[key] = formattedValue
           
-          // For Edit tools, also store raw values for old_string and new_string
-          if isEditTool && (key == "old_string" || key == "new_string" || key == "file_path" || key == "edits") {
-            rawParameters?[key] = formattedValue
+          // For tools that need raw parameters
+          if needsRawParams {
+            if toolUse.name == "Write" && (key == "file_path" || key == "content") {
+              rawParameters?[key] = formattedValue
+            } else if (toolUse.name == "Edit" || toolUse.name == "MultiEdit") && (key == "old_string" || key == "new_string" || key == "file_path") {
+              rawParameters?[key] = formattedValue
+            } else if key == "edits" && toolUse.name == "MultiEdit" {
+              // For MultiEdit's edits array, convert to JSON
+              if case .array(let editsArray) = dynamicContent {
+                let jsonEdits = editsArray.compactMap { item -> [String: String]? in
+                  guard case .dictionary(let dict) = item else { return nil }
+                  var stringDict: [String: String] = [:]
+                  for (k, v) in dict {
+                    if case .string(let str) = v {
+                      stringDict[k] = str
+                    }
+                  }
+                  return stringDict.isEmpty ? nil : stringDict
+                }
+                
+                // Convert to JSON string
+                if let jsonData = try? JSONSerialization.data(withJSONObject: jsonEdits),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                  rawParameters?[key] = jsonString
+                } else {
+                  rawParameters?[key] = formattedValue
+                }
+              } else {
+                rawParameters?[key] = formattedValue
+              }
+            }
           }
           
           logger.debug("Key: \(key), formatted value: \(formattedValue)")
