@@ -24,6 +24,12 @@ final class ContextManager {
   /// Visual feedback when context is captured
   var showCaptureAnimation: Bool = false
   
+  /// Whether the active file is pinned (won't change when switching files in Xcode)
+  var isPinnedActiveFile: Bool = false
+  
+  /// The pinned active file (if any)
+  private(set) var pinnedActiveFile: FileInfo?
+  
   // MARK: - Private Properties
   
   private let xcodeObservationViewModel: XcodeObservationViewModel
@@ -86,12 +92,40 @@ final class ContextManager {
   
   /// Removes a specific file by ID
   func removeFile(id: UUID) {
+    // If removing the pinned file, unpin it
+    if let pinned = pinnedActiveFile, pinned.id == id {
+      isPinnedActiveFile = false
+      pinnedActiveFile = nil
+    }
     context.removeFile(id: id)
   }
   
   /// Clears all context
   func clearAll() {
     context.clear()
+    isPinnedActiveFile = false
+    pinnedActiveFile = nil
+  }
+  
+  /// Toggles the pin state of the active file
+  func togglePinActiveFile() {
+    if isPinnedActiveFile {
+      // Unpin
+      isPinnedActiveFile = false
+      pinnedActiveFile = nil
+    } else {
+      // Pin the current active file from Xcode
+      if let activeFile = xcodeObservationViewModel.workspaceModel.activeFile {
+        isPinnedActiveFile = true
+        pinnedActiveFile = activeFile
+      }
+    }
+  }
+  
+  /// Unpins the active file
+  func unpinActiveFile() {
+    isPinnedActiveFile = false
+    pinnedActiveFile = nil
   }
   
   /// Sets additional notes for the context
@@ -122,9 +156,14 @@ final class ContextManager {
   // MARK: - Private Methods
   
   private func setupSubscriptions() {
-    // Since XcodeObservationViewModel uses @Observable, we need to observe it differently
-    // For now, we'll rely on SwiftUI's automatic observation when the view updates
-    // The handleWorkspaceUpdate will be called manually when needed
+    // Observe workspace changes from XcodeObservationViewModel
+    // We'll use a timer to periodically check for updates
+    Task { @MainActor in
+      while true {
+        try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        handleWorkspaceUpdate(xcodeObservationViewModel.workspaceModel)
+      }
+    }
   }
   
   private func handleWorkspaceUpdate(_ workspace: XcodeWorkspaceModel) {
@@ -132,6 +171,9 @@ final class ContextManager {
     if workspace.workspaceName != context.workspace {
       context.workspace = workspace.workspaceName
     }
+    
+    // Don't update context active files when pinned - the pinned file stays in view
+    // The actual Xcode active file changes are tracked in XcodeObservationViewModel
     
     // Optionally auto-capture selections if enabled
     if isCaptureEnabled && !workspace.selectedText.isEmpty {

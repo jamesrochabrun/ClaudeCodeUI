@@ -406,11 +406,42 @@ extension ChatInputView {
   /// Active file chip
   @ViewBuilder
   private var activeFileChip: some View {
-    if let activeFile = xcodeObservationViewModel.workspaceModel.activeFile {
-      ActiveFileView(model: .activeFile(activeFile))
-        .onTapGesture {
-          contextManager.addFile(activeFile)
+    // If there's a pinned file, show it instead of the active file
+    if contextManager.isPinnedActiveFile, let pinnedFile = contextManager.pinnedActiveFile {
+      ActiveFileView(
+        model: FileDisplayModel(
+          fileName: pinnedFile.name,
+          filePath: pinnedFile.path,
+          lineRange: nil,
+          isRemovable: true
+        ),
+        onRemove: {
+          // Unpin and clear the pinned file
+          contextManager.unpinActiveFile()
+        },
+        isPinned: true,
+        onTogglePin: {
+          contextManager.togglePinActiveFile()
         }
+      )
+    } else if let activeFile = xcodeObservationViewModel.workspaceModel.activeFile {
+      // Show the current active file with option to pin it
+      ActiveFileView(
+        model: FileDisplayModel(
+          fileName: activeFile.name,
+          filePath: activeFile.path,
+          lineRange: nil,
+          isRemovable: true
+        ),
+        onRemove: {
+          // Clear the active file from workspace observation
+          xcodeObservationViewModel.clearActiveFile()
+        },
+        isPinned: false,
+        onTogglePin: {
+          contextManager.togglePinActiveFile()
+        }
+      )
     }
   }
   

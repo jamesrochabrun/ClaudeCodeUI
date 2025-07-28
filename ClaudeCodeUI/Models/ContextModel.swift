@@ -129,6 +129,11 @@ struct ContextModel: Equatable {
     }
   }
   
+  /// Sets the active file (replaces current active files)
+  mutating func setActiveFile(_ file: FileInfo) {
+    activeFiles = [file]
+  }
+  
   /// Removes a specific selection
   mutating func removeSelection(id: UUID) {
     codeSelections.removeAll { $0.id == id }
