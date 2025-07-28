@@ -263,9 +263,9 @@ final class StreamProcessor {
         var parameters: [String: String] = [:]
         var rawParameters: [String: String]? = nil
         
-        // Check if this is an Edit or MultiEdit tool
-        let isEditTool = toolUse.name == "Edit" || toolUse.name == "MultiEdit"
-        if isEditTool {
+        // Check if this is an Edit, MultiEdit, or Write tool
+        let needsRawParams = toolUse.name == "Edit" || toolUse.name == "MultiEdit" || toolUse.name == "Write"
+        if needsRawParams {
           rawParameters = [:]
         }
         
@@ -281,9 +281,11 @@ final class StreamProcessor {
           }
           parameters[key] = formattedValue
           
-          // For Edit tools, also store raw values
-          if isEditTool {
-            if key == "old_string" || key == "new_string" || key == "file_path" {
+          // For tools that need raw parameters
+          if needsRawParams {
+            if toolUse.name == "Write" && (key == "file_path" || key == "content") {
+              rawParameters?[key] = formattedValue
+            } else if (toolUse.name == "Edit" || toolUse.name == "MultiEdit") && (key == "old_string" || key == "new_string" || key == "file_path") {
               rawParameters?[key] = formattedValue
             } else if key == "edits" && toolUse.name == "MultiEdit" {
               // For MultiEdit's edits array, convert to JSON

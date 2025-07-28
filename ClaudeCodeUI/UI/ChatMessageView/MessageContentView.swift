@@ -173,6 +173,22 @@ struct MessageContentView: View {
           defaultToolDisplay
         }
         
+      case "Write":
+        // Extract Write tool parameters
+        if let filePath = rawParams["file_path"],
+           let content = rawParams["content"] {
+          // Show formatted content view for Write tool
+          WriteToolContentView(
+            content: content,
+            filePath: filePath,
+            fontSize: fontSize,
+            textFormatter: textFormatter,
+            maxWidth: maxWidth
+          )
+        } else {
+          defaultToolDisplay
+        }
+        
       default:
         defaultToolDisplay
       }
