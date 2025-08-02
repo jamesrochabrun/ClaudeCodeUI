@@ -1,5 +1,5 @@
 {
-  "originHash" : "928b163a81a786d7eef83a6d5ab9a8983bbb980382a789fd849ac52470465d41",
+  "originHash" : "147ec104180ec9f3b65e5ff15efc200afcba869961fa2549f59b0c75b140da86",
   "pins" : [
     {
       "identity" : "claudecodesdk",
@@ -7,7 +7,7 @@
       "location" : "https://github.com/jamesrochabrun/ClaudeCodeSDK",
       "state" : {
         "branch" : "main",
-        "revision" : "b28803e03877fdc1434f0cfa40c81934498b7121"
+        "revision" : "92bc587180e49e5dd088c74e95dc48d070f575a9"
       }
     },
     {
