@@ -10,8 +10,6 @@ import SwiftUI
 struct AppearanceView: View {
   // MARK: - Constants
   private enum Layout {
-    static let windowWidth: CGFloat = 400
-    static let windowHeight: CGFloat = 200
     static let fontSizeRange: ClosedRange<Double> = 10...20
     static let fontSizeStep: Double = 1
     static let sectionSpacing: CGFloat = 8
@@ -45,7 +43,6 @@ struct AppearanceView: View {
         bottomToolbar
       }
       .navigationTitle("Appearance Settings")
-      .frame(width: Layout.windowWidth, height: Layout.windowHeight)
     }
   }
   

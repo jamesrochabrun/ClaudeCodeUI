@@ -74,6 +74,9 @@ public final class ChatViewModel {
   public private(set) var currentOutputTokens: Int = 0
   public private(set) var currentCostUSD: Double = 0.0
   
+  /// Tracks whether a session has started (first message sent)
+  public private(set) var hasSessionStarted: Bool = false
+  
   
   // MARK: - Initialization
   
@@ -179,6 +182,25 @@ public final class ChatViewModel {
     currentOutputTokens = 0
     currentCostUSD = 0.0
     
+    // Track session start and lock in the current path
+    if !hasSessionStarted {
+      hasSessionStarted = true
+      
+      // Lock in the current path for this session
+      let currentPath = settingsStorage.projectPath
+      if !currentPath.isEmpty {
+        // Wait for session ID to be available, then save the path
+        Task { @MainActor in
+          // Small delay to ensure session ID is set by StreamProcessor
+          try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
+          if let sessionId = sessionManager.currentSessionId {
+            settingsStorage.setProjectPath(currentPath, forSessionId: sessionId)
+            logger.debug("Locked path '\(currentPath)' for session '\(sessionId)'")
+          }
+        }
+      }
+    }
+    
     // Start conversation
     Task {
       do {
@@ -204,6 +226,7 @@ public final class ChatViewModel {
     currentMessageId = nil
     error = nil
     firstMessageInSession = nil
+    hasSessionStarted = false
   }
   
   /// Cancels any ongoing requests
@@ -298,6 +321,9 @@ public final class ChatViewModel {
     
     // Clear any errors
     error = nil
+    
+    // Mark session as already started since we're resuming
+    hasSessionStarted = true
     
     // Update last accessed time
     sessionManager.updateLastAccessed(id: id)

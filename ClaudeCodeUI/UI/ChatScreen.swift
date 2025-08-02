@@ -131,22 +131,33 @@ struct ChatScreen: View {
       SettingsView(chatViewModel: viewModel, xcodeObservationViewModel: xcodeObservationViewModel, permissionsService: permissionsService)
     }
     .alert("Working Directory Detected", isPresented: $showingPathDetectionAlert) {
-      Button("Accept") {
-        if let detectedPath = detectedProjectPath {
-          viewModel.claudeClient.configuration.workingDirectory = detectedPath
-          viewModel.settingsStorage.setProjectPath(detectedPath)
-          if let sessionId = viewModel.currentSessionId {
-            viewModel.settingsStorage.setProjectPath(detectedPath, forSessionId: sessionId)
-          }
-          viewModel.refreshProjectPath()
+      if viewModel.hasSessionStarted {
+        Button("Dismiss") {
+          // Just dismiss - can't change path during active session
         }
-      }
-      Button("Cancel", role: .cancel) {
-        // User declined - will show the settings button
+      } else {
+        Button("Accept") {
+          if let detectedPath = detectedProjectPath {
+            viewModel.claudeClient.configuration.workingDirectory = detectedPath
+            viewModel.settingsStorage.setProjectPath(detectedPath)
+            // Only save session-specific path if session hasn't started
+            if !viewModel.hasSessionStarted, let sessionId = viewModel.currentSessionId {
+              viewModel.settingsStorage.setProjectPath(detectedPath, forSessionId: sessionId)
+            }
+            viewModel.refreshProjectPath()
+          }
+        }
+        Button("Cancel", role: .cancel) {
+          // User declined - will show the settings button
+        }
       }
     } message: {
       if let detectedPath = detectedProjectPath {
-        Text("Claude Code UI has detected the following working directory:\n\n\(detectedPath)\n\nWould you like to use this as your working directory?")
+        if viewModel.hasSessionStarted {
+          Text("Claude Code UI has detected the following working directory:\n\n\(detectedPath)\n\nPath cannot be changed during an active session. Start a new session to use this directory.")
+        } else {
+          Text("Claude Code UI has detected the following working directory:\n\n\(detectedPath)\n\nWould you like to use this as your working directory?")
+        }
       }
     }
     .onChange(of: keyboardManager.capturedText) { oldValue, newValue in
