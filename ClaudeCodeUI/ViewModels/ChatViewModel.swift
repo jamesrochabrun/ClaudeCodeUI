@@ -236,6 +236,8 @@ public final class ChatViewModel {
         
         // Clear the current path to force user to select a new one
         self.settingsStorage.clearProjectPath()
+        self.claudeClient.configuration.workingDirectory = nil
+        self.projectPath = ""
         
         // Clear the session manager's current session
         self.sessionManager.clearSession()
@@ -348,6 +350,15 @@ public final class ChatViewModel {
   
   /// Deletes a session
   public func deleteSession(id: String) async {
+    // If deleting the current session, clear the chat interface and working directory
+    if currentSessionId == id {
+      clearConversation()
+      // Clear the working directory as well
+      settingsStorage.clearProjectPath()
+      claudeClient.configuration.workingDirectory = nil
+      projectPath = ""
+    }
+    
     // Delete from storage
     await sessionManager.deleteSession(id: id)
   }

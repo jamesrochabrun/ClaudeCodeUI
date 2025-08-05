@@ -214,6 +214,7 @@ struct SessionRowView: View {
         Image(systemName: "checkmark.circle.fill")
           .font(.system(size: 12))
           .foregroundColor(.accentColor)
+          .frame(width: 12, height: 12)
       } else {
         // Placeholder for alignment
         Color.clear
@@ -249,7 +250,7 @@ struct SessionRowView: View {
     .padding(.vertical, 6)
     .background(
       RoundedRectangle(cornerRadius: 6)
-        .fill(isActive ? Color.accentColor.opacity(0.1) : (isHovered ? Color.gray.opacity(0.1) : Color.clear))
+        .fill(isActive ? Color.accentColor.opacity(0.15) : (isHovered ? Color.gray.opacity(0.08) : Color.clear))
     )
     .contentShape(Rectangle())
     .onTapGesture {
