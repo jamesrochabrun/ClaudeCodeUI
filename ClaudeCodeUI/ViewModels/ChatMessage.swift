@@ -11,7 +11,7 @@ import Foundation
 ///
 /// ChatMessage encapsulates all the information needed to display and manage
 /// messages in the chat interface, including tool interactions and streaming states.
-public struct ChatMessage: Identifiable, Equatable {
+public struct ChatMessage: Identifiable, Equatable, Codable {
   /// Unique identifier for the message
   public var id: UUID
   
@@ -46,7 +46,7 @@ public struct ChatMessage: Identifiable, Equatable {
   public var codeSelections: [TextSelection]?
   
   /// File attachments associated with this message (images, PDFs, etc.)
-  public var attachments: [FileAttachment]?
+  public var attachments: [StoredAttachment]?
   
   /// Identifier for grouping related task messages together
   /// - Note: Messages with the same taskGroupId belong to the same Task execution
@@ -67,7 +67,7 @@ public struct ChatMessage: Identifiable, Equatable {
     toolInputData: ToolInputData? = nil,
     isError: Bool = false,
     codeSelections: [TextSelection]? = nil,
-    attachments: [FileAttachment]? = nil,
+    attachments: [StoredAttachment]? = nil,
     taskGroupId: UUID? = nil,
     isTaskContainer: Bool = false
   ) {
@@ -95,14 +95,14 @@ public struct ChatMessage: Identifiable, Equatable {
     lhs.toolInputData == rhs.toolInputData &&
     lhs.isError == rhs.isError &&
     lhs.codeSelections == rhs.codeSelections &&
-    lhs.attachments?.map { $0.id } == rhs.attachments?.map { $0.id } &&
+    lhs.attachments == rhs.attachments &&
     lhs.taskGroupId == rhs.taskGroupId &&
     lhs.isTaskContainer == rhs.isTaskContainer
   }
 }
 
 /// Defines the type of content in a message
-public enum MessageType: String {
+public enum MessageType: String, Codable {
   /// Regular text message from user or assistant
   case text
   /// Tool invocation message showing tool name and parameters
@@ -118,7 +118,7 @@ public enum MessageType: String {
 }
 
 /// Defines who sent the message or what generated it
-public enum MessageRole: String {
+public enum MessageRole: String, Codable {
   /// Message from the user
   case user
   /// Message from Claude assistant
@@ -148,7 +148,7 @@ public enum MessageRole: String {
 ///
 /// Example: For a TodoWrite tool with 5 todos (2 completed), instead of showing
 /// the raw JSON, it displays "TodoWrite(2/5 completed)" in the header.
-public struct ToolInputData: Equatable {
+public struct ToolInputData: Equatable, Codable {
   /// Simplified key-value representation of tool parameters
   /// - Note: Complex nested structures are flattened to strings for display
   public let parameters: [String: String]
@@ -207,5 +207,20 @@ public struct ToolInputData: Equatable {
     }
     
     return result
+  }
+}
+
+/// Simplified attachment data for storage
+public struct StoredAttachment: Codable, Equatable, Identifiable {
+  public let id: UUID
+  public let fileName: String
+  public let filePath: String
+  public let type: String
+  
+  public init(id: UUID = UUID(), fileName: String, filePath: String, type: String) {
+    self.id = id
+    self.fileName = fileName
+    self.filePath = filePath
+    self.type = type
   }
 }

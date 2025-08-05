@@ -11,14 +11,11 @@ struct ClaudeCodeUIApp: App {
   @State private var globalPreferences = GlobalPreferencesStorage()
   @Environment(\.openWindow) private var openWindow
   @Environment(\.colorScheme) private var colorScheme
-
+  
   var body: some Scene {
     WindowGroup(id: "main") {
       RootView()
         .toolbar(removing: .title)
-        .containerBackground(
-          Color.backgroundDark, for: .window
-        )
         .toolbarBackgroundVisibility(
           .hidden, for: .windowToolbar
         )
@@ -30,6 +27,7 @@ struct ClaudeCodeUIApp: App {
     //      .restorationBehavior(.disabled)
     .commands {
       AppearanceCommands()
+      SidebarCommands()
     }
     
     WindowGroup("Session", id: "session", for: String.self) { $sessionId in
@@ -89,6 +87,33 @@ struct AppearanceCommands: Commands {
       }
       .keyboardShortcut(",", modifiers: [.command, .shift])
     }
+  }
+}
+
+// Custom Commands for View Menu
+struct SidebarCommands: Commands {
+  @FocusedValue(\.toggleSidebar) private var toggleSidebar
+  
+  var body: some Commands {
+    CommandGroup(after: .sidebar) {
+      Button("Toggle Sidebar") {
+        toggleSidebar?()
+      }
+      .keyboardShortcut("s", modifiers: [.command, .option])
+      .disabled(toggleSidebar == nil)
+    }
+  }
+}
+
+// Define the focused value key
+struct ToggleSidebarKey: FocusedValueKey {
+  typealias Value = () -> Void
+}
+
+extension FocusedValues {
+  var toggleSidebar: (() -> Void)? {
+    get { self[ToggleSidebarKey.self] }
+    set { self[ToggleSidebarKey.self] = newValue }
   }
 }
 

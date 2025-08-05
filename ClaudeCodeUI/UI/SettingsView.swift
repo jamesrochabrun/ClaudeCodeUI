@@ -49,6 +49,7 @@ struct SettingsView: View {
                   selectProjectPath()
                 }
                 .buttonStyle(.borderedProminent)
+                // .disabled(chatViewModel.hasSessionStarted)
                 
                 if !projectPath.isEmpty {
                   Button("Clear") {
@@ -57,12 +58,19 @@ struct SettingsView: View {
                     updateClaudeClient()
                   }
                   .buttonStyle(.bordered)
+                  // .disabled(chatViewModel.hasSessionStarted)
                 }
               }
               
+              // if chatViewModel.hasSessionStarted {
+              //   Text("Path is locked during active session. Start a new session to change the working directory.")
+              //     .font(.caption)
+              //     .foregroundColor(.orange)
+              // } else {
               Text("This working directory is specific to this session. Other settings are configured globally via ⌘⇧,")
                 .font(.caption)
                 .foregroundColor(.secondary)
+              // }
             }
             .padding(.vertical, 8)
           }
@@ -141,13 +149,17 @@ struct SettingsView: View {
     // Save to global setting
     settingsStorage.setProjectPath(projectPath)
     
-    // Also save session-specific if we have a session
+    // // Only save session-specific path if session hasn't started yet
+    // if !chatViewModel.hasSessionStarted {
     if let sessionId = chatViewModel.currentSessionId {
       settingsStorage.setProjectPath(projectPath, forSessionId: sessionId)
       print("[SettingsView] Saved project path '\(projectPath)' for session '\(sessionId)'")
     } else {
       print("[SettingsView] WARNING: No session ID available when saving project path '\(projectPath)'")
     }
+    // } else {
+    //   print("[SettingsView] Session already started - not updating session-specific path")
+    // }
   }
   
   private func selectProjectPath() {

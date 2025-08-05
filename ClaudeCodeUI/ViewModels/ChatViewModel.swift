@@ -29,6 +29,9 @@ public final class ChatViewModel {
   private let messageStore = MessageStore()
   private var firstMessageInSession: String?
   
+  // Session isolation: track if we're in the middle of switching sessions
+  private var isSwitchingSession = false
+  
   /// Sessions loading state
   public var isLoadingSessions: Bool {
     sessionManager.isLoadingSessions
@@ -73,6 +76,9 @@ public final class ChatViewModel {
   public private(set) var currentInputTokens: Int = 0
   public private(set) var currentOutputTokens: Int = 0
   public private(set) var currentCostUSD: Double = 0.0
+  
+  /// Tracks whether a session has started (first message sent)
+  public private(set) var hasSessionStarted: Bool = false
   
   
   // MARK: - Initialization
@@ -179,6 +185,12 @@ public final class ChatViewModel {
     currentOutputTokens = 0
     currentCostUSD = 0.0
     
+    // Track session start
+    if !hasSessionStarted {
+      hasSessionStarted = true
+      // Path will be saved when the session is created in StreamProcessor
+    }
+    
     // Start conversation
     Task {
       do {
@@ -204,6 +216,49 @@ public final class ChatViewModel {
     currentMessageId = nil
     error = nil
     firstMessageInSession = nil
+    hasSessionStarted = false
+  }
+  
+  /// Starts a new session without affecting the current session
+  public func startNewSession() {
+    // Save current session messages before starting new
+    Task {
+      await saveCurrentSessionMessages()
+      
+      // After saving, clear the UI to prepare for new session
+      await MainActor.run {
+        // Clear only the local state to prepare for a new session
+        self.messageStore.clear()
+        self.currentMessageId = nil
+        self.error = nil
+        self.firstMessageInSession = nil
+        self.hasSessionStarted = false
+        
+        // Clear the current path to force user to select a new one
+        self.settingsStorage.clearProjectPath()
+        self.claudeClient.configuration.workingDirectory = nil
+        self.projectPath = ""
+        
+        // Clear the session manager's current session
+        self.sessionManager.clearSession()
+        
+        // A new session will be created when the user sends their first message
+        // Claude will provide the session ID
+      }
+    }
+  }
+  
+  /// Saves the current session's messages to storage
+  private func saveCurrentSessionMessages() async {
+    guard let sessionId = currentSessionId else { return }
+    
+    let messages = messageStore.getAllMessages()
+    do {
+      try await sessionStorage.updateSessionMessages(id: sessionId, messages: messages)
+      logger.debug("Saved \(messages.count) messages for current session \(sessionId)")
+    } catch {
+      logger.error("Failed to save messages for session \(sessionId): \(error)")
+    }
   }
   
   /// Cancels any ongoing requests
@@ -244,6 +299,20 @@ public final class ChatViewModel {
     // Set the session ID
     sessionManager.selectSession(id: sessionId)
     
+    // Load and set the session's stored path
+    if let sessionPath = settingsStorage.getProjectPath(forSessionId: sessionId) {
+      // Update ClaudeClient configuration
+      claudeClient.configuration.workingDirectory = sessionPath
+      // Update the observable project path
+      projectPath = sessionPath
+      logger.debug("Loaded path '\(sessionPath)' for selected session '\(sessionId)'")
+    } else {
+      // No stored path for this session
+      claudeClient.configuration.workingDirectory = nil
+      projectPath = ""
+      logger.debug("No stored path for selected session '\(sessionId)'")
+    }
+    
     // We would load previous messages here if we had that capability
     // For now, we're just switching to the session
     
@@ -261,12 +330,78 @@ public final class ChatViewModel {
     // Prepare session for resumption
     prepareSessionForResumption(id: id)
     
+    // Load messages for this session
+    do {
+      if let session = try await sessionStorage.getSession(id: id) {
+        messageStore.loadMessages(session.messages)
+        logger.debug("Loaded \(session.messages.count) messages for session \(id)")
+      }
+    } catch {
+      logger.error("Failed to load messages for session \(id): \(error)")
+    }
+    
     // Setup for conversation resumption
     let assistantId = UUID()
     setupConversationResumption(assistantId: assistantId, initialPrompt: initialPrompt)
     
     // Resume the conversation
     await performSessionResumption(id: id, initialPrompt: initialPrompt, assistantId: assistantId)
+  }
+  
+  /// Deletes a session
+  public func deleteSession(id: String) async {
+    // If deleting the current session, clear the chat interface and working directory
+    if currentSessionId == id {
+      clearConversation()
+      // Clear the working directory as well
+      settingsStorage.clearProjectPath()
+      claudeClient.configuration.workingDirectory = nil
+      projectPath = ""
+    }
+    
+    // Delete from storage
+    await sessionManager.deleteSession(id: id)
+  }
+  
+  /// Switches to a different session in the same window
+  public func switchToSession(_ sessionId: String) async {
+    // If switching to the same session, do nothing
+    guard sessionId != currentSessionId else { return }
+    
+    // Prevent concurrent session switches
+    guard !isSwitchingSession else {
+      logger.warning("Already switching sessions, ignoring switch to \(sessionId)")
+      return
+    }
+    
+    isSwitchingSession = true
+    defer { isSwitchingSession = false }
+    
+    logger.debug("Switching to session: \(sessionId)")
+    
+    // Cancel any ongoing requests first
+    if isLoading {
+      cancelRequest()
+      // Small delay to ensure cancellation completes
+      try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
+    }
+    
+    // Save current session messages before switching
+    if let currentId = currentSessionId {
+      let currentMessages = messageStore.getAllMessages()
+      do {
+        try await sessionStorage.updateSessionMessages(id: currentId, messages: currentMessages)
+        logger.debug("Saved \(currentMessages.count) messages for session \(currentId)")
+      } catch {
+        logger.error("Failed to save messages for session \(currentId): \(error)")
+      }
+    }
+    
+    // Clear current conversation
+    clearConversation()
+    
+    // Resume the selected session
+    await resumeSession(id: sessionId)
   }
   
   // MARK: - Session Resumption Helpers
@@ -296,32 +431,65 @@ public final class ChatViewModel {
     // Notify settings storage of session change
     onSessionChange?(id)
     
+    // Load and set the session's stored path
+    if let sessionPath = settingsStorage.getProjectPath(forSessionId: id) {
+      // Update ClaudeClient configuration
+      claudeClient.configuration.workingDirectory = sessionPath
+      // Update the observable project path
+      projectPath = sessionPath
+      logger.debug("Loaded path '\(sessionPath)' for resumed session '\(id)'")
+    } else {
+      // No stored path for this session
+      claudeClient.configuration.workingDirectory = nil
+      projectPath = ""
+      logger.debug("No stored path for resumed session '\(id)'")
+    }
+    
     // Clear any errors
     error = nil
+    
+    // Mark session as already started since we're resuming
+    hasSessionStarted = true
     
     // Update last accessed time
     sessionManager.updateLastAccessed(id: id)
   }
   
   private func setupConversationResumption(assistantId: UUID, initialPrompt: String?) {
-    // Resume the conversation - even with empty prompt to load history
-    isLoading = true
-    currentMessageId = assistantId
-    
-    // If we have an initial prompt, add it as a user message
-    if let prompt = initialPrompt {
+    // Only set loading state if we have a prompt to send
+    if let prompt = initialPrompt, !prompt.isEmpty {
+      isLoading = true
+      currentMessageId = assistantId
+      
+      // Add the user message
       let userMessage = MessageFactory.userMessage(content: prompt)
       messageStore.addMessage(userMessage)
+    } else {
+      // Just switching sessions, no loading state
+      currentMessageId = nil
     }
   }
   
   private func performSessionResumption(id: String, initialPrompt: String?, assistantId: UUID) async {
+    // Only make API call if there's an actual prompt to send
+    guard let prompt = initialPrompt, !prompt.isEmpty else {
+      // Just switch to the session without making an API call
+      logger.debug("Switching to session \(id) without sending a message")
+      
+      // Mark as not loading since we're not making an API call
+      await MainActor.run {
+        self.isLoading = false
+        self.streamingStartTime = nil
+      }
+      return
+    }
+    
     do {
-      // Resume the conversation with or without a prompt
+      // Resume the conversation with the provided prompt
       let options = createOptions()
       let result = try await claudeClient.resumeConversation(
         sessionId: id,
-        prompt: initialPrompt ?? "",
+        prompt: prompt,
         outputFormat: .streamJson,
         options: options
       )
@@ -336,19 +504,19 @@ public final class ChatViewModel {
     logger.error("Failed to resume session \(sessionId): \(error.localizedDescription)")
     
     await MainActor.run {
-      // If the conversation doesn't exist in Claude, just select the session
-      // This allows us to continue with the session even if Claude doesn't have it
       self.isLoading = false
-    self.streamingStartTime = nil
       self.streamingStartTime = nil
       
       // Check if it's a "conversation not found" error
       let errorMessage = error.localizedDescription.lowercased()
       if errorMessage.contains("no conversation") || errorMessage.contains("not found") {
         // Session exists in our storage but not in Claude
-        // This is OK - user can continue with a new message
-        logger.info("Session \(sessionId) exists locally but not in Claude. Ready for new messages.")
+        // This is expected after app restart - Claude sessions don't persist
+        logger.info("Session \(sessionId) exists locally but not in Claude. Continuing with local history.")
         self.error = nil
+        
+        // Keep the session active with its message history
+        // User can continue the conversation, and Claude will create a new backend session
       } else {
         // Some other error
         self.handleError(error)
@@ -373,14 +541,28 @@ public final class ChatViewModel {
   private func continueConversation(sessionId: String, prompt: String, messageId: UUID) async throws {
     let options = createOptions()
     
-    let result = try await claudeClient.resumeConversation(
-      sessionId: sessionId,
-      prompt: prompt,
-      outputFormat: .streamJson,
-      options: options
-    )
-    
-    await processResult(result, messageId: messageId)
+    do {
+      let result = try await claudeClient.resumeConversation(
+        sessionId: sessionId,
+        prompt: prompt,
+        outputFormat: .streamJson,
+        options: options
+      )
+      
+      // Pass the expected session ID to handle mismatches
+      await processResult(result, messageId: messageId)
+    } catch {
+      // Check if it's a session not found error
+      let errorMessage = error.localizedDescription.lowercased()
+      if errorMessage.contains("no conversation") || errorMessage.contains("not found") {
+        logger.info("Claude doesn't recognize session \(sessionId), starting new conversation")
+        
+        // Start a new conversation instead
+        try await startNewConversation(prompt: prompt, messageId: messageId)
+      } else {
+        throw error
+      }
+    }
   }
   
   private func createOptions() -> ClaudeCodeOptions {
@@ -454,6 +636,9 @@ public final class ChatViewModel {
         // Clear first message after it's been saved
         self.firstMessageInSession = nil
       }
+      
+      // Save messages after streaming completes
+      await saveCurrentSessionMessages()
       
     default:
       await MainActor.run {

@@ -13,6 +13,8 @@ public struct StoredSession: Codable, Identifiable {
   public let createdAt: Date
   public let firstUserMessage: String
   public var lastAccessedAt: Date
+  /// Complete message history for this session
+  public var messages: [ChatMessage]
   
   /// Computed title based on first user message
   public var title: String {
@@ -48,12 +50,17 @@ public protocol SessionStorageProtocol {
   
   /// Deletes all sessions
   func deleteAllSessions() async throws
+  
+  /// Updates messages for a session
+  func updateSessionMessages(id: String, messages: [ChatMessage]) async throws
 }
 
 /// UserDefaults-based implementation of SessionStorage
 public actor UserDefaultsSessionStorage: SessionStorageProtocol {
   private let userDefaults: UserDefaults
   private let storageKey = "com.claudecodeui.sessions"
+  private let encoder = JSONEncoder()
+  private let decoder = JSONDecoder()
   
   public init(userDefaults: UserDefaults = .standard) {
     self.userDefaults = userDefaults
@@ -64,6 +71,11 @@ public actor UserDefaultsSessionStorage: SessionStorageProtocol {
     
     // Check if session already exists
     if sessions.contains(where: { $0.id == id }) {
+      // Update last accessed time for existing session
+      if let index = sessions.firstIndex(where: { $0.id == id }) {
+        sessions[index].lastAccessedAt = Date()
+        try saveSessionsInternal(sessions)
+      }
       return
     }
     
@@ -71,7 +83,8 @@ public actor UserDefaultsSessionStorage: SessionStorageProtocol {
       id: id,
       createdAt: Date(),
       firstUserMessage: firstMessage,
-      lastAccessedAt: Date()
+      lastAccessedAt: Date(),
+      messages: []  // Start with empty messages
     )
     
     sessions.append(newSession)
@@ -109,6 +122,18 @@ public actor UserDefaultsSessionStorage: SessionStorageProtocol {
     userDefaults.removeObject(forKey: storageKey)
   }
   
+  public func updateSessionMessages(id: String, messages: [ChatMessage]) async throws {
+    var sessions = try await getAllSessionsInternal()
+    
+    guard let index = sessions.firstIndex(where: { $0.id == id }) else {
+      return
+    }
+    
+    sessions[index].messages = messages
+    sessions[index].lastAccessedAt = Date()
+    try saveSessionsInternal(sessions)
+  }
+  
   // MARK: - Private Methods
   
   private func getAllSessionsInternal() async throws -> [StoredSession] {
@@ -116,7 +141,6 @@ public actor UserDefaultsSessionStorage: SessionStorageProtocol {
       return []
     }
     
-    let decoder = JSONDecoder()
     do {
       return try decoder.decode([StoredSession].self, from: data)
     } catch {
@@ -127,8 +151,9 @@ public actor UserDefaultsSessionStorage: SessionStorageProtocol {
   }
   
   private func saveSessionsInternal(_ sessions: [StoredSession]) throws {
-    let encoder = JSONEncoder()
     let data = try encoder.encode(sessions)
     userDefaults.set(data, forKey: storageKey)
+    // Force synchronization to prevent race conditions
+    userDefaults.synchronize()
   }
 }

@@ -14,17 +14,17 @@ extension Color {
               blue: blue / 255.0,
               opacity: alpha)
   }
-
+  
   init(red: Int, green: Int, blue: Int, alpha: Double = 1.0) {
     self.init(red: Double(red), green: Double(green), blue: Double(blue), alpha: alpha)
   }
-
+  
   /// Create a Color from a hex string like "#CC785C" or "CC785C"
   init(hex: String, alpha: Double = 1.0) {
     let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
     var int = UInt64()
     Scanner(string: hex).scanHexInt64(&int)
-
+    
     let r, g, b: UInt64
     switch hex.count {
     case 6: // RGB (24-bit)
@@ -32,18 +32,28 @@ extension Color {
     default:
       (r, g, b) = (0, 0, 0)
     }
-
+    
     self.init(red: Int(r), green: Int(g), blue: Int(b), alpha: alpha)
   }
-
+  
   // MARK: - Named Colors
-
+  
   static let bookCloth = Color(hex: "#CC785C")
   static let kraft = Color(hex: "#D4A27F")
   static let manilla = Color(hex: "#EBDBBC")
-  static let backgroundDark = Color(hex: "##262624")
-  static let backgroundLight = Color(hex: "##FAF9F5")
+  static let backgroundDark = Color(hex: "#262624")
+  static let backgroundLight = Color(hex: "#FAF9F5")
   static let expandedContentBackgroundDark = Color(hex: "#222222")
   static let expandedContentBackgroundLight = Color(hex: "#F8F4E3")
-
+  
+  // MARK: - Adaptive Colors
+  
+  static func adaptiveBackground(for colorScheme: ColorScheme) -> Color {
+    colorScheme == .dark ? backgroundDark : backgroundLight
+  }
+  
+  static func adaptiveExpandedContentBackground(for colorScheme: ColorScheme) -> Color {
+    colorScheme == .dark ? expandedContentBackgroundDark : expandedContentBackgroundLight
+  }
+  
 }

@@ -141,12 +141,6 @@ extension ChatScreen {
           }
         }
       }
-      .onAppear {
-        checkForAutoDetection()
-      }
-      .onChange(of: xcodeObservationViewModel.workspaceModel) { _, _ in
-        checkForAutoDetection()
-      }
     }
   }
 }
