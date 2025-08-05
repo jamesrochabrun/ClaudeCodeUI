@@ -24,7 +24,6 @@ struct ChatInputView: View {
   let placeholder: String
   @State private var shouldSubmit = false
   @Binding var triggerFocus: Bool
-  @State private var showingSessionsList = false
   @State private var showingProjectPathAlert = false
   @State private var showingSettings = false
   @State private var attachments: [FileAttachment] = []
@@ -105,7 +104,6 @@ struct ChatInputView: View {
             .padding(.top, 4)
         }
         HStack {
-          sessionsButton
           attachmentButton
           textEditor
           actionButton
@@ -160,22 +158,6 @@ struct ChatInputView: View {
 
 extension ChatInputView {
   
-  /// Sessions list button
-  private var sessionsButton: some View {
-    Button(action: {
-      showingSessionsList = true
-    }) {
-      Image(systemName: "list.bullet")
-        .foregroundColor(.gray)
-    }
-    .buttonStyle(.plain)
-    .padding(.leading, 8)
-    .popover(isPresented: $showingSessionsList) {
-      SessionsListView(viewModel: $viewModel)
-        .frame(width: 300, height: 400)
-    }
-  }
-  
   /// Attachment button
   private var attachmentButton: some View {
     Button(action: {
@@ -185,6 +167,7 @@ extension ChatInputView {
         .foregroundColor(.gray)
     }
     .buttonStyle(.plain)
+    .padding(.leading, 8)
     .help("Attach files")
   }
   

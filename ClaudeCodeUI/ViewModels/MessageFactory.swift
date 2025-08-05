@@ -18,7 +18,17 @@ struct MessageFactory {
   ///   - attachments: Optional file attachments to display with the message
   /// - Returns: A ChatMessage configured as a user message
   static func userMessage(content: String, codeSelections: [TextSelection]? = nil, attachments: [FileAttachment]? = nil) -> ChatMessage {
-    ChatMessage(role: .user, content: content, codeSelections: codeSelections, attachments: attachments)
+    // Convert FileAttachment to StoredAttachment for persistence
+    let storedAttachments = attachments?.map { attachment in
+      StoredAttachment(
+        id: attachment.id,
+        fileName: attachment.fileName,
+        filePath: attachment.url.path,
+        type: attachment.type.rawValue
+      )
+    }
+    
+    return ChatMessage(role: .user, content: content, codeSelections: codeSelections, attachments: storedAttachments)
   }
   
   /// Creates an assistant message with streaming support

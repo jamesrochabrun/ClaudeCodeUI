@@ -79,4 +79,18 @@ final class MessageStore {
   func findMessage(id: UUID) -> ChatMessage? {
     messages.first { $0.id == id }
   }
+  
+  /// Replaces all messages with a new array
+  /// - Parameter newMessages: The array of messages to replace current messages with
+  /// - Note: Used when loading session history
+  func loadMessages(_ newMessages: [ChatMessage]) {
+    messages = newMessages
+  }
+  
+  /// Returns a copy of all messages
+  /// - Returns: Array of all current messages
+  /// - Note: Used for saving session state
+  func getAllMessages() -> [ChatMessage] {
+    messages
+  }
 }

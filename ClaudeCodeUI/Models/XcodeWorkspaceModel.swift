@@ -40,8 +40,8 @@ public struct XcodeWorkspaceModel: Equatable {
 }
 
 /// Represents information about a file in Xcode
-public struct FileInfo: Equatable, Identifiable {
-  public let id = UUID()
+public struct FileInfo: Equatable, Identifiable, Codable {
+  public let id: UUID
   
   /// Full path to the file
   public let path: String
@@ -83,7 +83,8 @@ public struct FileInfo: Equatable, Identifiable {
     }
   }
   
-  public init(path: String, name: String? = nil, content: String? = nil) {
+  public init(id: UUID = UUID(), path: String, name: String? = nil, content: String? = nil) {
+    self.id = id
     self.path = path
     self.name = name ?? URL(fileURLWithPath: path).lastPathComponent
     self.content = content
@@ -91,8 +92,8 @@ public struct FileInfo: Equatable, Identifiable {
 }
 
 /// Represents a text selection in a file
-public struct TextSelection: Equatable, Identifiable {
-  public let id = UUID()
+public struct TextSelection: Equatable, Identifiable, Codable {
+  public let id: UUID
   
   /// Path to the file containing the selection
   public let filePath: String
@@ -103,11 +104,18 @@ public struct TextSelection: Equatable, Identifiable {
   /// Line range of the selection (1-based)
   public let lineRange: ClosedRange<Int>
   
-  /// Column range on the start line
-  public let columnRange: Range<Int>?
+  /// Column range on the start line - stored as optional lower/upper bounds for Codable
+  public let columnRangeLower: Int?
+  public let columnRangeUpper: Int?
   
   /// Timestamp when the selection was captured
   public let timestamp: Date
+  
+  /// Column range computed property for compatibility
+  public var columnRange: Range<Int>? {
+    guard let lower = columnRangeLower, let upper = columnRangeUpper else { return nil }
+    return lower..<upper
+  }
   
   /// File name for display
   public var fileName: String {
@@ -124,16 +132,19 @@ public struct TextSelection: Equatable, Identifiable {
   }
   
   public init(
+    id: UUID = UUID(),
     filePath: String,
     selectedText: String,
     lineRange: ClosedRange<Int>,
     columnRange: Range<Int>? = nil,
     timestamp: Date = Date()
   ) {
+    self.id = id
     self.filePath = filePath
     self.selectedText = selectedText
     self.lineRange = lineRange
-    self.columnRange = columnRange
+    self.columnRangeLower = columnRange?.lowerBound
+    self.columnRangeUpper = columnRange?.upperBound
     self.timestamp = timestamp
   }
 }

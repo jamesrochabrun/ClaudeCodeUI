@@ -30,13 +30,27 @@ struct WelcomeRow: View {
           .foregroundColor(.primary)
         
         if showSettingsButton {
-          Button(action: onSettingsTapped) {
-            Image(systemName: "plus.circle.fill")
-              .font(.system(size: 16))
+          VStack(alignment: .leading, spacing: 8) {
+            Text("No working directory selected")
+              .font(.system(.caption, design: .monospaced))
+              .foregroundColor(.orange)
+            
+            Button(action: onSettingsTapped) {
+              HStack(spacing: 4) {
+                Image(systemName: "folder.badge.plus")
+                  .font(.system(size: 14))
+                Text("Select Working Directory")
+                  .font(.system(.body, design: .monospaced))
+              }
               .foregroundColor(.bookCloth)
+              .padding(.horizontal, 12)
+              .padding(.vertical, 6)
+              .background(Color.bookCloth.opacity(0.1))
+              .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .help("Select a working directory for this session")
           }
-          .buttonStyle(.plain)
-          .help("Select Working Directory")
         } else if let path = path {
           HStack(spacing: 8) {
             Text(path)

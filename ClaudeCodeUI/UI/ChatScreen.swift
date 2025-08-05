@@ -16,13 +16,14 @@ import CustomPermissionService
 
 struct ChatScreen: View {
   
-  init(viewModel: ChatViewModel, contextManager: ContextManager, xcodeObservationViewModel: XcodeObservationViewModel, permissionsService: PermissionsService, terminalService: TerminalService, customPermissionService: CustomPermissionService) {
+  init(viewModel: ChatViewModel, contextManager: ContextManager, xcodeObservationViewModel: XcodeObservationViewModel, permissionsService: PermissionsService, terminalService: TerminalService, customPermissionService: CustomPermissionService, columnVisibility: Binding<NavigationSplitViewVisibility>) {
     self.viewModel = viewModel
     self.contextManager = contextManager
     self.xcodeObservationViewModel = xcodeObservationViewModel
     self.permissionsService = permissionsService
     self.terminalService = terminalService
     self.customPermissionService = customPermissionService
+    self._columnVisibility = columnVisibility
     // Cast to DefaultCustomPermissionService for @ObservedObject support
     self.observedPermissionService = customPermissionService as! DefaultCustomPermissionService
   }
@@ -34,12 +35,10 @@ struct ChatScreen: View {
   let terminalService: TerminalService
   let customPermissionService: CustomPermissionService
   @ObservedObject private var observedPermissionService: DefaultCustomPermissionService
+  @Binding var columnVisibility: NavigationSplitViewVisibility
   @State private var messageText: String = ""
   @State var showingSettings = false
   @State private var keyboardManager = KeyboardShortcutManager()
-  @State var hasShownAutoDetectionAlert = false
-  @State var detectedProjectPath: String?
-  @State var showingPathDetectionAlert = false
   @State private var triggerTextEditorFocus = false
   
   var body: some View {
@@ -116,7 +115,7 @@ struct ChatScreen: View {
     .toolbar {
       ToolbarItem(placement: .automatic) {
         HStack(spacing: 8) {
-         // PermissionStatusView(customPermissionService: customPermissionService)
+          // PermissionStatusView(customPermissionService: customPermissionService)
           
           Button(action: clearChat) {
             Image(systemName: "trash")
@@ -129,36 +128,6 @@ struct ChatScreen: View {
     .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
     .sheet(isPresented: $showingSettings) {
       SettingsView(chatViewModel: viewModel, xcodeObservationViewModel: xcodeObservationViewModel, permissionsService: permissionsService)
-    }
-    .alert("Working Directory Detected", isPresented: $showingPathDetectionAlert) {
-      if viewModel.hasSessionStarted {
-        Button("Dismiss") {
-          // Just dismiss - can't change path during active session
-        }
-      } else {
-        Button("Accept") {
-          if let detectedPath = detectedProjectPath {
-            viewModel.claudeClient.configuration.workingDirectory = detectedPath
-            viewModel.settingsStorage.setProjectPath(detectedPath)
-            // Only save session-specific path if session hasn't started
-            if !viewModel.hasSessionStarted, let sessionId = viewModel.currentSessionId {
-              viewModel.settingsStorage.setProjectPath(detectedPath, forSessionId: sessionId)
-            }
-            viewModel.refreshProjectPath()
-          }
-        }
-        Button("Cancel", role: .cancel) {
-          // User declined - will show the settings button
-        }
-      }
-    } message: {
-      if let detectedPath = detectedProjectPath {
-        if viewModel.hasSessionStarted {
-          Text("Claude Code UI has detected the following working directory:\n\n\(detectedPath)\n\nPath cannot be changed during an active session. Start a new session to use this directory.")
-        } else {
-          Text("Claude Code UI has detected the following working directory:\n\n\(detectedPath)\n\nWould you like to use this as your working directory?")
-        }
-      }
     }
     .onChange(of: keyboardManager.capturedText) { oldValue, newValue in
       if !newValue.isEmpty && newValue != oldValue {
@@ -178,20 +147,22 @@ struct ChatScreen: View {
         keyboardManager.shouldFocusTextEditor = false
       }
     }
+    .focusedValue(\.toggleSidebar, toggleSidebar)
   }
   
   private func clearChat() {
     viewModel.clearConversation()
   }
   
-  func checkForAutoDetection() {
-    // Only check if we haven't shown the alert and don't have a manual path
-    if !hasShownAutoDetectionAlert && viewModel.projectPath.isEmpty {
-      if xcodeObservationViewModel.hasAccessibilityPermission,
-         let projectRoot = xcodeObservationViewModel.getProjectRootPath() {
-        detectedProjectPath = projectRoot
-        hasShownAutoDetectionAlert = true
-        showingPathDetectionAlert = true
+  private func toggleSidebar() {
+    withAnimation {
+      switch columnVisibility {
+      case .all:
+        columnVisibility = .detailOnly
+      case .detailOnly:
+        columnVisibility = .all
+      default:
+        columnVisibility = .all
       }
     }
   }

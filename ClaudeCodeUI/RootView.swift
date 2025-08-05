@@ -10,9 +10,11 @@ import ClaudeCodeSDK
 
 struct RootView: View {
   @Environment(GlobalPreferencesStorage.self) private var globalPreferences
+  @Environment(\.colorScheme) private var colorScheme
   
   @State private var dependencyContainer: DependencyContainer?
   @State private var viewModel: ChatViewModel?
+  @State private var columnVisibility: NavigationSplitViewVisibility = .all
   private let sessionId: String?
   
   init(sessionId: String? = nil) {
@@ -21,17 +23,29 @@ struct RootView: View {
   
   var body: some View {
     if let viewModel = viewModel, let container = dependencyContainer {
-      ChatScreen(
-        viewModel: viewModel,
-        contextManager: container.contextManager,
-        xcodeObservationViewModel: container.xcodeObservationViewModel,
-        permissionsService: container.permissionsService,
-        terminalService: container.terminalService,
-        customPermissionService: container.customPermissionService
-      )
-      .environment(container.xcodeObservationViewModel)
+      NavigationSplitView(columnVisibility: $columnVisibility) {
+        // Sidebar
+        SessionsSidebarView(viewModel: viewModel)
+          .navigationSplitViewColumnWidth(min: 200, ideal: 250, max: 300)
+      } detail: {
+        // Main chat content
+        ChatScreen(
+          viewModel: viewModel,
+          contextManager: container.contextManager,
+          xcodeObservationViewModel: container.xcodeObservationViewModel,
+          permissionsService: container.permissionsService,
+          terminalService: container.terminalService,
+          customPermissionService: container.customPermissionService,
+          columnVisibility: $columnVisibility
+        )
+        .environment(container.xcodeObservationViewModel)
+      }
+      .navigationSplitViewStyle(.balanced)
+      .background(Color.adaptiveBackground(for: colorScheme))
     } else {
       ProgressView()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.adaptiveBackground(for: colorScheme))
         .onAppear {
           setupViewModel()
         }
@@ -55,7 +69,7 @@ struct RootView: View {
       // Also set it as the active path for this session
       container.settingsStorage.setProjectPath(sessionPath)
     } else {
-      // New session starts with empty working directory to allow auto-detection
+      // New session starts with empty working directory - user must manually select
       workingDirectory = ""
       container.settingsStorage.clearProjectPath()
     }
@@ -65,22 +79,22 @@ struct RootView: View {
 #else
     let debugMode = false
 #endif
-
+    
     var config = ClaudeCodeConfiguration.default
     config.workingDirectory = workingDirectory
     config.enableDebugLogging = debugMode
     
     // Add nvm paths to support npm installed via nvm
-//    let homeDir = NSHomeDirectory()
-//    config.additionalPaths = [
-//      "/usr/local/bin",
-//      "/opt/homebrew/bin",
-//      "/usr/bin",
-//      "\(homeDir)/.nvm/versions/node/v22.16.0/bin",  // Your actual Node version
-//      "\(homeDir)/.nvm/current/bin",
-//      "\(homeDir)/.nvm/versions/node/v20.11.1/bin",
-//      "\(homeDir)/.nvm/versions/node/v18.19.0/bin"
-//    ]
+    //    let homeDir = NSHomeDirectory()
+    //    config.additionalPaths = [
+    //      "/usr/local/bin",
+    //      "/opt/homebrew/bin",
+    //      "/usr/bin",
+    //      "\(homeDir)/.nvm/versions/node/v22.16.0/bin",  // Your actual Node version
+    //      "\(homeDir)/.nvm/current/bin",
+    //      "\(homeDir)/.nvm/versions/node/v20.11.1/bin",
+    //      "\(homeDir)/.nvm/versions/node/v18.19.0/bin"
+    //    ]
     
     let claudeClient = ClaudeCodeClient(configuration: config)
     let vm = ChatViewModel(
