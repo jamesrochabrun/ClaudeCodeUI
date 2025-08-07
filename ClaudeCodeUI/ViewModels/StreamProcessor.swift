@@ -38,6 +38,13 @@ final class StreamProcessor {
     self.onSessionChange = onSessionChange
   }
   
+  /// Cancels the current stream processing
+  func cancelStream() {
+    // Cancel all active subscriptions
+    cancellables.forEach { $0.cancel() }
+    cancellables.removeAll()
+  }
+  
   func processStream(
     _ publisher: AnyPublisher<ResponseChunk, Error>,
     messageId: UUID,

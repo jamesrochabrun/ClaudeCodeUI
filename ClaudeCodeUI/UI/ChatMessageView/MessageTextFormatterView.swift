@@ -21,6 +21,17 @@ struct MessageTextFormatterView: View {
       if !message.isComplete && textFormatter.elements.isEmpty {
         MessageLoadingIndicator(messageTint: messageTint)
       }
+      
+      // Show cancelled indicator if message was cancelled
+      if message.wasCancelled {
+        HStack {
+          Text("Interrupted by user")
+            .font(.system(size: fontSize - 1))
+            .foregroundColor(.red)
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, 8)
+        }
+      }
     }
   }
   

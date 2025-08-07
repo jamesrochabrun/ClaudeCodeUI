@@ -211,12 +211,25 @@ struct MessageContentView: View {
   
   @ViewBuilder
   private var plainTextContent: some View {
-    let displayContent = message.role == .user && !message.content.isEmpty ? "> \(message.content)" : message.content
-    Text(displayContent)
-      .textSelection(.enabled)
-      .font(messageFont)
-      .padding(.horizontal, horizontalPadding)
-      .padding(.vertical, 8)
+    VStack(alignment: .leading, spacing: 0) {
+      let displayContent = message.role == .user && !message.content.isEmpty ? "> \(message.content)" : message.content
+      Text(displayContent)
+        .textSelection(.enabled)
+        .font(messageFont)
+        .padding(.horizontal, horizontalPadding)
+        .padding(.vertical, 8)
+      
+      // Show cancelled indicator if message was cancelled
+      if message.wasCancelled {
+        HStack {
+          Text("Interrupted by user")
+            .font(.system(size: fontSize - 1))
+            .foregroundColor(.red)
+            .padding(.horizontal, horizontalPadding)
+            .padding(.vertical, 8)
+        }
+      }
+    }
   }
   
   private var messageFont: SwiftUI.Font {
