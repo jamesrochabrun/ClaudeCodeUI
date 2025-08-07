@@ -32,6 +32,9 @@ public final class ChatViewModel {
   // Session isolation: track if we're in the middle of switching sessions
   private var isSwitchingSession = false
   
+  // Stream cancellation: track if user cancelled the current stream
+  private var isCancelled = false
+  
   /// Sessions loading state
   public var isLoadingSessions: Bool {
     sessionManager.isLoadingSessions
@@ -129,6 +132,9 @@ public final class ChatViewModel {
   ///   - attachments: Optional file attachments (images, PDFs, etc.)
   public func sendMessage(_ text: String, context: String? = nil, hiddenContext: String? = nil, codeSelections: [TextSelection]? = nil, attachments: [FileAttachment]? = nil) {
     guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+    
+    // Reset cancellation flag for new message
+    isCancelled = false
     
     // Store first message if this is a new session
     if sessionManager.currentSessionId == nil {
@@ -263,9 +269,21 @@ public final class ChatViewModel {
   
   /// Cancels any ongoing requests
   public func cancelRequest() {
-    claudeClient.cancel()
+    // Set cancellation flag instead of terminating the process
+    isCancelled = true
+    
+    // Cancel the stream subscription only (not the process)
+    streamProcessor.cancelStream()
+    
+    // Clean up UI state
     isLoading = false
     streamingStartTime = nil
+    
+    // Simply mark the last message as cancelled
+    let messages = messageStore.getAllMessages()
+    if let lastMessage = messages.last {
+      messageStore.markMessageAsCancelled(id: lastMessage.id)
+    }
   }
   
   /// Updates token usage from streaming response

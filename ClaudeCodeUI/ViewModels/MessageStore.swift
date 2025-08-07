@@ -93,4 +93,16 @@ final class MessageStore {
   func getAllMessages() -> [ChatMessage] {
     messages
   }
+  
+  /// Marks a message as cancelled
+  /// - Parameter id: The UUID of the message to mark as cancelled
+  /// - Note: This sets wasCancelled to true and isComplete to true
+  func markMessageAsCancelled(id: UUID) {
+    guard let index = messages.firstIndex(where: { $0.id == id }) else { return }
+    
+    var updatedMessage = messages[index]
+    updatedMessage.wasCancelled = true
+    updatedMessage.isComplete = true
+    messages[index] = updatedMessage
+  }
 }

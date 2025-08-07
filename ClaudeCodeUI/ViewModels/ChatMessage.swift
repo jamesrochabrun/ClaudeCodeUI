@@ -48,6 +48,9 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
   /// File attachments associated with this message (images, PDFs, etc.)
   public var attachments: [StoredAttachment]?
   
+  /// Whether this message was cancelled by the user
+  public var wasCancelled: Bool
+  
   /// Identifier for grouping related task messages together
   /// - Note: Messages with the same taskGroupId belong to the same Task execution
   public var taskGroupId: UUID?
@@ -68,6 +71,7 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
     isError: Bool = false,
     codeSelections: [TextSelection]? = nil,
     attachments: [StoredAttachment]? = nil,
+    wasCancelled: Bool = false,
     taskGroupId: UUID? = nil,
     isTaskContainer: Bool = false
   ) {
@@ -82,6 +86,7 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
     self.isError = isError
     self.codeSelections = codeSelections
     self.attachments = attachments
+    self.wasCancelled = wasCancelled
     self.taskGroupId = taskGroupId
     self.isTaskContainer = isTaskContainer
   }
@@ -96,6 +101,7 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
     lhs.isError == rhs.isError &&
     lhs.codeSelections == rhs.codeSelections &&
     lhs.attachments == rhs.attachments &&
+    lhs.wasCancelled == rhs.wasCancelled &&
     lhs.taskGroupId == rhs.taskGroupId &&
     lhs.isTaskContainer == rhs.isTaskContainer
   }
