@@ -49,6 +49,11 @@ struct MessageTextFormatterView: View {
       CodeBlockContentView(code: code, role: message.role)
         .padding(.horizontal, 4)
         .padding(.vertical, 4)
+      
+    case .table(let table):
+      TableContentView(table: table, role: message.role)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 4)
     }
   }
   

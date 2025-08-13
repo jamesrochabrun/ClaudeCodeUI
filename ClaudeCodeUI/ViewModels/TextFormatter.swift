@@ -32,6 +32,8 @@ final class TextFormatter {
     case text(_ text: TextElement)
     /// A code block segment
     case codeBlock(_ code: CodeBlockElement)
+    /// A table segment
+    case table(_ table: TableElement)
     
     /// Represents a text element within the formatted content
     @Observable
@@ -69,6 +71,7 @@ final class TextFormatter {
       switch self {
       case .text(let text): text.id
       case .codeBlock(let code): code.id
+      case .table(let table): table.id
       }
     }
     
@@ -84,6 +87,14 @@ final class TextFormatter {
     var asCodeBlock: CodeBlockElement? {
       if case .codeBlock(let code) = self {
         return code
+      }
+      return nil
+    }
+    
+    /// Returns the element as a TableElement if it is one, nil otherwise
+    var asTable: TableElement? {
+      if case .table(let table) = self {
+        return table
       }
       return nil
     }
@@ -124,6 +135,12 @@ final class TextFormatter {
   /// Whether we're currently parsing a code block header (language/filepath)
   private var isCodeBlockHeader = false
   
+  /// Whether we're currently parsing a table
+  private var isParsingTable = false
+  
+  /// Buffer for accumulating table content
+  private var tableBuffer = ""
+  
   // MARK: - Public Methods
   
   /// Synchronizes with a list of deltas, processing any new ones
@@ -150,12 +167,23 @@ final class TextFormatter {
   
   // MARK: - Private Methods
   
-  /// Processes unconsumed text to identify and extract code blocks
+  /// Processes unconsumed text to identify and extract code blocks and tables
   /// 
   /// This method scans through the unconsumed text character by character,
-  /// detecting triple backticks that mark code block boundaries and handling
-  /// escape sequences.
+  /// detecting triple backticks that mark code block boundaries, tables,
+  /// and handling escape sequences.
   private func processUnconsumedText() {
+    // First check if we should detect tables
+    if detectTableStart() {
+      return
+    }
+    
+    // Continue with existing parsing for tables in progress
+    if isParsingTable {
+      handleTableParsing()
+      return
+    }
+    
     var backtickCount = 0
     var i = 0
     var canConsummedUntil = 0
@@ -298,6 +326,12 @@ final class TextFormatter {
             add(code: "\(codeBlock.rawContent)\(consumed)", isComplete: false, at: elements.count - 1)
             return
           }
+          
+        case .table(let table):
+          if !table.isComplete {
+            add(table: "\(tableBuffer)\(consumed)", isComplete: false, at: elements.count - 1)
+            return
+          }
         }
       }
       
@@ -335,6 +369,165 @@ final class TextFormatter {
     } else {
       let element = elements[id].asCodeBlock
       element?.set(rawContent: code, isComplete: isComplete)
+    }
+  }
+  
+  /// Adds or updates a table element
+  /// - Parameters:
+  ///   - table: The table content
+  ///   - isComplete: Whether the table is complete
+  ///   - idx: Optional index to update existing element (nil to append new)
+  private func add(table: String, isComplete: Bool, at idx: Int? = nil) {
+    let id = idx ?? elements.count
+    if id == elements.count {
+      elements.append(Element.table(.init(id: id, rawContent: table, isComplete: isComplete)))
+    } else {
+      let element = elements[id].asTable
+      element?.set(rawContent: table, isComplete: isComplete)
+    }
+  }
+  
+  /// Detects if the unconsumed text starts with a table
+  /// - Returns: true if a table was detected and started
+  private func detectTableStart() -> Bool {
+    // Don't detect tables inside code blocks
+    if let lastElement = elements.last?.asCodeBlock, !lastElement.isComplete {
+      return false
+    }
+    
+    // Look for table pattern in unconsumed text
+    let lines = unconsumed.components(separatedBy: .newlines)
+    
+    // Need at least 2 lines to detect a table start
+    for i in 0..<lines.count {
+      let line = lines[i].trimmingCharacters(in: .whitespaces)
+      
+      // Check if this line looks like a table header
+      if line.contains("|") && line.filter({ $0 == "|" }).count >= 2 {
+        // Check if next line is a separator
+        if i + 1 < lines.count {
+          let nextLine = lines[i + 1].trimmingCharacters(in: .whitespaces)
+          if nextLine.contains("|") && nextLine.contains("-") {
+            // Found a table! Process any text before it
+            let linesBeforeTable = lines[0..<i]
+            if !linesBeforeTable.isEmpty {
+              let textBeforeTable = linesBeforeTable.joined(separator: "\n")
+              if !textBeforeTable.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                // Save text before the table
+                if let text = elements.last?.asText {
+                  add(text: "\(text.text)\(textBeforeTable)\n", isComplete: true, at: elements.count - 1)
+                } else {
+                  add(text: "\(textBeforeTable)\n", isComplete: true)
+                }
+                
+                // Remove consumed text from unconsumed
+                let consumedLength = textBeforeTable.count + (i > 0 ? 1 : 0) // +1 for newline
+                if consumedLength <= unconsumed.count {
+                  unconsumed.removeFirst(consumedLength)
+                }
+              } else if i > 0 {
+                // Just remove the empty lines before table
+                let emptyLinesLength = linesBeforeTable.joined(separator: "\n").count + 1
+                if emptyLinesLength <= unconsumed.count {
+                  unconsumed.removeFirst(emptyLinesLength)
+                }
+              }
+            }
+            
+            // Start parsing the table
+            isParsingTable = true
+            tableBuffer = ""
+            handleTableParsing()
+            return true
+          }
+        }
+      }
+    }
+    
+    return false
+  }
+  
+  /// Handles ongoing table parsing
+  private func handleTableParsing() {
+    let lines = unconsumed.components(separatedBy: .newlines)
+    var tableEndIndex: Int? = nil
+    var currentTableLines: [String] = []
+    
+    for (index, line) in lines.enumerated() {
+      let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+      
+      // Check if line is part of table
+      if trimmedLine.contains("|") {
+        // Count pipes to ensure it's a valid table row
+        let pipeCount = trimmedLine.filter({ $0 == "|" }).count
+        if pipeCount >= 2 || (index <= 1 && trimmedLine.contains("-")) {
+          currentTableLines.append(line)
+        } else if !currentTableLines.isEmpty {
+          // Line with single pipe after table started - table ended
+          tableEndIndex = index
+          break
+        }
+      } else if !trimmedLine.isEmpty && !currentTableLines.isEmpty {
+        // Non-empty line that doesn't contain pipes - table has ended
+        tableEndIndex = index
+        break
+      } else if trimmedLine.isEmpty && currentTableLines.count > 2 {
+        // Empty line after table content (with at least header and separator) - table has ended
+        tableEndIndex = index
+        break
+      }
+    }
+    
+    // If we found table content with at least header and separator
+    if currentTableLines.count >= 2 {
+      let tableContent = currentTableLines.joined(separator: "\n")
+      tableBuffer = tableContent
+      
+      // Calculate how much to consume from unconsumed
+      let linesToConsume = tableEndIndex ?? currentTableLines.count
+      let consumedLines = lines.prefix(linesToConsume)
+      let consumedText = consumedLines.joined(separator: "\n")
+      
+      // Remove consumed text from unconsumed
+      if let range = unconsumed.range(of: consumedText) {
+        unconsumed.removeSubrange(range)
+        // Also remove the trailing newline if present
+        if unconsumed.hasPrefix("\n") {
+          unconsumed.removeFirst()
+        }
+      } else {
+        // Fallback: remove by character count
+        let charsToRemove = min(consumedText.count, unconsumed.count)
+        unconsumed.removeFirst(charsToRemove)
+        if unconsumed.hasPrefix("\n") {
+          unconsumed.removeFirst()
+        }
+      }
+      
+      // Check if table is complete
+      let isTableComplete = tableEndIndex != nil || 
+      lines.count <= linesToConsume ||
+      unconsumed.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      
+      // Add or update the table element
+      if elements.last?.asTable != nil {
+        add(table: tableBuffer, isComplete: isTableComplete, at: elements.count - 1)
+      } else {
+        add(table: tableBuffer, isComplete: isTableComplete)
+      }
+      
+      if isTableComplete {
+        isParsingTable = false
+        tableBuffer = ""
+        
+        // Process any remaining unconsumed text
+        if !unconsumed.isEmpty {
+          processUnconsumedText()
+        }
+      }
+    } else if currentTableLines.count == 1 {
+      // Only one line found, might be incomplete table, keep buffering
+      tableBuffer = currentTableLines[0]
     }
   }
 }
