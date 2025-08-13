@@ -155,7 +155,7 @@ final class TextFormatter {
   
   /// Processes a new delta (incremental update) of text
   /// - Parameter delta: The new text fragment to process
-  /// 
+  ///
   /// This method accumulates the delta and processes it to identify
   /// code blocks and update the elements array accordingly.
   func ingest(delta: String) {
@@ -168,18 +168,26 @@ final class TextFormatter {
   // MARK: - Private Methods
   
   /// Processes unconsumed text to identify and extract code blocks and tables
-  /// 
+  ///
   /// This method scans through the unconsumed text character by character,
   /// detecting triple backticks that mark code block boundaries, tables,
   /// and handling escape sequences.
   private func processUnconsumedText() {
-    // First check if we should detect tables
-    if detectTableStart() {
+    // Don't detect tables if we're in a code block or parsing a code block header
+    let inCodeBlock = elements.last?.asCodeBlock != nil && !(elements.last?.asCodeBlock?.isComplete ?? true)
+    
+    // Check if we should auto-detect mermaid diagrams
+    if !inCodeBlock && !isCodeBlockHeader && detectMermaidStart() {
+      return
+    }
+    
+    // First check if we should detect tables (but not if we're in a code block or processing header)
+    if !inCodeBlock && !isCodeBlockHeader && detectTableStart() {
       return
     }
     
     // Continue with existing parsing for tables in progress
-    if isParsingTable {
+    if isParsingTable && !inCodeBlock && !isCodeBlockHeader {
       handleTableParsing()
       return
     }
@@ -271,7 +279,7 @@ final class TextFormatter {
   /// - Parameters:
   ///   - i: Current position in unconsumed text (reset after processing)
   ///   - canConsummedUntil: Position up to which text can be consumed (reset after processing)
-  /// 
+  ///
   /// The header format can be:
   /// - Just a language: `swift`
   /// - Language and file path: `swift:Sources/MyFile.swift`
@@ -290,24 +298,25 @@ final class TextFormatter {
     
     // Parse language and file path from header
     // Format: language:filepath or just language
-    if let match = header.firstMatch(of: /^(?<language>\w+):(?<path>.*)$/) {
+    if let match = header.firstMatch(of: /^(?<language>[\w\-]+):(?<path>.*)$/) {
       let language = match.output.language
       let path = match.output.path
-      currentCodeBlock.language = String(language)
+      currentCodeBlock.language = String(language).lowercased()
       currentCodeBlock.filePath = String(path)
     } else if !header.isEmpty {
       // For now, assume it's a language if it's a single word, otherwise a path
-      if header.contains("/") || header.contains(".") {
+      if header.contains("/") || (header.contains(".") && !header.lowercased().starts(with: "mermaid")) {
         currentCodeBlock.filePath = header
       } else {
-        currentCodeBlock.language = header
+        // Store the language as lowercase for consistent detection
+        currentCodeBlock.language = header.lowercased()
       }
     }
   }
   
   /// Consumes text up to the specified position and adds it to the appropriate element
   /// - Parameter canConsummedUntil: The position up to which text should be consumed
-  /// 
+  ///
   /// This method moves text from the unconsumed buffer to the current element
   /// (either extending the last element or creating a new one).
   private func consumeUntil(canConsummedUntil: Int) {
@@ -387,11 +396,122 @@ final class TextFormatter {
     }
   }
   
+  /// Detects if the unconsumed text starts with a mermaid diagram
+  /// - Returns: true if a mermaid diagram was detected and started
+  private func detectMermaidStart() -> Bool {
+    // Don't detect mermaid inside code blocks
+    if let lastElement = elements.last?.asCodeBlock, !lastElement.isComplete {
+      return false
+    }
+    
+    // Don't auto-detect if we already have triple backticks
+    if unconsumed.hasPrefix("```") {
+      return false
+    }
+    
+    // Check for common mermaid diagram starters
+    let mermaidPatterns = [
+      "graph TD", "graph LR", "graph TB", "graph BT", "graph RL", "graph DT",
+      "flowchart TD", "flowchart LR", "flowchart TB", "flowchart BT",
+      "sequenceDiagram", "classDiagram", "stateDiagram", "erDiagram",
+      "journey", "gantt", "pie", "gitGraph", "mindmap", "timeline",
+      "quadrantChart", "requirementDiagram", "C4Context"
+    ]
+    
+    // Look for mermaid pattern at the start of a line
+    let lines = unconsumed.components(separatedBy: .newlines)
+    guard !lines.isEmpty else { return false }
+    
+    // Check each line to see if it starts with a mermaid pattern
+    for (lineIndex, line) in lines.enumerated() {
+      let trimmedLine = line.trimmingCharacters(in: .whitespaces)
+      
+      for pattern in mermaidPatterns {
+        if trimmedLine.hasPrefix(pattern) {
+          // Found a mermaid diagram starting at this line!
+          
+          // Process any text before the mermaid diagram
+          if lineIndex > 0 {
+            let textBeforeMermaid = lines[0..<lineIndex].joined(separator: "\n")
+            if !textBeforeMermaid.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+              // Add text before mermaid
+              if let text = elements.last?.asText {
+                add(text: "\(text.text)\(textBeforeMermaid)\n", isComplete: true, at: elements.count - 1)
+              } else {
+                add(text: "\(textBeforeMermaid)\n", isComplete: true)
+              }
+              
+              // Remove consumed text
+              let consumedLength = textBeforeMermaid.count + 1 // +1 for newline
+              if consumedLength <= unconsumed.count {
+                unconsumed.removeFirst(consumedLength)
+              }
+            } else if lineIndex > 0 {
+              // Remove empty lines before mermaid
+              let emptyLinesLength = textBeforeMermaid.count + 1
+              if emptyLinesLength <= unconsumed.count {
+                unconsumed.removeFirst(emptyLinesLength)
+              }
+            }
+          }
+          
+          // Now we need to find where the mermaid diagram ends
+          // For now, let's collect all the mermaid content until we find a clear end
+          // (empty line after substantive content, or end of unconsumed)
+          var mermaidLines: [String] = []
+          var foundEnd = false
+          
+          for i in lineIndex..<lines.count {
+            let currentLine = lines[i]
+            let trimmed = currentLine.trimmingCharacters(in: .whitespaces)
+            
+            if trimmed.isEmpty && !mermaidLines.isEmpty {
+              // Empty line after content - end of mermaid
+              foundEnd = true
+              break
+            } else if !trimmed.isEmpty {
+              mermaidLines.append(currentLine)
+            }
+          }
+          
+          if !mermaidLines.isEmpty {
+            let mermaidContent = mermaidLines.joined(separator: "\n")
+            
+            // Create a code block with the mermaid content
+            add(code: mermaidContent, isComplete: foundEnd)
+            if let currentCodeBlock = elements.last?.asCodeBlock {
+              currentCodeBlock.language = "mermaid"
+            }
+            
+            // Remove the consumed mermaid content from unconsumed
+            let consumedLength = mermaidContent.count
+            if consumedLength <= unconsumed.count {
+              unconsumed.removeFirst(consumedLength)
+              // Also remove trailing newline if we found the end
+              if foundEnd && unconsumed.hasPrefix("\n") {
+                unconsumed.removeFirst()
+              }
+            }
+            
+            return true
+          }
+        }
+      }
+    }
+    
+    return false
+  }
+  
   /// Detects if the unconsumed text starts with a table
   /// - Returns: true if a table was detected and started
   private func detectTableStart() -> Bool {
     // Don't detect tables inside code blocks
     if let lastElement = elements.last?.asCodeBlock, !lastElement.isComplete {
+      return false
+    }
+    
+    // Don't detect tables if we're about to start a code block
+    if unconsumed.hasPrefix("```") {
       return false
     }
     
@@ -505,7 +625,7 @@ final class TextFormatter {
       }
       
       // Check if table is complete
-      let isTableComplete = tableEndIndex != nil || 
+      let isTableComplete = tableEndIndex != nil ||
       lines.count <= linesToConsume ||
       unconsumed.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
       

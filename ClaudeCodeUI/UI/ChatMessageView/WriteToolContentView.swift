@@ -39,7 +39,8 @@ struct WriteToolContentView: View {
             message: formattedMessage,
             fontSize: fontSize - 1,
             horizontalPadding: 12,
-            maxWidth: maxWidth
+            maxWidth: maxWidth,
+            showArtifact: nil
           )
           .padding(.vertical, 8)
           .background(

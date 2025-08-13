@@ -48,6 +48,9 @@ struct MessageContentView: View {
   /// Typically ranges from 12-20 points depending on the UI design.
   let horizontalPadding: CGFloat
   
+  /// Optional callback to show artifacts like Mermaid diagrams
+  let showArtifact: ((Artifact) -> Void)?
+  
   /// Maximum width constraint for the message content.
   /// Prevents messages from becoming too wide on large screens,
   /// ensuring optimal readability. Usually set based on the container width.
@@ -114,7 +117,8 @@ struct MessageContentView: View {
         message: message,
         fontSize: fontSize,
         horizontalPadding: horizontalPadding,
-        maxWidth: maxWidth
+        maxWidth: maxWidth,
+        showArtifact: showArtifact
       )
     } else {
       // Use plain text for other messages

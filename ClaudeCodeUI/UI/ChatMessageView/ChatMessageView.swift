@@ -17,6 +17,7 @@ struct ChatMessageView: View {
   let settingsStorage: SettingsStorage
   let fontSize: Double
   let terminalService: TerminalService
+  let showArtifact: ((Artifact) -> Void)?
   
   @State private var size = CGSize.zero
   @State private var isHovered = false
@@ -31,12 +32,14 @@ struct ChatMessageView: View {
     message: ChatMessage,
     settingsStorage: SettingsStorage,
     terminalService: TerminalService,
-    fontSize: Double = 13.0)
+    fontSize: Double = 13.0,
+    showArtifact: ((Artifact) -> Void)? = nil)
   {
     self.message = message
     self.settingsStorage = settingsStorage
     self.terminalService = terminalService
     self.fontSize = fontSize
+    self.showArtifact = showArtifact
     
     // Initialize text formatter with project root if available
     let projectRoot = settingsStorage.projectPath.isEmpty ? nil : URL(fileURLWithPath: settingsStorage.projectPath)
@@ -118,6 +121,7 @@ struct ChatMessageView: View {
                       textFormatter: textFormatter,
                       fontSize: fontSize,
                       horizontalPadding: horizontalPadding,
+                      showArtifact: showArtifact,
                       maxWidth: size.width,
                       terminalService: terminalService
                     )
@@ -139,6 +143,7 @@ struct ChatMessageView: View {
             textFormatter: textFormatter,
             fontSize: fontSize,
             horizontalPadding: horizontalPadding,
+            showArtifact: showArtifact,
             maxWidth: size.width,
             terminalService: terminalService
           )

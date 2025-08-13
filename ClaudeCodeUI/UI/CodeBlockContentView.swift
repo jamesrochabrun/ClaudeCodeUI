@@ -5,9 +5,16 @@ struct CodeBlockContentView: View {
   
   @Bindable var code: CodeBlockElement
   let role: MessageRole
+  let showArtifact: ((Artifact) -> Void)?
   let iconSizes: CGFloat = 15
   
   @Environment(\.colorScheme) private var colorScheme
+  
+  init(code: CodeBlockElement, role: MessageRole, showArtifact: ((Artifact) -> Void)? = nil) {
+    self.code = code
+    self.role = role
+    self.showArtifact = showArtifact
+  }
   
   var body: some View {
     VStack(spacing: 0) {
@@ -29,6 +36,30 @@ struct CodeBlockContentView: View {
         }
         
         Spacer()
+        
+        // View Diagram button for mermaid
+        if let showArtifact = showArtifact,
+           let language = code.language,
+           language.lowercased() == "mermaid",
+           let content = code.copyableContent {
+          Button(action: {
+            showArtifact(.diagram(content))
+          }) {
+            HStack(spacing: 4) {
+              Image(systemName: "flowchart")
+                .font(.system(size: 12))
+              Text("View")
+                .font(.system(size: 12))
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color.blue.opacity(0.1))
+            .foregroundColor(.blue)
+            .cornerRadius(4)
+          }
+          .buttonStyle(.plain)
+          .help("View Mermaid Diagram")
+        }
         
         // Copy button
         if let copyableContent = code.copyableContent {

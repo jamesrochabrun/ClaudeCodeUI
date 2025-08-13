@@ -110,7 +110,10 @@ extension ChatScreen {
               message: message,
               settingsStorage: viewModel.settingsStorage,
               terminalService: terminalService,
-              fontSize: 13.0  // Default font size for now
+              fontSize: 13.0,  // Default font size for now
+              showArtifact: { artifactItem in
+                artifact = artifactItem
+              }
             )
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets())
@@ -122,7 +125,10 @@ extension ChatScreen {
               groupedMessages: groupedMessages,
               settingsStorage: viewModel.settingsStorage,
               terminalService: terminalService,
-              fontSize: 13.0
+              fontSize: 13.0,
+              showArtifact: { artifactItem in
+                artifact = artifactItem
+              }
             )
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets())
