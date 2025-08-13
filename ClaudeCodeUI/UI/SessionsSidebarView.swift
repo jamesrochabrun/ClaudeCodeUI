@@ -81,7 +81,7 @@ struct SessionsSidebarView: View {
       .padding(.vertical, 8)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(Color(NSColor.controlBackgroundColor))
+    .background(.ultraThinMaterial)
     .onAppear {
       // Load sessions when sidebar appears
       Task {

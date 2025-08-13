@@ -40,6 +40,7 @@ struct ChatScreen: View {
   @State var showingSettings = false
   @State private var keyboardManager = KeyboardShortcutManager()
   @State private var triggerTextEditorFocus = false
+  @State var artifact: Artifact? = nil
   
   var body: some View {
     VStack {
@@ -128,6 +129,9 @@ struct ChatScreen: View {
     .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
     .sheet(isPresented: $showingSettings) {
       SettingsView(chatViewModel: viewModel, xcodeObservationViewModel: xcodeObservationViewModel, permissionsService: permissionsService)
+    }
+    .sheet(item: $artifact) { artifact in
+      ArtifactView(artifact: artifact)
     }
     .onChange(of: keyboardManager.capturedText) { oldValue, newValue in
       if !newValue.isEmpty && newValue != oldValue {

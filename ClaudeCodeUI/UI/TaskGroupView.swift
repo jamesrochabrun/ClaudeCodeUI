@@ -15,6 +15,7 @@ struct TaskGroupView: View {
   let settingsStorage: SettingsStorage
   let terminalService: TerminalService
   let fontSize: Double
+  let showArtifact: ((Artifact) -> Void)?
   
   @Environment(\.colorScheme) private var colorScheme
   

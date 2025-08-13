@@ -84,17 +84,18 @@ struct RootView: View {
     config.workingDirectory = workingDirectory
     config.enableDebugLogging = debugMode
     
-    // Add nvm paths to support npm installed via nvm
-    //    let homeDir = NSHomeDirectory()
-    //    config.additionalPaths = [
-    //      "/usr/local/bin",
-    //      "/opt/homebrew/bin",
-    //      "/usr/bin",
-    //      "\(homeDir)/.nvm/versions/node/v22.16.0/bin",  // Your actual Node version
-    //      "\(homeDir)/.nvm/current/bin",
-    //      "\(homeDir)/.nvm/versions/node/v20.11.1/bin",
-    //      "\(homeDir)/.nvm/versions/node/v18.19.0/bin"
-    //    ]
+    // Add paths to support claude installed via npm/nvm or standalone
+    let homeDir = NSHomeDirectory()
+    config.additionalPaths = [
+      "/usr/local/bin",
+      "/opt/homebrew/bin",
+      "/usr/bin",
+      "\(homeDir)/.claude/local",  // Claude standalone installation
+      "\(homeDir)/.nvm/versions/node/v22.16.0/bin",  // Common Node versions
+      "\(homeDir)/.nvm/current/bin",
+      "\(homeDir)/.nvm/versions/node/v20.11.1/bin",
+      "\(homeDir)/.nvm/versions/node/v18.19.0/bin"
+    ]
     
     let claudeClient = ClaudeCodeClient(configuration: config)
     let vm = ChatViewModel(

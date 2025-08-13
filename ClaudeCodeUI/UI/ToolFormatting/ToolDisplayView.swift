@@ -77,7 +77,8 @@ struct ToolDisplayView: View {
         ),
         fontSize: fontSize,
         horizontalPadding: 0,
-        maxWidth: .infinity
+        maxWidth: .infinity,
+        showArtifact: nil
       )
       
     // Code, shell, and JSON are now handled by markdown renderer

@@ -8,6 +8,7 @@ struct MessageTextFormatterView: View {
   let fontSize: Double
   let horizontalPadding: CGFloat
   let maxWidth: CGFloat
+  let showArtifact: ((Artifact) -> Void)?
   
   @Environment(\.colorScheme) private var colorScheme
   
@@ -46,7 +47,12 @@ struct MessageTextFormatterView: View {
         .padding(.vertical, 8)
       
     case .codeBlock(let code):
-      CodeBlockContentView(code: code, role: message.role)
+      CodeBlockContentView(code: code, role: message.role, showArtifact: showArtifact)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 4)
+      
+    case .table(let table):
+      TableContentView(table: table, role: message.role)
         .padding(.horizontal, 4)
         .padding(.vertical, 4)
     }
