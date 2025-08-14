@@ -53,6 +53,9 @@ public protocol SessionStorageProtocol {
   
   /// Updates messages for a session
   func updateSessionMessages(id: String, messages: [ChatMessage]) async throws
+  
+  /// Updates the session ID (when Claude returns a new ID for the same conversation)
+  func updateSessionId(oldId: String, newId: String) async throws
 }
 
 /// UserDefaults-based implementation of SessionStorage
@@ -131,6 +134,32 @@ public actor UserDefaultsSessionStorage: SessionStorageProtocol {
     
     sessions[index].messages = messages
     sessions[index].lastAccessedAt = Date()
+    try saveSessionsInternal(sessions)
+  }
+  
+  public func updateSessionId(oldId: String, newId: String) async throws {
+    var sessions = try await getAllSessionsInternal()
+    
+    // Find the session with the old ID
+    guard let index = sessions.firstIndex(where: { $0.id == oldId }) else {
+      // If old session doesn't exist, this might be a new session that hasn't been saved yet
+      // In that case, we don't need to do anything as the new ID will be saved when the session is created
+      return
+    }
+    
+    // Create a new session with the updated ID but keeping all other data
+    var updatedSession = sessions[index]
+    // We need to create a new StoredSession since id is let (immutable)
+    let newSession = StoredSession(
+      id: newId,
+      createdAt: updatedSession.createdAt,
+      firstUserMessage: updatedSession.firstUserMessage,
+      lastAccessedAt: Date(),
+      messages: updatedSession.messages
+    )
+    
+    // Replace the old session with the new one
+    sessions[index] = newSession
     try saveSessionsInternal(sessions)
   }
   
