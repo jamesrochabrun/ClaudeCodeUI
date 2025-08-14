@@ -24,7 +24,13 @@ final class SessionManager {
   }
   
   func startNewSession(id: String, firstMessage: String) {
+    // Log if we're replacing an existing session
+    if let existingId = currentSessionId {
+      print("🔄 Replacing session '\(existingId)' with new session '\(id)'")
+    }
+    
     currentSessionId = id
+    print("✅ New session started: \(id)")
     
     // Save to storage
     Task {
@@ -50,24 +56,43 @@ final class SessionManager {
   func selectSession(id: String) {
     // Don't check if session exists in array - trust the caller
     // Sessions might not be loaded yet when resuming
+    let previousId = currentSessionId
     currentSessionId = id
+    
+    if previousId != id {
+      print("🔄 Session switched from '\(previousId ?? "nil")' to '\(id)'")
+    }
   }
   
   /// Updates the current session ID to match what Claude is using.
-  /// 
+  ///
   /// This method is called when Claude's streaming response contains a different
   /// session ID than what we expected. This situation typically occurs after:
   /// - Stream interruptions or cancellations
   /// - Network issues
   /// - Claude's internal session management decisions
-  /// 
+  ///
   /// By updating our local session ID to match Claude's, we maintain conversation
   /// continuity and prevent creating multiple separate message threads.
   ///
   /// - Parameter id: The new session ID from Claude
   func updateCurrentSession(id: String) {
     // Update the current session ID when Claude returns a different one
+    let previousId = currentSessionId
     currentSessionId = id
+    print("🔄 Session ID chain updated: '\(previousId ?? "nil")' → '\(id)'")
+    
+    // Persist the new session ID to storage
+    if let oldId = previousId {
+      Task {
+        do {
+          try await sessionStorage.updateSessionId(oldId: oldId, newId: id)
+          print("✅ Persisted new session ID '\(id)' to storage")
+        } catch {
+          print("❌ Failed to update session ID in storage: \(error)")
+        }
+      }
+    }
   }
   
   func updateLastAccessed(id: String) {

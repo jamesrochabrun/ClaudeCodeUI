@@ -216,7 +216,7 @@ struct MessageContentView: View {
   @ViewBuilder
   private var plainTextContent: some View {
     VStack(alignment: .leading, spacing: 0) {
-      let displayContent = message.role == .user && !message.content.isEmpty ? "> \(message.content)" : message.content
+      let displayContent = message.role == .user && !message.content.isEmpty ? "\(message.content)" : message.content
       Text(displayContent)
         .textSelection(.enabled)
         .font(messageFont)

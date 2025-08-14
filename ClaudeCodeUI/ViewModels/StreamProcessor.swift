@@ -162,16 +162,23 @@ final class StreamProcessor {
       if sessionManager.currentSessionId == nil {
         // This is a new conversation
         let firstMessage = firstMessageInSession ?? "New conversation"
+        logger.info("🆕 Starting new session with ID: \(initMessage.sessionId)")
         sessionManager.startNewSession(id: initMessage.sessionId, firstMessage: firstMessage)
       } else {
-        // Claude has created a new session even though we tried to resume
-        // We need to update our session ID to match what Claude is using
-        let log = "Claude returned different session ID. Expected: \(sessionManager.currentSessionId ?? "nil"), Got: \(initMessage.sessionId)"
-        logger.warning("\(log)")
+        // Claude has created a new session ID in the chain (expected behavior)
+        // This happens on every --resume call as Claude chains sessions together
+        let expectedId = sessionManager.currentSessionId ?? "nil"
+        let actualId = initMessage.sessionId
+        logger.info("🔗 Session chain: '\(expectedId)' → '\(actualId)' (normal behavior)")
+        
+        // Update to match Claude's new session ID in the chain
         sessionManager.updateCurrentSession(id: initMessage.sessionId)
       }
       // Notify settings storage of session change
       onSessionChange?(initMessage.sessionId)
+    } else {
+      // Session IDs match as expected
+      logger.debug("✅ Session ID confirmed: \(initMessage.sessionId)")
     }
   }
   

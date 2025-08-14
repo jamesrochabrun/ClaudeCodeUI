@@ -133,12 +133,17 @@ public final class ChatViewModel {
   public func sendMessage(_ text: String, context: String? = nil, hiddenContext: String? = nil, codeSelections: [TextSelection]? = nil, attachments: [FileAttachment]? = nil) {
     guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
     
+    // Log session state before sending message
+    let sessionInfo = sessionManager.currentSessionId ?? "NEW"
+    logger.info("📨 Sending message - Current session: \(sessionInfo)")
+    
     // Reset cancellation flag for new message
     isCancelled = false
     
     // Store first message if this is a new session
     if sessionManager.currentSessionId == nil {
       firstMessageInSession = text
+      logger.info("🆕 This is the first message in a new session")
     }
     
     // Build message content for display (just the user's text)
@@ -201,10 +206,10 @@ public final class ChatViewModel {
     Task {
       do {
         if let sessionId = sessionManager.currentSessionId {
-          logger.debug("Continuing conversation with session: \(sessionId)")
+          logger.info("📤 Continuing existing session: \(sessionId)")
           try await continueConversation(sessionId: sessionId, prompt: apiContent, messageId: assistantId)
         } else {
-          logger.debug("No current session, starting new conversation")
+          logger.info("🚀 No current session, starting new conversation")
           try await startNewConversation(prompt: apiContent, messageId: assistantId)
         }
       } catch {
@@ -489,10 +494,18 @@ public final class ChatViewModel {
   }
   
   private func performSessionResumption(id: String, initialPrompt: String?, assistantId: UUID) async {
+    // Ensure we're resuming the correct session
+    if id != sessionManager.currentSessionId {
+      let log = "🔄 Switching to resume session '\(id)' (was: '\(sessionManager.currentSessionId ?? "nil")')"
+      logger.info("\(log)")
+      // Update to match the requested session
+      sessionManager.selectSession(id: id)
+    }
+    
     // Only make API call if there's an actual prompt to send
     guard let prompt = initialPrompt, !prompt.isEmpty else {
       // Just switch to the session without making an API call
-      logger.debug("Switching to session \(id) without sending a message")
+      logger.debug("✅ Switched to session \(id) without sending a message")
       
       // Mark as not loading since we're not making an API call
       await MainActor.run {
@@ -501,6 +514,8 @@ public final class ChatViewModel {
       }
       return
     }
+    
+    logger.info("📤 Resuming session '\(id)' after app relaunch with new message")
     
     do {
       // Resume the conversation with the provided prompt
@@ -545,6 +560,13 @@ public final class ChatViewModel {
   // MARK: - Private Methods
   
   private func startNewConversation(prompt: String, messageId: UUID) async throws {
+    // Log if we're starting fresh when there's already a session
+    if let existingId = sessionManager.currentSessionId {
+      logger.warning("⚠️ Starting new conversation while session '\(existingId)' exists - this may indicate an issue")
+    }
+    
+    logger.info("🚀 Starting new conversation")
+    
     let options = createOptions()
     
     let result = try await claudeClient.runSinglePrompt(
@@ -557,6 +579,9 @@ public final class ChatViewModel {
   }
   
   private func continueConversation(sessionId: String, prompt: String, messageId: UUID) async throws {
+    // Log the session continuation
+    logger.info("📤 Continuing session '\(sessionId)' with message")
+    
     let options = createOptions()
     
     do {
