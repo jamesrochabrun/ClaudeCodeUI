@@ -145,46 +145,8 @@ struct SessionsSidebarView: View {
   }
   
   private var sessionsList: some View {
-    ScrollView {
-      if viewModel.sessions.isEmpty {
-        VStack {
-          Spacer()
-          Text("No sessions yet")
-            .font(.caption)
-            .foregroundColor(.secondary)
-          Text("Send a message to start")
-            .font(.caption2)
-            .foregroundColor(Color.secondary.opacity(0.7))
-          Spacer()
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-      } else {
-        LazyVStack(spacing: 0) {
-          ForEach(viewModel.sessions) { session in
-            SessionRowView(
-              session: session,
-              isActive: session.id == viewModel.currentSessionId,
-              onSelect: {
-                // Prevent rapid switching
-                guard !viewModel.isLoading else { return }
-                
-                // Switch to this session
-                Task {
-                  await viewModel.switchToSession(session.id)
-                }
-              },
-              onDelete: {
-                Task {
-                  await viewModel.deleteSession(id: session.id)
-                }
-              }
-            )
-          }
-        }
-        .padding(.vertical, 8)
-      }
-    }
+    // Use hierarchical view for better organization
+    HierarchicalSessionsView(viewModel: viewModel)
   }
   
   private func deleteAllSessions() async {

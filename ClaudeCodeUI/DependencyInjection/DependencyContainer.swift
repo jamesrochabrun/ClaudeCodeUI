@@ -18,6 +18,7 @@ import TerminalServiceInterface
 import ApplicationServices
 import CustomPermissionService
 import CustomPermissionServiceInterface
+import ClaudeCodeSDK
 
 @MainActor
 final class DependencyContainer {
@@ -54,7 +55,20 @@ final class DependencyContainer {
   
   init(globalPreferences: GlobalPreferencesStorage) {
     self.settingsStorage = SettingsStorageManager()
-    self.sessionStorage = UserDefaultsSessionStorage()
+    
+    // Use native Claude session storage when available
+    // Try to use native storage, fallback to UserDefaults if needed
+    if FileManager.default.fileExists(atPath: NSHomeDirectory() + "/.claude/projects") {
+      // Native Claude CLI storage is available - don't specify a project path initially
+      // This allows us to show ALL projects in the hierarchical view
+      self.sessionStorage = ClaudeNativeStorageAdapter(projectPath: nil)
+      print("[DependencyContainer] Using native Claude session storage (global mode)")
+    } else {
+      // Fallback to UserDefaults storage
+      self.sessionStorage = UserDefaultsSessionStorage()
+      print("[DependencyContainer] Using UserDefaults session storage (Claude CLI storage not found)")
+    }
+    
     self.globalPreferences = globalPreferences
     
     // Initialize core services
