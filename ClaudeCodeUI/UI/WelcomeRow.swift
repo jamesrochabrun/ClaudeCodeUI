@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import AppKit
 
 struct WelcomeRow: View {
   let path: String?
@@ -14,7 +15,11 @@ struct WelcomeRow: View {
   let onSettingsTapped: () -> Void
   
   // Custom color
-  init(path: String?, showSettingsButton: Bool = false, onSettingsTapped: @escaping () -> Void = {}) {
+  init(
+    path: String?,
+    showSettingsButton: Bool = false,
+    onSettingsTapped: @escaping () -> Void = {}
+  ) {
     self.path = path
     self.showSettingsButton = showSettingsButton
     self.onSettingsTapped = onSettingsTapped

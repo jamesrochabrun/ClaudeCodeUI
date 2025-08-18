@@ -8,6 +8,7 @@
 import ClaudeCodeSDK
 import Foundation
 import SwiftUI
+import AppKit
 import PermissionsServiceInterface
 import TerminalServiceInterface
 import KeyboardShortcuts
@@ -41,6 +42,7 @@ struct ChatScreen: View {
   @State private var keyboardManager = KeyboardShortcutManager()
   @State private var triggerTextEditorFocus = false
   @State var artifact: Artifact? = nil
+  @State private var isCopied = false
   
   var body: some View {
     VStack {
@@ -118,6 +120,18 @@ struct ChatScreen: View {
         HStack(spacing: 8) {
           // PermissionStatusView(customPermissionService: customPermissionService)
           
+          // Copy session ID button
+          if let sessionId = viewModel.currentSessionId {
+            Button(action: {
+              copyToClipboard(sessionId)
+            }) {
+              Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
+                .font(.title2)
+            }
+            .help("Copy Session ID")
+            .disabled(isCopied)
+          }
+          
           Button(action: clearChat) {
             Image(systemName: "trash")
               .font(.title2)
@@ -156,6 +170,18 @@ struct ChatScreen: View {
   
   private func clearChat() {
     viewModel.clearConversation()
+  }
+  
+  private func copyToClipboard(_ text: String) {
+    #if os(macOS)
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(text, forType: .string)
+    #endif
+    
+    isCopied = true
+    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+      isCopied = false
+    }
   }
   
   private func toggleSidebar() {
