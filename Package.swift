@@ -25,7 +25,7 @@ let package = Package(
         .package(url: "https://github.com/jamesrochabrun/ClaudeCodeSDK", branch: "main"),
         .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic", from: "2.1.7"),
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.3.0"),
-        .package(url: "https://github.com/jamesrochabrun/Down", branch: "develop"),
+        .package(url: "https://github.com/jamesrochabrun/Down", branch: "fix/external-cmark-dependency"),
         .package(url: "https://github.com/appstefan/highlightswift", from: "1.1.0"),
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk", from: "0.9.0"),
         
