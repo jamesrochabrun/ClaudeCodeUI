@@ -11,7 +11,7 @@ import CCCustomPermissionServiceInterface
 
 @Observable
 @MainActor
-final class GlobalPreferencesStorage: MCPConfigStorage {
+public final class GlobalPreferencesStorage: MCPConfigStorage {
   private let userDefaults = UserDefaults.standard
   
   // MARK: - Keys
@@ -30,31 +30,31 @@ final class GlobalPreferencesStorage: MCPConfigStorage {
     static let maxConcurrentPermissionRequests = "global.maxConcurrentPermissionRequests"
   }
   
-  var maxTurns: Int {
+  public var maxTurns: Int {
     didSet {
       userDefaults.set(maxTurns, forKey: Keys.maxTurns)
     }
   }
   
-  var systemPrompt: String {
+  public var systemPrompt: String {
     didSet {
       userDefaults.set(systemPrompt, forKey: Keys.systemPrompt)
     }
   }
   
-  var appendSystemPrompt: String {
+  public var appendSystemPrompt: String {
     didSet {
       userDefaults.set(appendSystemPrompt, forKey: Keys.appendSystemPrompt)
     }
   }
   
-  var allowedTools: [String] {
+  public var allowedTools: [String] {
     didSet {
       userDefaults.set(allowedTools, forKey: Keys.allowedTools)
     }
   }
   
-  var mcpConfigPath: String {
+  public var mcpConfigPath: String {
     didSet {
       userDefaults.set(mcpConfigPath, forKey: Keys.mcpConfigPath)
     }
@@ -62,38 +62,38 @@ final class GlobalPreferencesStorage: MCPConfigStorage {
   
   // MARK: - Custom Permission Settings
   
-  var autoApproveToolCalls: Bool {
+  public var autoApproveToolCalls: Bool {
     didSet {
       userDefaults.set(autoApproveToolCalls, forKey: Keys.autoApproveToolCalls)
     }
   }
   
-  var autoApproveLowRisk: Bool {
+  public var autoApproveLowRisk: Bool {
     didSet {
       userDefaults.set(autoApproveLowRisk, forKey: Keys.autoApproveLowRisk)
     }
   }
   
-  var showDetailedPermissionInfo: Bool {
+  public var showDetailedPermissionInfo: Bool {
     didSet {
       userDefaults.set(showDetailedPermissionInfo, forKey: Keys.showDetailedPermissionInfo)
     }
   }
   
-  var permissionRequestTimeout: TimeInterval {
+  public var permissionRequestTimeout: TimeInterval {
     didSet {
       userDefaults.set(permissionRequestTimeout, forKey: Keys.permissionRequestTimeout)
     }
   }
   
-  var maxConcurrentPermissionRequests: Int {
+  public var maxConcurrentPermissionRequests: Int {
     didSet {
       userDefaults.set(maxConcurrentPermissionRequests, forKey: Keys.maxConcurrentPermissionRequests)
     }
   }
   
   // MARK: - Initialization
-  init() {
+  public init() {
     // Load saved values or use defaults
     self.maxTurns = userDefaults.object(forKey: Keys.maxTurns) as? Int ?? 50
     self.systemPrompt = userDefaults.string(forKey: Keys.systemPrompt) ?? ""
@@ -110,7 +110,7 @@ final class GlobalPreferencesStorage: MCPConfigStorage {
   }
   
   // MARK: - Methods
-  func resetToDefaults() {
+  public func resetToDefaults() {
     maxTurns = 50
     systemPrompt = ""
     appendSystemPrompt = ""
@@ -128,7 +128,7 @@ final class GlobalPreferencesStorage: MCPConfigStorage {
   // MARK: - Custom Permission Configuration
   
   /// Creates a PermissionConfiguration from the current settings
-  func createPermissionConfiguration() -> PermissionConfiguration {
+  public func createPermissionConfiguration() -> PermissionConfiguration {
     return PermissionConfiguration(
       defaultTimeout: permissionRequestTimeout,
       autoApproveLowRisk: autoApproveLowRisk,
@@ -138,7 +138,7 @@ final class GlobalPreferencesStorage: MCPConfigStorage {
   }
   
   /// Updates the permission settings from a PermissionConfiguration
-  func updateFromPermissionConfiguration(_ config: PermissionConfiguration) {
+  public func updateFromPermissionConfiguration(_ config: PermissionConfiguration) {
     permissionRequestTimeout = config.defaultTimeout
     autoApproveLowRisk = config.autoApproveLowRisk
     showDetailedPermissionInfo = config.showDetailedInfo
