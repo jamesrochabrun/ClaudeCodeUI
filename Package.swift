@@ -29,21 +29,84 @@ let package = Package(
         .package(url: "https://github.com/appstefan/highlightswift", from: "1.1.0"),
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk", from: "0.9.0"),
         
-        // Local module dependencies
-        .package(path: "modules/AccessibilityFoundation"),
-        .package(path: "modules/AccessibilityService"),
-        .package(path: "modules/AccessibilityServiceInterface"),
+        // Keep ApprovalMCPServer as local package since it's a separate executable
         .package(path: "modules/ApprovalMCPServer"),
-        .package(path: "modules/CustomPermissionService"),
-        .package(path: "modules/CustomPermissionServiceInterface"),
-        .package(path: "modules/PermissionsService"),
-        .package(path: "modules/PermissionsServiceInterface"),
-        .package(path: "modules/TerminalService"),
-        .package(path: "modules/TerminalServiceInterface"),
-        .package(path: "modules/XcodeObserverService"),
-        .package(path: "modules/XcodeObserverServiceInterface"),
     ],
     targets: [
+        // Foundation modules (no dependencies)
+        .target(
+            name: "AccessibilityFoundation",
+            path: "Sources/AccessibilityFoundation"
+        ),
+        .target(
+            name: "AccessibilityServiceInterface",
+            path: "Sources/AccessibilityServiceInterface"
+        ),
+        .target(
+            name: "CustomPermissionServiceInterface",
+            path: "Sources/CustomPermissionServiceInterface"
+        ),
+        .target(
+            name: "PermissionsServiceInterface",
+            path: "Sources/PermissionsServiceInterface"
+        ),
+        .target(
+            name: "TerminalServiceInterface",
+            path: "Sources/TerminalServiceInterface"
+        ),
+        
+        // Modules with single dependencies
+        .target(
+            name: "XcodeObserverServiceInterface",
+            dependencies: ["AccessibilityFoundation"],
+            path: "Sources/XcodeObserverServiceInterface"
+        ),
+        .target(
+            name: "TerminalService",
+            dependencies: ["TerminalServiceInterface"],
+            path: "Sources/TerminalService"
+        ),
+        .target(
+            name: "CustomPermissionService",
+            dependencies: [
+                "CustomPermissionServiceInterface",
+                .product(name: "SwiftAnthropic", package: "SwiftAnthropic"),
+                .product(name: "MCP", package: "swift-sdk"),
+            ],
+            path: "Sources/CustomPermissionService"
+        ),
+        
+        // Modules with multiple dependencies
+        .target(
+            name: "AccessibilityService",
+            dependencies: [
+                "AccessibilityFoundation",
+                "AccessibilityServiceInterface"
+            ],
+            path: "Sources/AccessibilityService"
+        ),
+        .target(
+            name: "PermissionsService",
+            dependencies: [
+                "PermissionsServiceInterface",
+                "TerminalServiceInterface"
+            ],
+            path: "Sources/PermissionsService"
+        ),
+        .target(
+            name: "XcodeObserverService",
+            dependencies: [
+                "AccessibilityFoundation",
+                "AccessibilityServiceInterface",
+                "PermissionsServiceInterface",
+                "XcodeObserverServiceInterface"
+            ],
+            path: "Sources/XcodeObserverService",
+            swiftSettings: [
+                .swiftLanguageMode(.v5)
+            ]
+        ),
+        
         // Core library containing all reusable components
         .target(
             name: "ClaudeCodeCore",
@@ -55,20 +118,24 @@ let package = Package(
                 .product(name: "HighlightSwift", package: "highlightswift"),
                 .product(name: "MCP", package: "swift-sdk"),
                 
-                // Local modules
-                .product(name: "AccessibilityFoundation", package: "AccessibilityFoundation"),
-                .product(name: "AccessibilityService", package: "AccessibilityService"),
-                .product(name: "AccessibilityServiceInterface", package: "AccessibilityServiceInterface"),
-                .product(name: "CustomPermissionService", package: "CustomPermissionService"),
-                .product(name: "CustomPermissionServiceInterface", package: "CustomPermissionServiceInterface"),
-                .product(name: "PermissionsService", package: "PermissionsService"),
-                .product(name: "PermissionsServiceInterface", package: "PermissionsServiceInterface"),
-                .product(name: "TerminalService", package: "TerminalService"),
-                .product(name: "TerminalServiceInterface", package: "TerminalServiceInterface"),
-                .product(name: "XcodeObserverService", package: "XcodeObserverService"),
-                .product(name: "XcodeObserverServiceInterface", package: "XcodeObserverServiceInterface"),
+                // Internal module dependencies
+                "AccessibilityFoundation",
+                "AccessibilityService",
+                "AccessibilityServiceInterface",
+                "CustomPermissionService",
+                "CustomPermissionServiceInterface",
+                "PermissionsService",
+                "PermissionsServiceInterface",
+                "TerminalService",
+                "TerminalServiceInterface",
+                "XcodeObserverService",
+                "XcodeObserverServiceInterface",
             ],
             path: "Sources/ClaudeCodeCore",
+            exclude: [
+                "FileSearch/FileSearch_README.md",
+                "ClaudeCodeUI.entitlements"
+            ],
             resources: [
                 .process("Assets.xcassets")
             ],
@@ -91,6 +158,59 @@ let package = Package(
             name: "ClaudeCodeCoreTests",
             dependencies: ["ClaudeCodeCore"],
             path: "Tests/ClaudeCodeCoreTests"
-        )
+        ),
+        .testTarget(
+            name: "AccessibilityFoundationTests",
+            dependencies: ["AccessibilityFoundation"],
+            path: "Tests/AccessibilityFoundationTests"
+        ),
+        .testTarget(
+            name: "AccessibilityServiceTests",
+            dependencies: ["AccessibilityService"],
+            path: "Tests/AccessibilityServiceTests"
+        ),
+        .testTarget(
+            name: "AccessibilityServiceInterfaceTests",
+            dependencies: ["AccessibilityServiceInterface"],
+            path: "Tests/AccessibilityServiceInterfaceTests"
+        ),
+        .testTarget(
+            name: "CustomPermissionServiceTests",
+            dependencies: ["CustomPermissionService"],
+            path: "Tests/CustomPermissionServiceTests"
+        ),
+        .testTarget(
+            name: "CustomPermissionServiceInterfaceTests",
+            dependencies: ["CustomPermissionServiceInterface"],
+            path: "Tests/CustomPermissionServiceInterfaceTests"
+        ),
+        .testTarget(
+            name: "PermissionsServiceTests",
+            dependencies: ["PermissionsService"],
+            path: "Tests/PermissionsServiceTests"
+        ),
+        .testTarget(
+            name: "PermissionsServiceInterfaceTests",
+            dependencies: ["PermissionsServiceInterface"],
+            path: "Tests/PermissionsServiceInterfaceTests"
+        ),
+        .testTarget(
+            name: "TerminalServiceTests",
+            dependencies: ["TerminalService"],
+            path: "Tests/TerminalServiceTests",
+            resources: [
+                .process("simple_output.sh")
+            ]
+        ),
+        .testTarget(
+            name: "TerminalServiceInterfaceTests",
+            dependencies: ["TerminalServiceInterface"],
+            path: "Tests/TerminalServiceInterfaceTests"
+        ),
+        .testTarget(
+            name: "XcodeObserverServiceTests",
+            dependencies: ["XcodeObserverService"],
+            path: "Tests/XcodeObserverServiceTests"
+        ),
     ]
 )

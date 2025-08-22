@@ -7,9 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		08627C1C2E2AEE1800D5C3B4 /* CustomPermissionServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 08627C1B2E2AEE1800D5C3B4 /* CustomPermissionServiceInterface */; };
-		08627C1F2E2AF1A500D5C3B4 /* CustomPermissionService in Frameworks */ = {isa = PBXBuildFile; productRef = 08627C1E2E2AF1A500D5C3B4 /* CustomPermissionService */; };
-		7B90FE2A2E0938E200764905 /* XcodeObserverServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE292E0938E200764905 /* XcodeObserverServiceInterface */; };
 		7BAD7A682E57E5280048BD27 /* ClaudeCodeCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7BAD7A672E57E5280048BD27 /* ClaudeCodeCore */; };
 		7BAD7AF72E57E8F20048BD27 /* ClaudeCodeCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7BAD7AF62E57E8F20048BD27 /* ClaudeCodeCore */; };
 /* End PBXBuildFile section */
@@ -61,10 +58,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7BAD7A682E57E5280048BD27 /* ClaudeCodeCore in Frameworks */,
-				7B90FE2A2E0938E200764905 /* XcodeObserverServiceInterface in Frameworks */,
 				7BAD7AF72E57E8F20048BD27 /* ClaudeCodeCore in Frameworks */,
-				08627C1F2E2AF1A500D5C3B4 /* CustomPermissionService in Frameworks */,
-				08627C1C2E2AEE1800D5C3B4 /* CustomPermissionServiceInterface in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -133,9 +127,6 @@
 			);
 			name = ClaudeCodeUI;
 			packageProductDependencies = (
-				7B90FE292E0938E200764905 /* XcodeObserverServiceInterface */,
-				08627C1B2E2AEE1800D5C3B4 /* CustomPermissionServiceInterface */,
-				08627C1E2E2AF1A500D5C3B4 /* CustomPermissionService */,
 				7BAD7A672E57E5280048BD27 /* ClaudeCodeCore */,
 				7BAD7AF62E57E8F20048BD27 /* ClaudeCodeCore */,
 			);
@@ -589,18 +580,6 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		08627C1B2E2AEE1800D5C3B4 /* CustomPermissionServiceInterface */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = CustomPermissionServiceInterface;
-		};
-		08627C1E2E2AF1A500D5C3B4 /* CustomPermissionService */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = CustomPermissionService;
-		};
-		7B90FE292E0938E200764905 /* XcodeObserverServiceInterface */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = XcodeObserverServiceInterface;
-		};
 		7BAD7A672E57E5280048BD27 /* ClaudeCodeCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ClaudeCodeCore;
