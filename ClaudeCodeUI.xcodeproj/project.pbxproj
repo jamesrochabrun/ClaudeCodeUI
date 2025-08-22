@@ -9,19 +9,9 @@
 /* Begin PBXBuildFile section */
 		08627C1C2E2AEE1800D5C3B4 /* CustomPermissionServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 08627C1B2E2AEE1800D5C3B4 /* CustomPermissionServiceInterface */; };
 		08627C1F2E2AF1A500D5C3B4 /* CustomPermissionService in Frameworks */ = {isa = PBXBuildFile; productRef = 08627C1E2E2AF1A500D5C3B4 /* CustomPermissionService */; };
-		08627C222E2B18E800D5C3B4 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = 08627C212E2B18E800D5C3B4 /* MCP */; };
-		7B7EE9962E09D27700B25B8D /* TerminalServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 7B7EE9952E09D27700B25B8D /* TerminalServiceInterface */; };
-		7B7EE9982E09D27D00B25B8D /* TerminalService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B7EE9972E09D27D00B25B8D /* TerminalService */; };
-		7B8F56E52E11114200A11A68 /* Down in Frameworks */ = {isa = PBXBuildFile; productRef = 7B8F56E42E11114200A11A68 /* Down */; };
-		7B8F56E82E11116600A11A68 /* HighlightSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 7B8F56E72E11116600A11A68 /* HighlightSwift */; };
-		7B90FE1D2E09384F00764905 /* AccessibilityFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE1C2E09384F00764905 /* AccessibilityFoundation */; };
-		7B90FE1F2E09385B00764905 /* AccessibilityService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE1E2E09385B00764905 /* AccessibilityService */; };
-		7B90FE212E09386900764905 /* AccessibilityServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE202E09386900764905 /* AccessibilityServiceInterface */; };
-		7B90FE252E09388000764905 /* PermissionsService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE242E09388000764905 /* PermissionsService */; };
 		7B90FE2A2E0938E200764905 /* XcodeObserverServiceInterface in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE292E0938E200764905 /* XcodeObserverServiceInterface */; };
-		7B90FE322E093A3D00764905 /* XcodeObserverService in Frameworks */ = {isa = PBXBuildFile; productRef = 7B90FE312E093A3D00764905 /* XcodeObserverService */; };
-		7BE462B62E08AAD100FD421C /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = 7BE462B52E08AAD100FD421C /* KeyboardShortcuts */; };
-		7BE463412E09304F00FD421C /* ClaudeCodeSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 7BE463402E09304F00FD421C /* ClaudeCodeSDK */; };
+		7BAD7A682E57E5280048BD27 /* ClaudeCodeCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7BAD7A672E57E5280048BD27 /* ClaudeCodeCore */; };
+		7BAD7AF72E57E8F20048BD27 /* ClaudeCodeCore in Frameworks */ = {isa = PBXBuildFile; productRef = 7BAD7AF62E57E8F20048BD27 /* ClaudeCodeCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -70,21 +60,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7B8F56E52E11114200A11A68 /* Down in Frameworks */,
-				7B7EE9962E09D27700B25B8D /* TerminalServiceInterface in Frameworks */,
-				7B90FE322E093A3D00764905 /* XcodeObserverService in Frameworks */,
-				7B8F56E82E11116600A11A68 /* HighlightSwift in Frameworks */,
-				7B7EE9982E09D27D00B25B8D /* TerminalService in Frameworks */,
-				7BE463412E09304F00FD421C /* ClaudeCodeSDK in Frameworks */,
-				7B90FE1F2E09385B00764905 /* AccessibilityService in Frameworks */,
-				7B90FE1D2E09384F00764905 /* AccessibilityFoundation in Frameworks */,
+				7BAD7A682E57E5280048BD27 /* ClaudeCodeCore in Frameworks */,
 				7B90FE2A2E0938E200764905 /* XcodeObserverServiceInterface in Frameworks */,
-				08627C222E2B18E800D5C3B4 /* MCP in Frameworks */,
-				7B90FE252E09388000764905 /* PermissionsService in Frameworks */,
+				7BAD7AF72E57E8F20048BD27 /* ClaudeCodeCore in Frameworks */,
 				08627C1F2E2AF1A500D5C3B4 /* CustomPermissionService in Frameworks */,
 				08627C1C2E2AEE1800D5C3B4 /* CustomPermissionServiceInterface in Frameworks */,
-				7B90FE212E09386900764905 /* AccessibilityServiceInterface in Frameworks */,
-				7BE462B62E08AAD100FD421C /* KeyboardShortcuts in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -153,21 +133,11 @@
 			);
 			name = ClaudeCodeUI;
 			packageProductDependencies = (
-				7BE462B52E08AAD100FD421C /* KeyboardShortcuts */,
-				7BE463402E09304F00FD421C /* ClaudeCodeSDK */,
-				7B90FE1C2E09384F00764905 /* AccessibilityFoundation */,
-				7B90FE1E2E09385B00764905 /* AccessibilityService */,
-				7B90FE202E09386900764905 /* AccessibilityServiceInterface */,
-				7B90FE242E09388000764905 /* PermissionsService */,
 				7B90FE292E0938E200764905 /* XcodeObserverServiceInterface */,
-				7B90FE312E093A3D00764905 /* XcodeObserverService */,
-				7B7EE9952E09D27700B25B8D /* TerminalServiceInterface */,
-				7B7EE9972E09D27D00B25B8D /* TerminalService */,
-				7B8F56E42E11114200A11A68 /* Down */,
-				7B8F56E72E11116600A11A68 /* HighlightSwift */,
 				08627C1B2E2AEE1800D5C3B4 /* CustomPermissionServiceInterface */,
 				08627C1E2E2AF1A500D5C3B4 /* CustomPermissionService */,
-				08627C212E2B18E800D5C3B4 /* MCP */,
+				7BAD7A672E57E5280048BD27 /* ClaudeCodeCore */,
+				7BAD7AF62E57E8F20048BD27 /* ClaudeCodeCore */,
 			);
 			productName = ClaudeCodeUI;
 			productReference = 7B3764CC2DE3D2B200F32C87 /* ClaudeCodeUI.app */;
@@ -252,21 +222,7 @@
 			mainGroup = 7B3764C32DE3D2B200F32C87;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				7B5698F02E07D17C00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityFoundation" */,
-				7B5698F32E07D21F00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityService" */,
-				7B5698F62E07D24A00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityServiceInterface" */,
-				7B6C0D2D2E07E73B008ADF13 /* XCLocalSwiftPackageReference "modules/PermissionsService" */,
-				7BE462B42E08AAD100FD421C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */,
-				7BE4633F2E09304F00FD421C /* XCRemoteSwiftPackageReference "ClaudeCodeSDK" */,
-				7B90FE282E0938E200764905 /* XCLocalSwiftPackageReference "modules/XcodeObserverServiceInterface" */,
-				7B90FE302E0939E100764905 /* XCLocalSwiftPackageReference "modules/XcodeObserverService" */,
-				7B7EE80D2E09D03800B25B8D /* XCLocalSwiftPackageReference "modules/TerminalServiceInterface" */,
-				7B7EE80E2E09D04500B25B8D /* XCLocalSwiftPackageReference "modules/TerminalService" */,
-				7B8F56E32E11114200A11A68 /* XCRemoteSwiftPackageReference "Down" */,
-				7B8F56E62E11116600A11A68 /* XCRemoteSwiftPackageReference "highlightswift" */,
-				08627C1A2E2AEE1800D5C3B4 /* XCLocalSwiftPackageReference "modules/CustomPermissionServiceInterface" */,
-				08627C1D2E2AF1A500D5C3B4 /* XCLocalSwiftPackageReference "modules/CustomPermissionService" */,
-				08627C202E2B18E800D5C3B4 /* XCRemoteSwiftPackageReference "swift-sdk" */,
+				7BAD7AF52E57E8F20048BD27 /* XCLocalSwiftPackageReference "../ClaudeCodeUI" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 7B3764CD2DE3D2B200F32C87 /* Products */;
@@ -626,90 +582,11 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		08627C1A2E2AEE1800D5C3B4 /* XCLocalSwiftPackageReference "modules/CustomPermissionServiceInterface" */ = {
+		7BAD7AF52E57E8F20048BD27 /* XCLocalSwiftPackageReference "../ClaudeCodeUI" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/CustomPermissionServiceInterface;
-		};
-		08627C1D2E2AF1A500D5C3B4 /* XCLocalSwiftPackageReference "modules/CustomPermissionService" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/CustomPermissionService;
-		};
-		7B5698F02E07D17C00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityFoundation" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/AccessibilityFoundation;
-		};
-		7B5698F32E07D21F00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityService" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/AccessibilityService;
-		};
-		7B5698F62E07D24A00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityServiceInterface" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/AccessibilityServiceInterface;
-		};
-		7B6C0D2D2E07E73B008ADF13 /* XCLocalSwiftPackageReference "modules/PermissionsService" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/PermissionsService;
-		};
-		7B7EE80D2E09D03800B25B8D /* XCLocalSwiftPackageReference "modules/TerminalServiceInterface" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/TerminalServiceInterface;
-		};
-		7B7EE80E2E09D04500B25B8D /* XCLocalSwiftPackageReference "modules/TerminalService" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/TerminalService;
-		};
-		7B90FE282E0938E200764905 /* XCLocalSwiftPackageReference "modules/XcodeObserverServiceInterface" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/XcodeObserverServiceInterface;
-		};
-		7B90FE302E0939E100764905 /* XCLocalSwiftPackageReference "modules/XcodeObserverService" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = modules/XcodeObserverService;
+			relativePath = ../ClaudeCodeUI;
 		};
 /* End XCLocalSwiftPackageReference section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		08627C202E2B18E800D5C3B4 /* XCRemoteSwiftPackageReference "swift-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/modelcontextprotocol/swift-sdk";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.9.0;
-			};
-		};
-		7B8F56E32E11114200A11A68 /* XCRemoteSwiftPackageReference "Down" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/gsabran/Down";
-			requirement = {
-				kind = revision;
-				revision = 14309dd8781c7613063344727454ffbbebc8e8bd;
-			};
-		};
-		7B8F56E62E11116600A11A68 /* XCRemoteSwiftPackageReference "highlightswift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/appstefan/highlightswift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.0.9;
-			};
-		};
-		7BE462B42E08AAD100FD421C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/sindresorhus/KeyboardShortcuts";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.3.0;
-			};
-		};
-		7BE4633F2E09304F00FD421C /* XCRemoteSwiftPackageReference "ClaudeCodeSDK" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/jamesrochabrun/ClaudeCodeSDK";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
 		08627C1B2E2AEE1800D5C3B4 /* CustomPermissionServiceInterface */ = {
@@ -720,69 +597,17 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = CustomPermissionService;
 		};
-		08627C212E2B18E800D5C3B4 /* MCP */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 08627C202E2B18E800D5C3B4 /* XCRemoteSwiftPackageReference "swift-sdk" */;
-			productName = MCP;
-		};
-		7B7EE9952E09D27700B25B8D /* TerminalServiceInterface */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7B7EE80D2E09D03800B25B8D /* XCLocalSwiftPackageReference "modules/TerminalServiceInterface" */;
-			productName = TerminalServiceInterface;
-		};
-		7B7EE9972E09D27D00B25B8D /* TerminalService */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7B7EE80E2E09D04500B25B8D /* XCLocalSwiftPackageReference "modules/TerminalService" */;
-			productName = TerminalService;
-		};
-		7B8F56E42E11114200A11A68 /* Down */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7B8F56E32E11114200A11A68 /* XCRemoteSwiftPackageReference "Down" */;
-			productName = Down;
-		};
-		7B8F56E72E11116600A11A68 /* HighlightSwift */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7B8F56E62E11116600A11A68 /* XCRemoteSwiftPackageReference "highlightswift" */;
-			productName = HighlightSwift;
-		};
-		7B90FE1C2E09384F00764905 /* AccessibilityFoundation */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7B5698F02E07D17C00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityFoundation" */;
-			productName = AccessibilityFoundation;
-		};
-		7B90FE1E2E09385B00764905 /* AccessibilityService */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7B5698F32E07D21F00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityService" */;
-			productName = AccessibilityService;
-		};
-		7B90FE202E09386900764905 /* AccessibilityServiceInterface */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7B5698F62E07D24A00E8065C /* XCLocalSwiftPackageReference "modules/AccessibilityServiceInterface" */;
-			productName = AccessibilityServiceInterface;
-		};
-		7B90FE242E09388000764905 /* PermissionsService */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7B6C0D2D2E07E73B008ADF13 /* XCLocalSwiftPackageReference "modules/PermissionsService" */;
-			productName = PermissionsService;
-		};
 		7B90FE292E0938E200764905 /* XcodeObserverServiceInterface */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = XcodeObserverServiceInterface;
 		};
-		7B90FE312E093A3D00764905 /* XcodeObserverService */ = {
+		7BAD7A672E57E5280048BD27 /* ClaudeCodeCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7B90FE302E0939E100764905 /* XCLocalSwiftPackageReference "modules/XcodeObserverService" */;
-			productName = XcodeObserverService;
+			productName = ClaudeCodeCore;
 		};
-		7BE462B52E08AAD100FD421C /* KeyboardShortcuts */ = {
+		7BAD7AF62E57E8F20048BD27 /* ClaudeCodeCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 7BE462B42E08AAD100FD421C /* XCRemoteSwiftPackageReference "KeyboardShortcuts" */;
-			productName = KeyboardShortcuts;
-		};
-		7BE463402E09304F00FD421C /* ClaudeCodeSDK */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 7BE4633F2E09304F00FD421C /* XCRemoteSwiftPackageReference "ClaudeCodeSDK" */;
-			productName = ClaudeCodeSDK;
+			productName = ClaudeCodeCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

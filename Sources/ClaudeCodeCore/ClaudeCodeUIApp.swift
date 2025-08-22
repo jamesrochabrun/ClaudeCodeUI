@@ -6,13 +6,17 @@
 //
 
 import SwiftUI
-@main
-struct ClaudeCodeUIApp: App {
+
+// Note: @main attribute removed - this is now a library component
+// The actual app entry point is in the executable target
+public struct ClaudeCodeUIApp: App {
   @State private var globalPreferences = GlobalPreferencesStorage()
   @Environment(\.openWindow) private var openWindow
   @Environment(\.colorScheme) private var colorScheme
   
-  var body: some Scene {
+  public init() {}
+  
+  public var body: some Scene {
     WindowGroup(id: "main") {
       RootView()
         .toolbar(removing: .title)

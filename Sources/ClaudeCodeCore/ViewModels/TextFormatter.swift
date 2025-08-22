@@ -298,11 +298,16 @@ final class TextFormatter {
     
     // Parse language and file path from header
     // Format: language:filepath or just language
-    if let match = header.firstMatch(of: /^(?<language>[\w\-]+):(?<path>.*)$/) {
-      let language = match.output.language
-      let path = match.output.path
-      currentCodeBlock.language = String(language).lowercased()
-      currentCodeBlock.filePath = String(path)
+    let pattern = "^([\\w\\-]+):(.*)$"
+    if let regex = try? NSRegularExpression(pattern: pattern),
+       let match = regex.firstMatch(in: header, range: NSRange(header.startIndex..., in: header)) {
+      if let languageRange = Range(match.range(at: 1), in: header),
+         let pathRange = Range(match.range(at: 2), in: header) {
+        let language = String(header[languageRange])
+        let path = String(header[pathRange])
+        currentCodeBlock.language = language.lowercased()
+        currentCodeBlock.filePath = path
+      }
     } else if !header.isEmpty {
       // For now, assume it's a language if it's a single word, otherwise a path
       if header.contains("/") || (header.contains(".") && !header.lowercased().starts(with: "mermaid")) {

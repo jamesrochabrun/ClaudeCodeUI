@@ -8,7 +8,7 @@
 import SwiftUI
 import ClaudeCodeSDK
 
-struct RootView: View {
+public struct RootView: View {
   @Environment(GlobalPreferencesStorage.self) private var globalPreferences
   @Environment(\.colorScheme) private var colorScheme
   
@@ -16,12 +16,14 @@ struct RootView: View {
   @State private var viewModel: ChatViewModel?
   @State private var columnVisibility: NavigationSplitViewVisibility = .all
   private let sessionId: String?
+  private let configuration: ClaudeCodeConfiguration
   
-  init(sessionId: String? = nil) {
+  public init(sessionId: String? = nil, configuration: ClaudeCodeConfiguration = .default) {
     self.sessionId = sessionId
+    self.configuration = configuration
   }
   
-  var body: some View {
+  public var body: some View {
     if let viewModel = viewModel, let container = dependencyContainer {
       NavigationSplitView(columnVisibility: $columnVisibility) {
         // Sidebar
@@ -74,15 +76,8 @@ struct RootView: View {
       container.settingsStorage.clearProjectPath()
     }
     
-#if DEBUG
-    let debugMode = true
-#else
-    let debugMode = false
-#endif
-    
-    var config = ClaudeCodeConfiguration.default
+    var config = configuration
     config.workingDirectory = workingDirectory
-    config.enableDebugLogging = debugMode
     
     // Add paths to support claude installed via npm/nvm or standalone
     let homeDir = NSHomeDirectory()

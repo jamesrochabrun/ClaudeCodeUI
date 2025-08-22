@@ -8,6 +8,76 @@ https://github.com/user-attachments/assets/12a3a1ff-1ba5-41b2-b6af-897e53b18331
 
 ClaudeCodeUI is a SwiftUI-based macOS application that wraps the Claude Code SDK, providing users with a desktop experience for interacting with Claude's coding capabilities. The app features markdown rendering, syntax highlighting, file management, and terminal integration - all within a native macOS interface.
 
+**New: ClaudeCodeUI is now available as a Swift Package!** You can use the core functionality in your own apps or run the standalone macOS application.
+
+## Installation
+
+### Option 1: Use as a macOS Application
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/jamesrochabrun/ClaudeCodeUI.git
+   cd ClaudeCodeUI
+   ```
+
+2. Open in Xcode:
+   ```bash
+   open ClaudeCodeUI.xcodeproj
+   ```
+
+3. Build and run (⌘R)
+
+### Option 2: Use as a Swift Package
+
+Add ClaudeCodeUI to your project as a Swift Package dependency:
+
+#### In Xcode:
+1. File → Add Package Dependencies
+2. Enter: `https://github.com/jamesrochabrun/ClaudeCodeUI.git`
+3. Choose the `ClaudeCodeCore` library product
+
+#### In Package.swift:
+```swift
+dependencies: [
+    .package(url: "https://github.com/jamesrochabrun/ClaudeCodeUI.git", branch: "main")
+],
+targets: [
+    .target(
+        name: "YourApp",
+        dependencies: [
+            .product(name: "ClaudeCodeCore", package: "ClaudeCodeUI")
+        ]
+    )
+]
+```
+
+#### Usage in Your App:
+```swift
+import SwiftUI
+import ClaudeCodeCore
+
+@main
+struct MyApp: App {
+    var body: some Scene {
+        // Use the complete ClaudeCodeUI app
+        ClaudeCodeUIApp().body
+    }
+}
+```
+
+Or use individual components:
+```swift
+import ClaudeCodeCore
+
+struct MyCustomView: View {
+    @StateObject private var viewModel = ChatViewModel(...)
+    
+    var body: some View {
+        ChatScreen(viewModel: viewModel, ...)
+    }
+}
+```
+
 ## How It Works
 
 ClaudeCodeUI communicates with the Claude Code SDK through the `ClaudeCodeClient` class. The app:

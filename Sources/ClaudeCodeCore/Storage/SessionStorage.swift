@@ -8,7 +8,7 @@
 import Foundation
 
 /// Session data stored for each conversation
-public struct StoredSession: Codable, Identifiable {
+public struct StoredSession: Codable, Identifiable, Sendable {
   public let id: String
   public let createdAt: Date
   public let firstUserMessage: String
