@@ -1,19 +1,44 @@
 # ClaudeCodeUI
 
-A native macOS application providing a graphical user interface for Claude Code SDK, enabling seamless AI-powered coding assistance with a beautiful, intuitive interface.
+A native macOS application and Swift Package providing a graphical user interface for Claude Code SDK, enabling seamless AI-powered coding assistance with a beautiful, intuitive interface.
 
 https://github.com/user-attachments/assets/12a3a1ff-1ba5-41b2-b6af-897e53b18331
 
+## 🎉 Now Available as a Swift Package!
+
+ClaudeCodeUI has been completely restructured to work as both a standalone macOS application AND a reusable Swift Package. This means you can:
+- **Use the macOS app directly** - Download and run the full application
+- **Integrate into your own apps** - Import `ClaudeCodeCore` and use all the functionality in your projects
+- **Customize and extend** - Build on top of the comprehensive component library
+
 ## Overview
 
-ClaudeCodeUI is a SwiftUI-based macOS application that wraps the Claude Code SDK, providing users with a desktop experience for interacting with Claude's coding capabilities. The app features markdown rendering, syntax highlighting, file management, and terminal integration - all within a native macOS interface.
+ClaudeCodeUI is a SwiftUI-based macOS application that wraps the Claude Code SDK, providing users with a desktop experience for interacting with Claude's coding capabilities. The app features markdown rendering, syntax highlighting, file management, terminal integration, and a complete MCP (Model Context Protocol) approval system - all within a native macOS interface.
 
-**New: ClaudeCodeUI is now available as a Swift Package!** You can use the core functionality in your own apps or run the standalone macOS application.
+### What's Included in ClaudeCodeCore
+
+The `ClaudeCodeCore` package includes everything:
+- ✅ Complete chat interface with streaming support
+- ✅ Session management and persistence
+- ✅ Code syntax highlighting and markdown rendering
+- ✅ File diff visualization
+- ✅ Terminal integration
+- ✅ Xcode project detection and integration
+- ✅ MCP approval system for secure tool usage
+- ✅ Custom permissions handling
+- ✅ All UI components and view models
+- ✅ Complete dependency injection system
 
 ## Installation
 
 ### Option 1: Use as a macOS Application
 
+#### For End Users (Simplest)
+1. Download the latest release from the [Releases page](https://github.com/jamesrochabrun/ClaudeCodeUI/releases)
+2. Move ClaudeCodeUI.app to your Applications folder
+3. Launch the app
+
+#### For Developers (Build from Source)
 1. Clone the repository:
    ```bash
    git clone https://github.com/jamesrochabrun/ClaudeCodeUI.git
@@ -35,6 +60,7 @@ Add ClaudeCodeUI to your project as a Swift Package dependency:
 1. File → Add Package Dependencies
 2. Enter: `https://github.com/jamesrochabrun/ClaudeCodeUI.git`
 3. Choose the `ClaudeCodeCore` library product
+4. Click "Add Package"
 
 #### In Package.swift:
 ```swift
@@ -51,7 +77,12 @@ targets: [
 ]
 ```
 
-#### Usage in Your App:
+## Usage Examples
+
+### Quick Start - Use the Entire App
+
+The simplest integration - get the full ClaudeCodeUI experience in just 3 lines:
+
 ```swift
 import SwiftUI
 import ClaudeCodeCore
@@ -59,23 +90,122 @@ import ClaudeCodeCore
 @main
 struct MyApp: App {
     var body: some Scene {
-        // Use the complete ClaudeCodeUI app
+        // That's it! You get the complete app
         ClaudeCodeUIApp().body
     }
 }
 ```
 
-Or use individual components:
+### Custom Integration - Mix Your UI with ClaudeCode
+
+Want to integrate ClaudeCode into your existing app? Use individual components:
+
+```swift
+import SwiftUI
+import ClaudeCodeCore
+
+struct MyCustomApp: App {
+    @State private var globalPreferences = GlobalPreferencesStorage()
+    
+    var body: some Scene {
+        WindowGroup {
+            NavigationSplitView {
+                // Your custom sidebar
+                MySidebarView()
+            } detail: {
+                // ClaudeCode chat interface
+                RootView()
+                    .environment(globalPreferences)
+            }
+        }
+    }
+}
+```
+
+### Advanced - Use Individual Components
+
+For maximum control, use the components directly:
+
 ```swift
 import ClaudeCodeCore
 
-struct MyCustomView: View {
-    @StateObject private var viewModel = ChatViewModel(...)
+struct MyCustomChatView: View {
+    @StateObject private var dependencyContainer: DependencyContainer
+    @StateObject private var chatViewModel: ChatViewModel
+    
+    init() {
+        let globalPrefs = GlobalPreferencesStorage()
+        let container = DependencyContainer(globalPreferences: globalPrefs)
+        
+        _dependencyContainer = StateObject(wrappedValue: container)
+        _chatViewModel = StateObject(wrappedValue: ChatViewModel(
+            claudeClient: container.claudeClient,
+            sessionManager: container.sessionManager,
+            // ... other dependencies
+        ))
+    }
     
     var body: some View {
-        ChatScreen(viewModel: viewModel, ...)
+        ChatScreen(
+            viewModel: chatViewModel,
+            contextManager: dependencyContainer.contextManager,
+            xcodeObservationViewModel: dependencyContainer.xcodeObservationViewModel,
+            permissionsService: dependencyContainer.permissionsService,
+            terminalService: dependencyContainer.terminalService,
+            customPermissionService: dependencyContainer.customPermissionService,
+            columnVisibility: .constant(.all)
+        )
     }
 }
+```
+
+### Configuration Options
+
+Customize the behavior with your own settings:
+
+```swift
+import ClaudeCodeCore
+
+// Use custom storage implementations
+let customStorage = MyCustomSessionStorage()
+let customSettings = MyCustomSettingsStorage()
+
+// Configure the dependency container
+let container = DependencyContainer(
+    globalPreferences: globalPreferences,
+    sessionStorage: customStorage,
+    settingsStorage: customSettings
+)
+```
+
+## Project Structure
+
+### Package Structure
+```
+ClaudeCodeUI/
+├── Package.swift                    # Swift Package manifest
+├── Sources/
+│   ├── ClaudeCodeCore/             # Main library (all reusable components)
+│   │   ├── App/                    # App structure and entry points
+│   │   ├── ViewModels/             # Business logic and state management
+│   │   ├── Views/UI/               # All SwiftUI views and components
+│   │   ├── Services/               # Core services (permissions, terminal, etc.)
+│   │   ├── Storage/                # Session and settings persistence
+│   │   ├── Models/                 # Data models
+│   │   ├── DependencyInjection/    # DI container
+│   │   ├── Diff/                   # File diff visualization
+│   │   ├── FileSearch/             # File search functionality
+│   │   ├── ToolFormatting/         # Tool output formatting
+│   │   └── Extensions/             # Utility extensions
+│   └── ClaudeCodeUI/               # Minimal executable wrapper
+│       └── main.swift              # App entry point
+├── modules/                        # Local Swift packages
+│   ├── AccessibilityService/       # macOS accessibility APIs
+│   ├── ApprovalMCPServer/          # MCP approval server
+│   ├── CustomPermissionService/    # Permission handling
+│   ├── TerminalService/            # Terminal integration
+│   └── XcodeObserverService/       # Xcode integration
+└── ClaudeCodeUI.xcodeproj          # Xcode project (for app distribution)
 ```
 
 ## How It Works
@@ -88,15 +218,22 @@ ClaudeCodeUI communicates with the Claude Code SDK through the `ClaudeCodeClient
 4. **Processes Responses**: Renders Claude's responses with markdown formatting and code syntax highlighting
 5. **Executes Actions**: Handles file operations, terminal commands, and other SDK capabilities through a unified interface
 
-The main integration point is in `RootView.swift` where the Claude Code SDK is configured and initialized:
+## Migration Guide
 
-```swift
-var config = ClaudeCodeConfiguration.default
-config.workingDirectory = workingDirectory
-config.enableDebugLogging = debugMode
+### For Existing Users
 
-let claudeClient = ClaudeCodeClient(configuration: config)
-```
+If you've been using ClaudeCodeUI before the package restructure:
+
+1. **No changes needed for app users** - The macOS app works exactly the same
+2. **For developers**: The source code is now in `Sources/ClaudeCodeCore/` instead of `ClaudeCodeUI/`
+3. **Package imports**: Use `import ClaudeCodeCore` instead of importing individual files
+
+### For Package Consumers
+
+When adding ClaudeCodeUI as a dependency:
+- The main library product is `ClaudeCodeCore`
+- All components are public and can be used individually
+- The package includes all necessary dependencies (you don't need to add them separately)
 
 ## Xcode Integration
 
@@ -119,30 +256,45 @@ Once enabled, ClaudeCodeUI can:
 - **Monitor Active Files**: Track which files you're working on for better context
 - **Sync Project Paths**: Automatically update the working directory when you switch between Xcode projects
 
-### Troubleshooting Xcode Integration
-
-If Xcode integration isn't working:
-- Ensure ClaudeCodeUI has Accessibility permissions enabled
-- Restart both ClaudeCodeUI and Xcode after granting permissions
-- Check that you have an Xcode project open (not just individual files)
-- Verify the integration status in the app's toolbar
-
 ## MCP Approval Tool
 
 ### Overview
 
 The MCP (Model Context Protocol) approval tool provides a secure permission system for Claude Code operations. When Claude needs to perform actions like file operations or execute commands, the approval tool presents a native macOS dialog for user consent.
 
-### How It Works
+### Setup Instructions by Use Case
 
-1. **Automatic Setup**: The approval server is built automatically via an Xcode build phase
-2. **Smart Path Detection**: The app finds the server using multiple fallback strategies
-3. **Permission Dialogs**: Native macOS UI for approving/denying Claude's requests
-4. **Session-Based**: Permissions are managed per chat session for security
+#### For Package Users (Using ClaudeCodeCore in Your App)
 
-### First-Time Setup Required
+When using ClaudeCodeCore as a package dependency, you need to build and include the MCP approval server in your app:
 
-When you first clone the repo, you need to add a build phase in Xcode:
+1. **Add the MCP server module to your project**:
+   - The server source is included in the package at `modules/ApprovalMCPServer`
+   - You'll need to build it as part of your app's build process
+
+2. **Option A: Add Build Phase to Your App**:
+   ```bash
+   # Add this script to your app's build phases
+   cd "$BUILD_DIR/../../SourcePackages/checkouts/ClaudeCodeUI/modules/ApprovalMCPServer"
+   swift build -c release
+   cp .build/release/ApprovalMCPServer "$BUILT_PRODUCTS_DIR/$PRODUCT_NAME.app/Contents/Resources/"
+   ```
+
+3. **Option B: Build Manually and Include**:
+   ```bash
+   # Build the server manually
+   cd path/to/ClaudeCodeUI/modules/ApprovalMCPServer
+   swift build -c release
+   # Copy the binary to your app's Resources folder
+   ```
+
+4. **Option C: Use without MCP** (Simplest):
+   - The app will work without the MCP server, but you won't get approval dialogs
+   - Claude will use default permissions based on your settings
+
+#### For Building ClaudeCodeUI from Source
+
+When building the ClaudeCodeUI app itself from source:
 
 1. Open `ClaudeCodeUI.xcodeproj`
 2. Select the `ClaudeCodeUI` target
@@ -153,87 +305,23 @@ When you first clone the repo, you need to add a build phase in Xcode:
 7. Rename to "Build MCP Approval Server" (optional)
 8. Build and run!
 
-### Troubleshooting MCP Approval Server
+### How It Works
 
-#### Error: "MCP tool mcp__approval_server__approval_prompt not found"
-
-**Cause**: The approval server hasn't been built yet.
-
-**Solutions**:
-1. Ensure you've added the build phase (see setup above)
-2. Clean build folder (⇧⌘K) and rebuild
-3. Manually build the server:
-   ```bash
-   cd modules/ApprovalMCPServer
-   swift build -c debug
-   ```
-
-#### Error: "ApprovalMCPServer directory not found"
-
-**Cause**: The app can't find the project directory.
-
-**Solutions**:
-1. Ensure you're running from Xcode (not a standalone app)
-2. Check the project structure is intact
-3. Verify the `modules/ApprovalMCPServer` directory exists
-
-#### Build Phase Not Working
-
-**Symptoms**: The build phase runs but server isn't built.
-
-**Check**:
-1. Open Report Navigator (⌘9) in Xcode
-2. Look for "Build MCP Approval Server" in the build log
-3. Check for error messages
-
-**Common fixes**:
-- Ensure Swift is in your PATH: `which swift`
-- Check script permissions: `chmod +x Scripts/build-approval-server.sh`
-- Run the script manually to see errors:
-  ```bash
-  cd /path/to/ClaudeCodeUI
-  ./Scripts/build-approval-server.sh
-  ```
-
-#### Permission Dialogs Not Appearing
-
-**Check**:
-1. Ensure the approval server is running (check Console.app for logs)
-2. Verify MCP is configured in Claude Code settings
-3. Check that auto-approve isn't enabled in settings
-
-### Technical Architecture
-
-The MCP approval system consists of three components:
-
-1. **ApprovalMCPServer**: A Swift executable that implements the MCP protocol
-2. **CustomPermissionService**: Manages permission requests and UI
-3. **ApprovalBridge**: Handles IPC between the server and the app
-
-The flow:
-1. Claude Code requests a tool use via MCP
-2. ApprovalMCPServer receives the request
-3. IPC notification sent to the main app
-4. CustomPermissionService shows approval dialog
-5. User response sent back through the chain
-
-### Developer Notes
-
-- Build output: `modules/ApprovalMCPServer/.build/{arch}-apple-macosx/debug/ApprovalMCPServer`
-- The server is only built when needed (checks if executable exists)
-- For release builds, the server is copied into `ClaudeCodeUI.app/Contents/Resources/`
-- Logs available in Console.app under "MCPApprovalTool" category
+1. **Automatic Detection**: ClaudeCodeCore looks for the server in multiple locations
+2. **Smart Path Detection**: Checks app bundle, build directories, and package paths
+3. **Permission Dialogs**: Native macOS UI for approving/denying Claude's requests
+4. **Session-Based**: Permissions are managed per chat session for security
 
 ## Development
 
 ### Prerequisites
 
-- macOS 14.0 or later
+- macOS 15.2 or later (due to package dependencies)
 - Xcode 15.0 or later
 - Swift 5.9 or later
-- Claude Code installed
+- Claude Code SDK
 
-### Getting Started
+### Building from Source
 
 1. Clone the repository:
 ```bash
@@ -241,52 +329,29 @@ git clone https://github.com/jamesrochabrun/ClaudeCodeUI.git
 cd ClaudeCodeUI
 ```
 
-2. Open the project in Xcode:
+2. **Using Xcode Project** (for app development):
 ```bash
 open ClaudeCodeUI.xcodeproj
+# Build and run with ⌘R
 ```
 
-3. **REQUIRED: Add MCP Approval Server Build Phase**
-   
-   This is a one-time setup that ensures the MCP approval server is built:
-   
-   - Select `ClaudeCodeUI` target in project navigator
-   - Go to "Build Phases" tab
-   - Click "+" button → "New Run Script Phase"
-   - **IMPORTANT**: Drag the new phase above "Compile Sources"
-   - In the script editor, paste:
-     ```bash
-     "${PROJECT_DIR}/Scripts/build-approval-server.sh"
-     ```
-   - Optionally rename it to "Build MCP Approval Server"
-
-4. Build and run (⌘+R)
-
-⚠️ **Note**: Without this build phase, you'll get "MCP tool not found" errors. See [MCP Troubleshooting](#troubleshooting-mcp-approval-server) if you encounter issues.
-
-### Project Structure
-
-```
-ClaudeCodeUI/
-├── ClaudeCodeUI/
-│   ├── Views/
-│   │   ├── ChatScreen.swift        # Main chat interface
-│   │   ├── MessageView.swift       # Individual message rendering
-│   │   └── DiffView.swift          # File diff visualization
-│   ├── ViewModels/
-│   │   ├── ChatViewModel.swift     # Main business logic
-│   │   └── SessionManager.swift    # Session management
-│   ├── Services/
-│   │   ├── PermissionsService.swift    # File system permissions
-│   │   ├── TerminalService.swift       # Terminal integration
-│   │   └── ContextManager.swift        # Context file management
-│   ├── Storage/
-│   │   ├── SessionStorage.swift        # Session persistence
-│   │   └── SettingsStorage.swift       # User preferences
-│   └── RootView.swift              # Main app entry point
+3. **Using Swift Package Manager** (for package development):
+```bash
+swift build
+swift run ClaudeCodeUI
 ```
 
-### Contributing
+### Testing the Package
+
+```bash
+# Run tests for the core library
+swift test
+
+# Or in Xcode
+# Product → Test (⌘U)
+```
+
+## Contributing
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
@@ -299,46 +364,36 @@ Please ensure your contributions:
 - Include appropriate documentation
 - Add tests where applicable
 - Update the README if adding new features
+- Work with both the Xcode project and Swift Package
 
 ## Troubleshooting
 
 ### Common Issues
 
 **"MCP tool not found" error on first run**
-- You need to add the build phase! See step 3 in [Getting Started](#getting-started)
-- This is a one-time setup required for all developers
-- After adding, clean build (⇧⌘K) and run again
+- You need to add the build phase! See [First-Time Setup](#first-time-setup-required-only-for-building-from-source)
+- This is only needed when building from source
+
+**Package resolution issues**
+- Clean the package cache: `swift package clean`
+- Reset package resolved: `swift package reset`
+- In Xcode: File → Packages → Reset Package Caches
 
 **App doesn't launch**
-- Ensure you're running macOS 14.0 or later
-- Check that all Swift Package dependencies are resolved in Xcode
+- Ensure you're running macOS 15.2 or later
+- Check that all Swift Package dependencies are resolved
 
 **Claude Code SDK not responding**
 - Verify your API credentials are properly configured
 - Check the debug logs in Console.app for detailed error messages
 - Ensure you have an active internet connection
 
-**File permissions errors**
-- Grant the app Full Disk Access in System Preferences > Privacy & Security
-- Check that custom permissions are properly configured (see CUSTOM_PERMISSION_SETUP.md)
-
-**Terminal commands not working**
-- Ensure the app has appropriate shell access permissions
-- Check that the working directory is correctly set
-- Verify PATH includes necessary command locations
-
-**Markdown rendering issues**
-- Clear the app's cache by deleting derived data
-- Rebuild the project to ensure all resources are properly included
-
-### Debug Mode
-
-To enable debug logging, the app automatically detects if it's running in a debug configuration. You can also manually enable debug logging by modifying the configuration in `RootView.swift`.
-
 ## TODOs
 
 - [ ] Fix diffing UI - improve visual diff presentation and user interaction
-- [ ] Improve MCP approval flow - enhance the permission dialog UX and add more context about what each MCP server does
+- [ ] Improve MCP approval flow - enhance the permission dialog UX
+- [ ] Add iOS/iPadOS support (the package structure now makes this possible!)
+- [ ] Create example apps demonstrating different integration patterns
 
 ## Acknowledgments
 
