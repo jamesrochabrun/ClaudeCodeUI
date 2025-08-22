@@ -19,10 +19,7 @@ public struct ClaudeCodeUIApp: App {
   public var body: some Scene {
     WindowGroup(id: "main") {
       RootView()
-        .toolbar(removing: .title)
-        .toolbarBackgroundVisibility(
-          .hidden, for: .windowToolbar
-        )
+        .modifier(ConditionalToolbarModifier())
         .environment(globalPreferences)
     }
     //  .windowResizability(.contentSize)
@@ -37,13 +34,8 @@ public struct ClaudeCodeUIApp: App {
     WindowGroup("Session", id: "session", for: String.self) { $sessionId in
       if let sessionId = sessionId {
         RootView(sessionId: sessionId)
-          .toolbar(removing: .title)
-          .containerBackground(
-            .thinMaterial, for: .window
-          )
-          .toolbarBackgroundVisibility(
-            .hidden, for: .windowToolbar
-          )
+          .modifier(ConditionalToolbarModifier())
+          .modifier(ConditionalBackgroundModifier())
           .environment(globalPreferences)
       }
     }
@@ -118,6 +110,30 @@ extension FocusedValues {
   var toggleSidebar: (() -> Void)? {
     get { self[ToggleSidebarKey.self] }
     set { self[ToggleSidebarKey.self] = newValue }
+  }
+}
+
+// Conditional modifiers for macOS version compatibility
+struct ConditionalToolbarModifier: ViewModifier {
+  func body(content: Content) -> some View {
+    if #available(macOS 15.0, *) {
+      content
+        .toolbar(removing: .title)
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+    } else {
+      content
+    }
+  }
+}
+
+struct ConditionalBackgroundModifier: ViewModifier {
+  func body(content: Content) -> some View {
+    if #available(macOS 15.0, *) {
+      content
+        .containerBackground(.thinMaterial, for: .window)
+    } else {
+      content
+    }
   }
 }
 

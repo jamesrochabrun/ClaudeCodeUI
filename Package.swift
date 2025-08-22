@@ -44,6 +44,9 @@ let package = Package(
         ),
         .target(
             name: "CCCustomPermissionServiceInterface",
+            dependencies: [
+                .product(name: "ClaudeCodeSDK", package: "ClaudeCodeSDK")
+            ],
             path: "Sources/CustomPermissionServiceInterface"
         ),
         .target(
