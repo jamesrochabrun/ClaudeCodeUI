@@ -1,5 +1,5 @@
 {
-  "originHash" : "186c0938eec2feee0c908a7f5fa20993f8812810fedfe2cc089c30aaf80c1d3f",
+  "originHash" : "e37a1597c89dd36f652c52c2781b4782aa78e8f78aa1eeec5fdfb1e891b25b07",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -22,9 +22,10 @@
     {
       "identity" : "down",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/gsabran/Down",
+      "location" : "https://github.com/jamesrochabrun/Down",
       "state" : {
-        "revision" : "14309dd8781c7613063344727454ffbbebc8e8bd"
+        "branch" : "develop",
+        "revision" : "2728a467d754e42e18ae21e5bcbbed3cf732f17c"
       }
     },
     {
