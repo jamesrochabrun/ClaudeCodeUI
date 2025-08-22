@@ -17,7 +17,7 @@ import CCCustomPermissionService
 
 struct ChatScreen: View {
   
-  init(viewModel: ChatViewModel, contextManager: ContextManager, xcodeObservationViewModel: XcodeObservationViewModel, permissionsService: PermissionsService, terminalService: TerminalService, customPermissionService: CustomPermissionService, columnVisibility: Binding<NavigationSplitViewVisibility>) {
+  init(viewModel: ChatViewModel, contextManager: ContextManager, xcodeObservationViewModel: XcodeObservationViewModel, permissionsService: PermissionsService, terminalService: TerminalService, customPermissionService: CustomPermissionService, columnVisibility: Binding<NavigationSplitViewVisibility>, uiConfiguration: UIConfiguration = .default) {
     self.viewModel = viewModel
     self.contextManager = contextManager
     self.xcodeObservationViewModel = xcodeObservationViewModel
@@ -25,6 +25,7 @@ struct ChatScreen: View {
     self.terminalService = terminalService
     self.customPermissionService = customPermissionService
     self._columnVisibility = columnVisibility
+    self.uiConfiguration = uiConfiguration
     // Cast to DefaultCustomPermissionService for @ObservedObject support
     self.observedPermissionService = customPermissionService as! DefaultCustomPermissionService
   }
@@ -35,6 +36,7 @@ struct ChatScreen: View {
   let permissionsService: PermissionsService
   let terminalService: TerminalService
   let customPermissionService: CustomPermissionService
+  let uiConfiguration: UIConfiguration
   @ObservedObject private var observedPermissionService: DefaultCustomPermissionService
   @Binding var columnVisibility: NavigationSplitViewVisibility
   @State private var messageText: String = ""
@@ -114,7 +116,7 @@ struct ChatScreen: View {
         }
       }
     )
-    .navigationTitle("Claude Code Chat")
+    .navigationTitle("\(uiConfiguration.appName) Chat")
     .toolbar {
       ToolbarItem(placement: .automatic) {
         HStack(spacing: 8) {
@@ -137,12 +139,27 @@ struct ChatScreen: View {
               .font(.title2)
           }
           .disabled(viewModel.messages.isEmpty)
+          
+          // Show settings button if configured
+          if uiConfiguration.showSettingsInNavBar {
+            Button(action: {
+              showingSettings = true
+            }) {
+              Image(systemName: "gearshape")
+                .font(.title2)
+            }
+            .help("Global Settings")
+          }
         }
       }
     }
     .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
     .sheet(isPresented: $showingSettings) {
-      SettingsView(chatViewModel: viewModel, xcodeObservationViewModel: xcodeObservationViewModel, permissionsService: permissionsService)
+      if uiConfiguration.showSettingsInNavBar {
+        GlobalSettingsView()
+      } else {
+        SettingsView(chatViewModel: viewModel, xcodeObservationViewModel: xcodeObservationViewModel, permissionsService: permissionsService)
+      }
     }
     .sheet(item: $artifact) { artifact in
       ArtifactView(artifact: artifact)

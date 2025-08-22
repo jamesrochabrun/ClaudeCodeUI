@@ -16,9 +16,9 @@ public struct RootView: View {
   @State private var viewModel: ChatViewModel?
   @State private var columnVisibility: NavigationSplitViewVisibility = .all
   private let sessionId: String?
-  private let configuration: ClaudeCodeConfiguration
+  private let configuration: ClaudeCodeAppConfiguration
   
-  public init(sessionId: String? = nil, configuration: ClaudeCodeConfiguration = .default) {
+  public init(sessionId: String? = nil, configuration: ClaudeCodeAppConfiguration = .default) {
     self.sessionId = sessionId
     self.configuration = configuration
   }
@@ -38,7 +38,8 @@ public struct RootView: View {
           permissionsService: container.permissionsService,
           terminalService: container.terminalService,
           customPermissionService: container.customPermissionService,
-          columnVisibility: $columnVisibility
+          columnVisibility: $columnVisibility,
+          uiConfiguration: configuration.uiConfiguration
         )
         .environment(container.xcodeObservationViewModel)
       }
@@ -76,7 +77,7 @@ public struct RootView: View {
       container.settingsStorage.clearProjectPath()
     }
     
-    var config = configuration
+    var config = configuration.claudeCodeConfiguration
     config.workingDirectory = workingDirectory
     
     // Add paths to support claude installed via npm/nvm or standalone

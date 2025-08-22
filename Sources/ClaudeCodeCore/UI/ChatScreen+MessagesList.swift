@@ -95,6 +95,7 @@ extension ChatScreen {
         WelcomeRow(
           path: effectiveWorkingDirectory,
           showSettingsButton: shouldShowSettingsButton,
+          appName: uiConfiguration.appName,
           onSettingsTapped: {
             showingSettings = true
           }
