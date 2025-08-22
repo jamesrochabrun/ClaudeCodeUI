@@ -73,6 +73,7 @@ let package = Package(
             name: "CCCustomPermissionService",
             dependencies: [
                 "CCCustomPermissionServiceInterface",
+                .product(name: "ClaudeCodeSDK", package: "ClaudeCodeSDK"),
                 .product(name: "SwiftAnthropic", package: "SwiftAnthropic"),
                 .product(name: "MCP", package: "swift-sdk"),
             ],
