@@ -1,5 +1,5 @@
 import SwiftUI
-import TerminalServiceInterface
+import CCTerminalServiceInterface
 
 struct EditToolDiffView: View {
   let oldString: String

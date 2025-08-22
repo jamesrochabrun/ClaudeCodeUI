@@ -7,7 +7,7 @@
 
 import Foundation
 import SwiftUI
-import XcodeObserverServiceInterface
+import CCXcodeObserverServiceInterface
 
 // MARK: - XcodeObserverViewModel
 

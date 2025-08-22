@@ -7,7 +7,7 @@
 
 import Foundation
 import Observation
-import CustomPermissionServiceInterface
+import CCCustomPermissionServiceInterface
 
 @Observable
 @MainActor

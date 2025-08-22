@@ -8,8 +8,8 @@
 import ClaudeCodeSDK
 import Foundation
 import os.log
-import CustomPermissionService
-import CustomPermissionServiceInterface
+import CCCustomPermissionService
+import CCCustomPermissionServiceInterface
 
 @Observable
 @MainActor

@@ -1,6 +1,6 @@
 import Combine
 import LoggingServiceInterface
-import TerminalServiceInterface
+import CCTerminalServiceInterface
 import XCTest
 @testable import PermissionsService
 

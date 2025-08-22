@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 import Down
-import TerminalServiceInterface
+import CCTerminalServiceInterface
 
 struct ChatMessageView: View {
   

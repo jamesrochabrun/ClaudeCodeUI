@@ -1,5 +1,5 @@
-import AccessibilityFoundation
-import AccessibilityServiceInterface
+import CCAccessibilityFoundation
+import CCAccessibilityServiceInterface
 @preconcurrency import AppKit
 import os
 

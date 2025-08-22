@@ -1,5 +1,5 @@
 import Foundation
-import TerminalServiceInterface
+import CCTerminalServiceInterface
 
 // MARK: - DefaultTerminalService
 

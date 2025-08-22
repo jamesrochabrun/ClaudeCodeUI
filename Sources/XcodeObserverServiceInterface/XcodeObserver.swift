@@ -1,4 +1,4 @@
-import AccessibilityFoundation
+import CCAccessibilityFoundation
 import Combine
 
 // MARK: - XcodeObserver

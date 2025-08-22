@@ -7,17 +7,17 @@
 
 import Foundation
 import SwiftUI
-import XcodeObserverService
-import XcodeObserverServiceInterface
-import PermissionsService
-import PermissionsServiceInterface
-import AccessibilityService
-import AccessibilityServiceInterface
-import TerminalService
-import TerminalServiceInterface
+import CCXcodeObserverService
+import CCXcodeObserverServiceInterface
+import CCPermissionsService
+import CCPermissionsServiceInterface
+import CCAccessibilityService
+import CCAccessibilityServiceInterface
+import CCTerminalService
+import CCTerminalServiceInterface
 import ApplicationServices
-import CustomPermissionService
-import CustomPermissionServiceInterface
+import CCCustomPermissionService
+import CCCustomPermissionServiceInterface
 import ClaudeCodeSDK
 
 @MainActor

@@ -7,7 +7,7 @@
 
 import SwiftUI
 import ClaudeCodeSDK
-import PermissionsServiceInterface
+import CCPermissionsServiceInterface
 import UniformTypeIdentifiers
 
 struct ChatInputView: View {

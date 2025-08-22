@@ -1,7 +1,7 @@
 import Foundation
 import Combine
-import CustomPermissionService
-import CustomPermissionServiceInterface
+import CCCustomPermissionService
+import CCCustomPermissionServiceInterface
 import os.log
 
 /// Bridge service that handles IPC communication between MCP server and main ClaudeCodeUI app

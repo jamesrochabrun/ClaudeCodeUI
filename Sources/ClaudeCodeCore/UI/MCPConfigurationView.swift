@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import CustomPermissionServiceInterface
+import CCCustomPermissionServiceInterface
 
 struct MCPConfigurationView: View {
   // MARK: - Properties

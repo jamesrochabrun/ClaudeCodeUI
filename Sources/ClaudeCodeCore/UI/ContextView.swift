@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import XcodeObserverServiceInterface
+import CCXcodeObserverServiceInterface
 import Combine
 
 struct ContextView: View {

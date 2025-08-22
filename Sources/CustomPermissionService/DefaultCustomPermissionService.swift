@@ -1,6 +1,6 @@
 import ClaudeCodeSDK
 import Combine
-import CustomPermissionServiceInterface
+import CCCustomPermissionServiceInterface
 import Foundation
 import SwiftUI
 

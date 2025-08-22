@@ -1,6 +1,6 @@
 import SwiftUI
 import Combine
-import CustomPermissionServiceInterface
+import CCCustomPermissionServiceInterface
 
 /// SwiftUI view for displaying permission approval prompts
 public struct ApprovalPromptView: View {

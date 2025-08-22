@@ -1,6 +1,6 @@
-import AccessibilityFoundation
+import CCAccessibilityFoundation
 import AppKit
-import XcodeObserverServiceInterface
+import CCXcodeObserverServiceInterface
 
 // MARK: - SourceEditorObserver
 

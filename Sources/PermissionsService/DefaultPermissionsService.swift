@@ -1,7 +1,7 @@
 @preconcurrency import ApplicationServices
 import Combine
-import PermissionsServiceInterface
-import TerminalServiceInterface
+import CCPermissionsServiceInterface
+import CCTerminalServiceInterface
 
 // MARK: - DefaultPermissionsService
 

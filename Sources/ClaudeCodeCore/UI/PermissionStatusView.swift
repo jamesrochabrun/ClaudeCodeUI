@@ -5,7 +5,7 @@
 //  Custom permission status monitoring component
 //
 
-import CustomPermissionServiceInterface
+import CCCustomPermissionServiceInterface
 import SwiftUI
 
 // MARK: - PermissionStatusView

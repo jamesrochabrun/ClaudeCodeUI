@@ -1,9 +1,9 @@
-import AccessibilityFoundation
-import AccessibilityServiceInterface
+import CCAccessibilityFoundation
+import CCAccessibilityServiceInterface
 import AppKit
 import Combine
 import Foundation
-import XcodeObserverServiceInterface
+import CCXcodeObserverServiceInterface
 
 /// This class observes a single window that is a workspace.
 final class WorkspaceWindowObserver: WindowObserver {

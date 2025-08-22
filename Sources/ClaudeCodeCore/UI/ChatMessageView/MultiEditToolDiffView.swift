@@ -1,5 +1,5 @@
 import SwiftUI
-import TerminalServiceInterface
+import CCTerminalServiceInterface
 
 struct MultiEditToolDiffView: View {
   let edits: [[String: String]]

@@ -8,7 +8,7 @@
 import SwiftUI
 import AppKit
 import ClaudeCodeSDK
-import PermissionsServiceInterface
+import CCPermissionsServiceInterface
 
 struct SettingsView: View {
   @Environment(\.dismiss) private var dismiss

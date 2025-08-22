@@ -7,7 +7,7 @@
 
 import SwiftUI
 import ClaudeCodeSDK
-import CustomPermissionService
+import CCCustomPermissionService
 
 struct SessionsSidebarView: View {
   @State var viewModel: ChatViewModel

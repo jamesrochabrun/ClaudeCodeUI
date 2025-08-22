@@ -7,7 +7,7 @@
 
 import Foundation
 import SwiftUI
-import TerminalServiceInterface
+import CCTerminalServiceInterface
 import os.log
 
 // MARK: - Git Diff Generation

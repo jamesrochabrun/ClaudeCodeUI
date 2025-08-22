@@ -1,4 +1,4 @@
-import CustomPermissionServiceInterface
+import CCCustomPermissionServiceInterface
 import SwiftUI
 
 // MARK: - ApprovalToast

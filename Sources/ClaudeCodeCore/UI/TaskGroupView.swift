@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import TerminalServiceInterface
+import CCTerminalServiceInterface
 
 /// View that displays a Task tool with all its nested tool executions in a collapsible format
 struct TaskGroupView: View {

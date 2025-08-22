@@ -35,41 +35,41 @@ let package = Package(
     targets: [
         // Foundation modules (no dependencies)
         .target(
-            name: "AccessibilityFoundation",
+            name: "CCAccessibilityFoundation",
             path: "Sources/AccessibilityFoundation"
         ),
         .target(
-            name: "AccessibilityServiceInterface",
+            name: "CCAccessibilityServiceInterface",
             path: "Sources/AccessibilityServiceInterface"
         ),
         .target(
-            name: "CustomPermissionServiceInterface",
+            name: "CCCustomPermissionServiceInterface",
             path: "Sources/CustomPermissionServiceInterface"
         ),
         .target(
-            name: "PermissionsServiceInterface",
+            name: "CCPermissionsServiceInterface",
             path: "Sources/PermissionsServiceInterface"
         ),
         .target(
-            name: "TerminalServiceInterface",
+            name: "CCTerminalServiceInterface",
             path: "Sources/TerminalServiceInterface"
         ),
         
         // Modules with single dependencies
         .target(
-            name: "XcodeObserverServiceInterface",
-            dependencies: ["AccessibilityFoundation"],
+            name: "CCXcodeObserverServiceInterface",
+            dependencies: ["CCAccessibilityFoundation"],
             path: "Sources/XcodeObserverServiceInterface"
         ),
         .target(
-            name: "TerminalService",
-            dependencies: ["TerminalServiceInterface"],
+            name: "CCTerminalService",
+            dependencies: ["CCTerminalServiceInterface"],
             path: "Sources/TerminalService"
         ),
         .target(
-            name: "CustomPermissionService",
+            name: "CCCustomPermissionService",
             dependencies: [
-                "CustomPermissionServiceInterface",
+                "CCCustomPermissionServiceInterface",
                 .product(name: "SwiftAnthropic", package: "SwiftAnthropic"),
                 .product(name: "MCP", package: "swift-sdk"),
             ],
@@ -78,28 +78,28 @@ let package = Package(
         
         // Modules with multiple dependencies
         .target(
-            name: "AccessibilityService",
+            name: "CCAccessibilityService",
             dependencies: [
-                "AccessibilityFoundation",
-                "AccessibilityServiceInterface"
+                "CCAccessibilityFoundation",
+                "CCAccessibilityServiceInterface"
             ],
             path: "Sources/AccessibilityService"
         ),
         .target(
-            name: "PermissionsService",
+            name: "CCPermissionsService",
             dependencies: [
-                "PermissionsServiceInterface",
-                "TerminalServiceInterface"
+                "CCPermissionsServiceInterface",
+                "CCTerminalServiceInterface"
             ],
             path: "Sources/PermissionsService"
         ),
         .target(
-            name: "XcodeObserverService",
+            name: "CCXcodeObserverService",
             dependencies: [
-                "AccessibilityFoundation",
-                "AccessibilityServiceInterface",
-                "PermissionsServiceInterface",
-                "XcodeObserverServiceInterface"
+                "CCAccessibilityFoundation",
+                "CCAccessibilityServiceInterface",
+                "CCPermissionsServiceInterface",
+                "CCXcodeObserverServiceInterface"
             ],
             path: "Sources/XcodeObserverService",
             swiftSettings: [
@@ -119,17 +119,17 @@ let package = Package(
                 .product(name: "MCP", package: "swift-sdk"),
                 
                 // Internal module dependencies
-                "AccessibilityFoundation",
-                "AccessibilityService",
-                "AccessibilityServiceInterface",
-                "CustomPermissionService",
-                "CustomPermissionServiceInterface",
-                "PermissionsService",
-                "PermissionsServiceInterface",
-                "TerminalService",
-                "TerminalServiceInterface",
-                "XcodeObserverService",
-                "XcodeObserverServiceInterface",
+                "CCAccessibilityFoundation",
+                "CCAccessibilityService",
+                "CCAccessibilityServiceInterface",
+                "CCCustomPermissionService",
+                "CCCustomPermissionServiceInterface",
+                "CCPermissionsService",
+                "CCPermissionsServiceInterface",
+                "CCTerminalService",
+                "CCTerminalServiceInterface",
+                "CCXcodeObserverService",
+                "CCXcodeObserverServiceInterface",
             ],
             path: "Sources/ClaudeCodeCore",
             exclude: [
@@ -160,56 +160,56 @@ let package = Package(
             path: "Tests/ClaudeCodeCoreTests"
         ),
         .testTarget(
-            name: "AccessibilityFoundationTests",
-            dependencies: ["AccessibilityFoundation"],
+            name: "CCAccessibilityFoundationTests",
+            dependencies: ["CCAccessibilityFoundation"],
             path: "Tests/AccessibilityFoundationTests"
         ),
         .testTarget(
-            name: "AccessibilityServiceTests",
-            dependencies: ["AccessibilityService"],
+            name: "CCAccessibilityServiceTests",
+            dependencies: ["CCAccessibilityService"],
             path: "Tests/AccessibilityServiceTests"
         ),
         .testTarget(
-            name: "AccessibilityServiceInterfaceTests",
-            dependencies: ["AccessibilityServiceInterface"],
+            name: "CCAccessibilityServiceInterfaceTests",
+            dependencies: ["CCAccessibilityServiceInterface"],
             path: "Tests/AccessibilityServiceInterfaceTests"
         ),
         .testTarget(
-            name: "CustomPermissionServiceTests",
-            dependencies: ["CustomPermissionService"],
+            name: "CCCustomPermissionServiceTests",
+            dependencies: ["CCCustomPermissionService"],
             path: "Tests/CustomPermissionServiceTests"
         ),
         .testTarget(
-            name: "CustomPermissionServiceInterfaceTests",
-            dependencies: ["CustomPermissionServiceInterface"],
+            name: "CCCustomPermissionServiceInterfaceTests",
+            dependencies: ["CCCustomPermissionServiceInterface"],
             path: "Tests/CustomPermissionServiceInterfaceTests"
         ),
         .testTarget(
-            name: "PermissionsServiceTests",
-            dependencies: ["PermissionsService"],
+            name: "CCPermissionsServiceTests",
+            dependencies: ["CCPermissionsService"],
             path: "Tests/PermissionsServiceTests"
         ),
         .testTarget(
-            name: "PermissionsServiceInterfaceTests",
-            dependencies: ["PermissionsServiceInterface"],
+            name: "CCPermissionsServiceInterfaceTests",
+            dependencies: ["CCPermissionsServiceInterface"],
             path: "Tests/PermissionsServiceInterfaceTests"
         ),
         .testTarget(
-            name: "TerminalServiceTests",
-            dependencies: ["TerminalService"],
+            name: "CCTerminalServiceTests",
+            dependencies: ["CCTerminalService"],
             path: "Tests/TerminalServiceTests",
             resources: [
                 .process("simple_output.sh")
             ]
         ),
         .testTarget(
-            name: "TerminalServiceInterfaceTests",
-            dependencies: ["TerminalServiceInterface"],
+            name: "CCTerminalServiceInterfaceTests",
+            dependencies: ["CCTerminalServiceInterface"],
             path: "Tests/TerminalServiceInterfaceTests"
         ),
         .testTarget(
-            name: "XcodeObserverServiceTests",
-            dependencies: ["XcodeObserverService"],
+            name: "CCXcodeObserverServiceTests",
+            dependencies: ["CCXcodeObserverService"],
             path: "Tests/XcodeObserverServiceTests"
         ),
     ]

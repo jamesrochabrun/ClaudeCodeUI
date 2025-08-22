@@ -9,11 +9,11 @@ import ClaudeCodeSDK
 import Foundation
 import SwiftUI
 import AppKit
-import PermissionsServiceInterface
-import TerminalServiceInterface
+import CCPermissionsServiceInterface
+import CCTerminalServiceInterface
 import KeyboardShortcuts
-import CustomPermissionServiceInterface
-import CustomPermissionService
+import CCCustomPermissionServiceInterface
+import CCCustomPermissionService
 
 struct ChatScreen: View {
   

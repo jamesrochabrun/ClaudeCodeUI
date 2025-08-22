@@ -1,5 +1,5 @@
 import SwiftUI
-import TerminalServiceInterface
+import CCTerminalServiceInterface
 
 /// A view that renders the content of a chat message with appropriate formatting based on the message type.
 ///

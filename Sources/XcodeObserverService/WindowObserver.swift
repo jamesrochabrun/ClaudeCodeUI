@@ -1,8 +1,8 @@
-import AccessibilityFoundation
+import CCAccessibilityFoundation
 import AppKit
 import Combine
 import Foundation
-import XcodeObserverServiceInterface
+import CCXcodeObserverServiceInterface
 
 // MARK: - WindowObserver
 

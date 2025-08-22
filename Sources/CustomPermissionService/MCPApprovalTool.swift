@@ -1,6 +1,6 @@
 import Foundation
 import ClaudeCodeSDK
-import CustomPermissionServiceInterface
+import CCCustomPermissionServiceInterface
 
 // Extension to get machine architecture
 extension ProcessInfo {

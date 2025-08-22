@@ -1,8 +1,8 @@
-import AccessibilityFoundation
-import AccessibilityServiceInterface
+import CCAccessibilityFoundation
+import CCAccessibilityServiceInterface
 import AppKit
 import Combine
-import XcodeObserverServiceInterface
+import CCXcodeObserverServiceInterface
 
 // MARK: - InstanceObserver
 

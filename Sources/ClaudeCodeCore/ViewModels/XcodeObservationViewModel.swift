@@ -8,7 +8,7 @@
 import Foundation
 import SwiftUI
 import Combine
-import XcodeObserverServiceInterface
+import CCXcodeObserverServiceInterface
 import AppKit
 import ApplicationServices
 
