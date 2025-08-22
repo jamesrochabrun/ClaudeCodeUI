@@ -17,6 +17,11 @@ import CCCustomPermissionService
 
 struct ChatScreen: View {
   
+  enum SettingsType {
+    case session
+    case global
+  }
+  
   init(viewModel: ChatViewModel, contextManager: ContextManager, xcodeObservationViewModel: XcodeObservationViewModel, permissionsService: PermissionsService, terminalService: TerminalService, customPermissionService: CustomPermissionService, columnVisibility: Binding<NavigationSplitViewVisibility>, uiConfiguration: UIConfiguration = .default) {
     self.viewModel = viewModel
     self.contextManager = contextManager
@@ -41,6 +46,7 @@ struct ChatScreen: View {
   @Binding var columnVisibility: NavigationSplitViewVisibility
   @State private var messageText: String = ""
   @State var showingSettings = false
+  @State var settingsTypeToShow: SettingsType = .session
   @State private var keyboardManager = KeyboardShortcutManager()
   @State private var triggerTextEditorFocus = false
   @State var artifact: Artifact? = nil
@@ -116,7 +122,7 @@ struct ChatScreen: View {
         }
       }
     )
-    .navigationTitle("\(uiConfiguration.appName) Chat")
+    .navigationTitle(uiConfiguration.appName)
     .toolbar {
       ToolbarItem(placement: .automatic) {
         HStack(spacing: 8) {
@@ -143,6 +149,7 @@ struct ChatScreen: View {
           // Show settings button if configured
           if uiConfiguration.showSettingsInNavBar {
             Button(action: {
+              settingsTypeToShow = .global
               showingSettings = true
             }) {
               Image(systemName: "gearshape")
@@ -155,10 +162,11 @@ struct ChatScreen: View {
     }
     .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
     .sheet(isPresented: $showingSettings) {
-      if uiConfiguration.showSettingsInNavBar {
-        GlobalSettingsView()
-      } else {
+      switch settingsTypeToShow {
+      case .session:
         SettingsView(chatViewModel: viewModel, xcodeObservationViewModel: xcodeObservationViewModel, permissionsService: permissionsService)
+      case .global:
+        GlobalSettingsView()
       }
     }
     .sheet(item: $artifact) { artifact in

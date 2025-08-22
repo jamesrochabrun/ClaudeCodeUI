@@ -24,6 +24,9 @@ struct MyApp2: App {
   var body: some Scene {
     WindowGroup {
       // Configuration with app name and settings in nav bar
+      // Note: When showSettingsInNavBar is true, the gear icon in the navigation bar
+      // opens GlobalSettingsView. The "Select Working Directory" button always opens
+      // the session-specific SettingsView.
       RootView(configuration: ClaudeCodeAppConfiguration(
         appName: "My Custom IDE",
         showSettingsInNavBar: true

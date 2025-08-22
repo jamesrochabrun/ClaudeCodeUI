@@ -51,6 +51,13 @@ struct GlobalSettingsView: View {
     }
     .frame(width: Layout.windowWidth, height: Layout.windowHeight)
     .background(Color(NSColor.windowBackgroundColor))
+    .toolbar {
+      ToolbarItem(placement: .confirmationAction) {
+        Button("Done") {
+          dismiss()
+        }
+      }
+    }
     .sheet(isPresented: $showingToolsEditor) {
       toolsSelectionSheet
     }
