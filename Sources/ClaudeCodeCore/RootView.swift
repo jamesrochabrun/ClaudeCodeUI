@@ -17,10 +17,27 @@ public struct RootView: View {
   @State private var columnVisibility: NavigationSplitViewVisibility = .all
   private let sessionId: String?
   private let configuration: ClaudeCodeAppConfiguration
+  private let customDependencies: DependencyContainer?
   
   public init(sessionId: String? = nil, configuration: ClaudeCodeAppConfiguration = .default) {
     self.sessionId = sessionId
     self.configuration = configuration
+    self.customDependencies = nil
+  }
+  
+  /// Creates a new RootView with custom dependencies.
+  /// - Parameters:
+  ///   - sessionId: Optional session ID to restore
+  ///   - configuration: The app configuration to use
+  ///   - dependencies: Custom dependency container with injected services
+  public init(
+    sessionId: String? = nil,
+    configuration: ClaudeCodeAppConfiguration = .default,
+    dependencies: DependencyContainer
+  ) {
+    self.sessionId = sessionId
+    self.configuration = configuration
+    self.customDependencies = dependencies
   }
   
   public var body: some View {
@@ -56,7 +73,8 @@ public struct RootView: View {
   }
   
   private func setupViewModel() {
-    let container = DependencyContainer(globalPreferences: globalPreferences)
+    // Use custom dependencies if provided, otherwise create new container
+    let container = customDependencies ?? DependencyContainer(globalPreferences: globalPreferences)
     self.dependencyContainer = container
     
     // Set the current session for settings storage

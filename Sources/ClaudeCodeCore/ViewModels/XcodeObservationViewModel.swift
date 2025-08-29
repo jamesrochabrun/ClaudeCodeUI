@@ -15,7 +15,7 @@ import ApplicationServices
 /// Manages the XcodeObserver lifecycle and provides workspace state updates
 @Observable
 @MainActor
-final class XcodeObservationViewModel {
+public final class XcodeObservationViewModel {
   
   // MARK: - Observable Properties
   

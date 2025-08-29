@@ -16,6 +16,27 @@ public struct StoredSession: Codable, Identifiable, Sendable {
   /// Complete message history for this session
   public var messages: [ChatMessage]
   
+  /// Creates a new StoredSession instance.
+  /// - Parameters:
+  ///   - id: Unique identifier for the session
+  ///   - createdAt: When the session was created
+  ///   - firstUserMessage: The first message from the user in this session
+  ///   - lastAccessedAt: When the session was last accessed
+  ///   - messages: Complete message history for this session
+  public init(
+    id: String,
+    createdAt: Date,
+    firstUserMessage: String,
+    lastAccessedAt: Date,
+    messages: [ChatMessage] = []
+  ) {
+    self.id = id
+    self.createdAt = createdAt
+    self.firstUserMessage = firstUserMessage
+    self.lastAccessedAt = lastAccessedAt
+    self.messages = messages
+  }
+  
   /// Computed title based on first user message
   public var title: String {
     let trimmed = firstUserMessage.trimmingCharacters(in: .whitespacesAndNewlines)

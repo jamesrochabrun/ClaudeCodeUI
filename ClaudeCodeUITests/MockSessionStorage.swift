@@ -8,6 +8,7 @@
 import Foundation
 import ClaudeCodeSDK
 @testable import ClaudeCodeUI
+@testable import ClaudeCodeCore
 
 // MARK: - Mock Session Storage
 
@@ -24,7 +25,8 @@ class MockSessionStorage: SessionStorageProtocol {
       id: id,
       createdAt: Date(),
       firstUserMessage: firstMessage,
-      lastAccessedAt: Date()
+      lastAccessedAt: Date(),
+      messages: []
     )
     sessions.append(session)
   }
@@ -56,5 +58,30 @@ class MockSessionStorage: SessionStorageProtocol {
   func deleteAllSessions() async throws {
     if let error = errorToThrow { throw error }
     sessions.removeAll()
+  }
+  
+  func updateSessionMessages(id: String, messages: [ChatMessage]) async throws {
+    if let error = errorToThrow { throw error }
+    if let index = sessions.firstIndex(where: { $0.id == id }) {
+      var session = sessions[index]
+      session.messages = messages
+      session.lastAccessedAt = Date()
+      sessions[index] = session
+    }
+  }
+  
+  func updateSessionId(oldId: String, newId: String) async throws {
+    if let error = errorToThrow { throw error }
+    if let index = sessions.firstIndex(where: { $0.id == oldId }) {
+      let session = sessions[index]
+      let newSession = StoredSession(
+        id: newId,
+        createdAt: session.createdAt,
+        firstUserMessage: session.firstUserMessage,
+        lastAccessedAt: Date(),
+        messages: session.messages
+      )
+      sessions[index] = newSession
+    }
   }
 }

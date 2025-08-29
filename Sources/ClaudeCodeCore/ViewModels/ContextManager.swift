@@ -11,7 +11,7 @@ import SwiftUI
 /// Manages the code context that will be included in chat messages
 @Observable
 @MainActor
-final class ContextManager {
+public final class ContextManager {
   
   // MARK: - Observable Properties
   
