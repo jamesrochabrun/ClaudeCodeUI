@@ -86,7 +86,15 @@ public final class ChatViewModel {
   
   // MARK: - Initialization
   
-  init(
+  /// Creates a new ChatViewModel instance.
+  /// - Parameters:
+  ///   - claudeClient: The Claude client for API communication
+  ///   - sessionStorage: Storage protocol for managing sessions
+  ///   - settingsStorage: Storage for application settings
+  ///   - globalPreferences: Global preferences storage
+  ///   - customPermissionService: Service for custom permission management
+  ///   - onSessionChange: Optional callback when session changes
+  public init(
     claudeClient: ClaudeCode,
     sessionStorage: SessionStorageProtocol,
     settingsStorage: SettingsStorage,

@@ -48,6 +48,119 @@ This document outlines the custom storage integration capabilities added to Clau
 </changes>
 </api-change>
 
+<api-change>
+<component>ChatScreen</component>
+<status>Modified</status>
+<visibility>internal → public</visibility>
+<changes>
+- Made struct public for direct usage
+- Public initializer for custom UI implementations
+- All required parameters exposed
+- Enables bypassing RootView for advanced use cases
+</changes>
+</api-change>
+
+<api-change>
+<component>ChatViewModel</component>
+<status>Modified</status>
+<changes>
+- Added public initializer
+- Already public class
+- Enables direct instantiation for custom implementations
+</changes>
+</api-change>
+
+<api-change>
+<component>SettingsStorageManager</component>
+<status>Modified</status>
+<visibility>internal → public</visibility>
+<changes>
+- Made class public
+- Added public initializer
+- All protocol methods now public
+- Default implementation of SettingsStorage protocol
+</changes>
+</api-change>
+
+## Direct ChatScreen Usage
+
+For advanced use cases where you need more control over the UI layout, you can use `ChatScreen` directly without `RootView`:
+
+<example>
+<title>Using ChatScreen Directly</title>
+<code>
+import SwiftUI
+import ClaudeCodeCore
+import ClaudeCodeSDK
+
+struct CustomChatView: View {
+    @State private var dependencies: DependencyContainer?
+    @State private var chatViewModel: ChatViewModel?
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+    
+    var body: some View {
+        if let dependencies = dependencies,
+           let chatViewModel = chatViewModel {
+            // Custom layout with ChatScreen
+            NavigationSplitView(columnVisibility: $columnVisibility) {
+                // Your custom sidebar
+                CustomSidebarView()
+            } detail: {
+                // Use ChatScreen directly
+                ChatScreen(
+                    viewModel: chatViewModel,
+                    contextManager: dependencies.contextManager,
+                    xcodeObservationViewModel: dependencies.xcodeObservationViewModel,
+                    permissionsService: dependencies.permissionsService,
+                    terminalService: dependencies.terminalService,
+                    customPermissionService: dependencies.customPermissionService,
+                    columnVisibility: $columnVisibility,
+                    uiConfiguration: .default
+                )
+            }
+        } else {
+            ProgressView()
+                .onAppear { setupDependencies() }
+        }
+    }
+    
+    @MainActor
+    private func setupDependencies() {
+        // Create dependencies
+        let globalPreferences = GlobalPreferencesStorage()
+        let customStorage = MyCustomSessionStorage() // Your custom storage
+        
+        let container = DependencyContainer(
+            globalPreferences: globalPreferences,
+            customSessionStorage: customStorage
+        )
+        
+        // Create Claude client
+        let config = ClaudeCodeConfiguration(
+            apiKey: "your-api-key",
+            workingDirectory: "/path/to/project"
+        )
+        let claudeClient = ClaudeCodeClient(configuration: config)
+        
+        // Create ChatViewModel
+        let viewModel = ChatViewModel(
+            claudeClient: claudeClient,
+            sessionStorage: container.sessionStorage,
+            settingsStorage: container.settingsStorage,
+            globalPreferences: container.globalPreferences,
+            customPermissionService: container.customPermissionService,
+            onSessionChange: { sessionId in
+                container.setCurrentSession(sessionId)
+            }
+        )
+        
+        self.dependencies = container
+        self.chatViewModel = viewModel
+    }
+}
+</code>
+</example>
+
 ## Integration Guide
 
 ### Step 1: Implement SessionStorageProtocol

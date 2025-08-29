@@ -15,14 +15,26 @@ import KeyboardShortcuts
 import CCCustomPermissionServiceInterface
 import CCCustomPermissionService
 
-struct ChatScreen: View {
+/// Main chat interface view that displays the conversation and input controls.
+/// This view can be used directly for custom UI implementations without requiring RootView.
+public struct ChatScreen: View {
   
-  enum SettingsType {
+  public enum SettingsType {
     case session
     case global
   }
   
-  init(viewModel: ChatViewModel, contextManager: ContextManager, xcodeObservationViewModel: XcodeObservationViewModel, permissionsService: PermissionsService, terminalService: TerminalService, customPermissionService: CustomPermissionService, columnVisibility: Binding<NavigationSplitViewVisibility>, uiConfiguration: UIConfiguration = .default) {
+  /// Creates a new ChatScreen instance.
+  /// - Parameters:
+  ///   - viewModel: The chat view model managing conversation state
+  ///   - contextManager: Manages context information from various sources
+  ///   - xcodeObservationViewModel: View model for Xcode observation data
+  ///   - permissionsService: Service managing app permissions
+  ///   - terminalService: Service for terminal operations
+  ///   - customPermissionService: Service for custom permission management
+  ///   - columnVisibility: Binding to control navigation split view visibility
+  ///   - uiConfiguration: UI configuration settings
+  public init(viewModel: ChatViewModel, contextManager: ContextManager, xcodeObservationViewModel: XcodeObservationViewModel, permissionsService: PermissionsService, terminalService: TerminalService, customPermissionService: CustomPermissionService, columnVisibility: Binding<NavigationSplitViewVisibility>, uiConfiguration: UIConfiguration = .default) {
     self.viewModel = viewModel
     self.contextManager = contextManager
     self.xcodeObservationViewModel = xcodeObservationViewModel
@@ -52,7 +64,7 @@ struct ChatScreen: View {
   @State var artifact: Artifact? = nil
   @State private var isCopied = false
   
-  var body: some View {
+  public var body: some View {
     VStack {
       // Always show the messages list (WelcomeRow will handle empty state)
       messagesListView
