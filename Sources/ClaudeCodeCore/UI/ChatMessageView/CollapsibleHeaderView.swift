@@ -116,9 +116,9 @@ struct CollapsibleHeaderView: View {
   private var statusColor: SwiftUI.Color {
     switch messageType {
     case .toolUse, .thinking, .webSearch:
-      return .bookCloth
+      return .brandPrimary
     case .toolResult:
-      return .manilla
+      return .brandTertiary
     case .toolError:
       return .red
     default:

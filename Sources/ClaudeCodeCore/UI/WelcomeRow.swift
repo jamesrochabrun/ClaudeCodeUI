@@ -31,7 +31,7 @@ struct WelcomeRow: View {
   var body: some View {
     HStack(alignment: .firstTextBaseline, spacing: 6) {
       Text("✻")
-        .foregroundColor(.bookCloth)
+        .foregroundColor(.brandPrimary)
       VStack(alignment: .leading, spacing: 16) {
         Text("Welcome to **\(appName)!**")
           .font(.system(.body, design: .monospaced))
@@ -50,10 +50,10 @@ struct WelcomeRow: View {
                 Text("Select Working Directory")
                   .font(.system(.body, design: .monospaced))
               }
-              .foregroundColor(.bookCloth)
+              .foregroundColor(.brandPrimary)
               .padding(.horizontal, 12)
               .padding(.vertical, 6)
-              .background(Color.bookCloth.opacity(0.1))
+              .background(Color.brandPrimary.opacity(0.1))
               .cornerRadius(6)
             }
             .buttonStyle(.plain)
@@ -80,7 +80,7 @@ struct WelcomeRow: View {
     .padding(12)
     .overlay(
       RoundedRectangle(cornerRadius: 4)
-        .stroke(Color.bookCloth, lineWidth: 1)
+        .stroke(Color.brandPrimary, lineWidth: 1)
     )
     .padding(12)
   }

@@ -371,6 +371,36 @@ public final class ChatViewModel {
     await performSessionResumption(id: id, initialPrompt: initialPrompt, assistantId: assistantId)
   }
   
+  /// Injects a session with messages from an external source (e.g., database)
+  /// This is designed for apps that manage their own message storage
+  /// - Parameters:
+  ///   - sessionId: The session ID to use for Claude CLI
+  ///   - messages: The chat history to display in the UI
+  ///   - workingDirectory: Optional working directory for this session
+  /// - Note: The messages are displayed in UI, but Claude CLI won't have the context
+  ///         unless it already knows about this sessionId
+  public func injectSession(sessionId: String, messages: [ChatMessage], workingDirectory: String? = nil) {
+    // Set up the session
+    sessionManager.selectSession(id: sessionId)
+    onSessionChange?(sessionId)
+    
+    // Set working directory if provided
+    if let dir = workingDirectory {
+      claudeClient.configuration.workingDirectory = dir
+      projectPath = dir
+      settingsStorage.setProjectPath(dir)
+    }
+    
+    // Load the messages into the UI
+    messageStore.loadMessages(messages)
+    
+    // Mark as active session
+    hasSessionStarted = true
+    error = nil
+    
+    logger.info("Injected session '\(sessionId)' with \(messages.count) messages")
+  }
+  
   /// Deletes a session
   public func deleteSession(id: String) async {
     // If deleting the current session, clear the chat interface and working directory

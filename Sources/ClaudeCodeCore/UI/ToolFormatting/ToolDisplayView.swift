@@ -268,9 +268,9 @@ struct ToolDisplayView: View {
     
     switch message.messageType {
     case .toolUse:
-      return .bookCloth
+      return .brandPrimary
     case .toolResult:
-      return .manilla
+      return .brandTertiary
     case .toolError:
       return .red
     default:

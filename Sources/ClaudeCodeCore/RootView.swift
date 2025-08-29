@@ -71,6 +71,11 @@ public struct RootView: View {
       workingDirectory = sessionPath
       // Also set it as the active path for this session
       container.settingsStorage.setProjectPath(sessionPath)
+    } else if let configuredDirectory = configuration.claudeCodeConfiguration.workingDirectory,
+              !configuredDirectory.isEmpty {
+      // Use the working directory from configuration if provided
+      workingDirectory = configuredDirectory
+      container.settingsStorage.setProjectPath(configuredDirectory)
     } else {
       // New session starts with empty working directory - user must manually select
       workingDirectory = ""

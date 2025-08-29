@@ -97,7 +97,7 @@ struct TaskGroupView: View {
         // Task icon
         Image(systemName: "play.circle")
           .font(.system(size: 14, weight: .medium))
-          .foregroundColor(.bookCloth)
+          .foregroundColor(.brandPrimary)
         
         // Task description with "Task: " prefix
         if let toolInputData = taskMessage.toolInputData,
@@ -122,18 +122,18 @@ struct TaskGroupView: View {
                 // Animated indicator for running tool
                 Image(systemName: "circle.fill")
                   .font(.system(size: 6))
-                  .foregroundColor(.bookCloth)
+                  .foregroundColor(.brandPrimary)
                   .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true), value: status.tool.id)
                 
                 Text("Running: \(status.tool.toolName ?? "Processing")")
                   .font(.system(size: fontSize - 1))
-                  .foregroundColor(.bookCloth)
+                  .foregroundColor(.brandPrimary)
                   .lineLimit(1)
               } else {
                 // Static indicator for completed tool
                 Image(systemName: "checkmark.circle.fill")
                   .font(.system(size: 10))
-                  .foregroundColor(.kraft)
+                  .foregroundColor(.brandSecondary)
                 
                 Text("Completed: \(status.tool.toolName ?? "Processing")")
                   .font(.system(size: fontSize - 1))
@@ -168,7 +168,7 @@ struct TaskGroupView: View {
             if let status = latestToolStatus, status.isExecuting {
               Text("- Currently: \(status.tool.toolName ?? "Processing")")
                 .font(.system(size: fontSize - 2))
-                .foregroundColor(.bookCloth)
+                .foregroundColor(.brandPrimary)
             }
           }
           .padding(.leading, 32)
@@ -234,7 +234,7 @@ struct CompactToolPairView: View {
              let tool = toolRegistry.tool(for: toolName) {
             Image(systemName: tool.icon)
               .font(.system(size: 14))
-              .foregroundColor(.bookCloth)
+              .foregroundColor(.brandPrimary)
           }
           
           // Tool name and parameters
@@ -259,7 +259,7 @@ struct CompactToolPairView: View {
               HStack(spacing: 4) {
                 Image(systemName: result.isError ? "xmark.circle.fill" : "arrow.turn.down.right")
                   .font(.system(size: 10))
-                  .foregroundColor(result.isError ? .warmCoral : .kraft)
+                  .foregroundColor(result.isError ? .warmCoral : .brandSecondary)
                 
                 Text(truncateResponse(result.content))
                   .font(.system(size: fontSize - 1))
@@ -271,7 +271,7 @@ struct CompactToolPairView: View {
               HStack(spacing: 4) {
                 Image(systemName: "checkmark.circle.fill")
                   .font(.system(size: 10))
-                  .foregroundColor(.kraft)
+                  .foregroundColor(.brandSecondary)
                 
                 Text("Result processed")
                   .font(.system(size: fontSize - 1))
@@ -285,7 +285,7 @@ struct CompactToolPairView: View {
           // Expand indicator
           Image(systemName: showDetail ? "chevron.up.circle" : "chevron.down.circle")
             .font(.system(size: 12))
-            .foregroundColor(.manilla)
+            .foregroundColor(.brandTertiary)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)

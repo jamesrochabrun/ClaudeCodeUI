@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct AppearanceView: View {
   // MARK: - Constants
@@ -57,6 +58,7 @@ struct AppearanceView: View {
   private var appearanceSection: some View {
     Section("Appearance") {
       colorSchemePicker
+      themePicker
       fontSizeControls
     }
   }
@@ -68,6 +70,88 @@ struct AppearanceView: View {
       }
     }
     .pickerStyle(.segmented)
+  }
+  
+  private var themePicker: some View {
+    VStack(alignment: .leading, spacing: Layout.sectionSpacing) {
+      Text("Theme")
+        .fontWeight(.medium)
+      
+      Picker("Theme", selection: $appearanceSettings.selectedTheme) {
+        ForEach(AppTheme.allCases) { theme in
+          Text(theme.displayName)
+            .tag(theme)
+        }
+      }
+      .pickerStyle(.segmented)
+      // Show the selected theme description below the segmented control
+      Text(appearanceSettings.selectedTheme.description)
+        .font(.caption)
+        .foregroundColor(.secondary)
+
+      // If custom theme is selected, show pickers for custom colors
+      if appearanceSettings.selectedTheme == .custom {
+        customColorEditors
+      }
+
+      // Color preview for selected theme
+      themeColorPreview
+    }
+    .padding(.vertical, Layout.sectionPadding)
+  }
+  
+  private var themeColorPreview: some View {
+    HStack(spacing: 12) {
+      Text("Colors:")
+        .font(.caption)
+        .foregroundColor(.secondary)
+      
+      let colors = getThemeColors(for: appearanceSettings.selectedTheme)
+      
+      HStack(spacing: 8) {
+        ColorSwatch(color: colors.brandPrimary, label: "Primary")
+        ColorSwatch(color: colors.brandSecondary, label: "Secondary")
+        ColorSwatch(color: colors.brandTertiary, label: "Tertiary")
+      }
+      
+      Spacer()
+    }
+    .padding(.top, 4)
+  }
+
+  // MARK: - Custom Theme Editors
+  private var customColorEditors: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Custom Colors")
+        .font(.subheadline)
+        .foregroundColor(.secondary)
+      
+      customColorRow(title: "Primary", hexBinding: $appearanceSettings.customPrimaryHex)
+      customColorRow(title: "Secondary", hexBinding: $appearanceSettings.customSecondaryHex)
+      customColorRow(title: "Tertiary", hexBinding: $appearanceSettings.customTertiaryHex)
+    }
+    .padding(.vertical, 4)
+  }
+
+  private func customColorRow(title: String, hexBinding: Binding<String>) -> some View {
+    HStack(spacing: 12) {
+      Text(title)
+        .frame(width: 70, alignment: .leading)
+      
+      MacColorWell(color: Binding<NSColor>(
+        get: { NSColor.fromHex(hexBinding.wrappedValue) },
+        set: { newValue in
+          hexBinding.wrappedValue = newValue.toHexString()
+        }
+      ))
+      .frame(width: 44, height: 24)
+      
+      Text(hexBinding.wrappedValue.uppercased())
+        .font(.caption)
+        .foregroundColor(.secondary)
+      
+      Spacer()
+    }
   }
   
   private var fontSizeControls: some View {
@@ -109,6 +193,90 @@ struct AppearanceView: View {
   // MARK: - Computed Properties
   private var formattedFontSize: String {
     "\(Int(appearanceSettings.fontSize))pt"
+  }
+  
+  // MARK: - Helper Methods
+  private func getThemeColors(for theme: AppTheme) -> ThemeColors {
+    switch theme {
+    case .claude:
+      return ThemeColors(
+        brandPrimary: Color(hex: "#CC785C"),
+        brandSecondary: Color(hex: "#D4A27F"),
+        brandTertiary: Color(hex: "#EBDBBC")
+      )
+    case .bat:
+      // Bat: purple primary, real mustard secondary, slate tertiary
+      return ThemeColors(
+        brandPrimary: Color(hex: "#7C3AED"),
+        brandSecondary: Color(hex: "#FFB000"),
+        brandTertiary: Color(hex: "#64748B")
+      )
+    case .xcode:
+      // Xcode: dynamic system colors akin to Xcode highlights
+      return ThemeColors(
+        brandPrimary: Color(nsColor: .systemBlue),
+        brandSecondary: Color(nsColor: .systemIndigo),
+        brandTertiary: Color(nsColor: .systemTeal)
+      )
+    case .custom:
+      return ThemeColors(
+        brandPrimary: Color(hex: appearanceSettings.customPrimaryHex),
+        brandSecondary: Color(hex: appearanceSettings.customSecondaryHex),
+        brandTertiary: Color(hex: appearanceSettings.customTertiaryHex)
+      )
+    }
+  }
+}
+
+// MARK: - Supporting Views
+struct ColorSwatch: View {
+  let color: Color
+  let label: String
+  
+  var body: some View {
+    VStack(spacing: 2) {
+      Circle()
+        .fill(color)
+        .frame(width: 20, height: 20)
+        .overlay(
+          Circle()
+            .stroke(Color.secondary.opacity(0.3), lineWidth: 0.5)
+        )
+      
+      Text(label)
+        .font(.caption2)
+        .foregroundColor(.secondary)
+    }
+  }
+}
+
+// MARK: - AppKit Color Well Wrapper
+struct MacColorWell: NSViewRepresentable {
+  @Binding var color: NSColor
+  
+  func makeNSView(context: Context) -> NSColorWell {
+    let well = NSColorWell()
+    well.color = color
+    well.target = context.coordinator
+    well.action = #selector(Coordinator.colorChanged(_:))
+    return well
+  }
+  
+  func updateNSView(_ nsView: NSColorWell, context: Context) {
+    if nsView.color != color {
+      nsView.color = color
+    }
+  }
+  
+  func makeCoordinator() -> Coordinator { Coordinator(self) }
+  
+  class Coordinator: NSObject {
+    var parent: MacColorWell
+    init(_ parent: MacColorWell) { self.parent = parent }
+    
+    @objc func colorChanged(_ sender: NSColorWell) {
+      parent.color = sender.color
+    }
   }
 }
 

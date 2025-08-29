@@ -71,3 +71,67 @@ struct MyLibraryApp: App {
     }
   }
 }
+
+// Example 5: App with initial working directory (no manual selection needed!)
+struct MyAppWithDirectory: App {
+  @State private var globalPreferences = GlobalPreferencesStorage()
+  
+  var body: some Scene {
+    WindowGroup {
+      // Initialize with a working directory - skips manual directory selection
+      RootView(configuration: ClaudeCodeAppConfiguration(
+        appName: "My Project App",
+        workingDirectory: "/Users/me/my-project"
+      ))
+      .environment(globalPreferences)
+    }
+  }
+}
+
+// Example 6: Direct ChatScreen usage with session injection
+struct DirectChatApp: App {
+  @State private var globalPreferences = GlobalPreferencesStorage()
+  @State private var viewModel: ChatViewModel?
+  @State private var dependencies: DependencyContainer?
+  
+  var body: some Scene {
+    WindowGroup {
+      if let viewModel = viewModel, let deps = dependencies {
+        ChatScreen(
+          viewModel: viewModel,
+          contextManager: deps.contextManager,
+          xcodeObservationViewModel: deps.xcodeObservationViewModel,
+          permissionsService: deps.permissionsService,
+          terminalService: deps.terminalService,
+          customPermissionService: deps.customPermissionService,
+          columnVisibility: .constant(.detailOnly), // No sidebar
+          uiConfiguration: UIConfiguration(appName: "Direct Chat App")
+        )
+      } else {
+        ProgressView("Loading...")
+          .onAppear { setupWithInjectedSession() }
+      }
+    }
+  }
+  
+  func setupWithInjectedSession() {
+    let deps = DependencyContainer(globalPreferences: globalPreferences)
+    let vm = ChatViewModel(
+      claudeClient: ClaudeCodeClient(configuration: .default),
+      sessionStorage: UserDefaultsSessionStorage(),
+      settingsStorage: deps.settingsStorage,
+      globalPreferences: globalPreferences,
+      customPermissionService: deps.customPermissionService
+    )
+    
+    // Inject a session with working directory - ready to use immediately!
+    vm.injectSession(
+      sessionId: "my-session-123",
+      messages: [], // Can pre-populate with saved messages
+      workingDirectory: "/Users/me/my-project"
+    )
+    
+    self.viewModel = vm
+    self.dependencies = deps
+  }
+}

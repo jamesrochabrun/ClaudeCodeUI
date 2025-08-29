@@ -21,7 +21,7 @@ class MarkdownStyle: DownStyle {
     h3Size = 15
     codeFont = .monospacedSystemFont(ofSize: 13, weight: .regular)
     // Use bookCloth color for inline code (like branch names)
-    codeColor = SwiftUI.Color.bookCloth.nsColor
+    codeColor = SwiftUI.Color.brandPrimary.nsColor
     quoteColor = .secondaryLabelColor
     
     // Configure link color to match the theme

@@ -199,7 +199,7 @@ extension ChatInputView {
       sendMessage()
     }) {
       Image(systemName: "arrow.up.circle.fill")
-        .foregroundColor(.kraft)
+        .foregroundColor(.brandSecondary)
         .font(.title2)
     }
     .padding(10)

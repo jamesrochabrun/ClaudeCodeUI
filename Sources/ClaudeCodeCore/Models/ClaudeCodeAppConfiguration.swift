@@ -62,4 +62,34 @@ public struct ClaudeCodeAppConfiguration {
       )
     )
   }
+  
+  /// Convenience initializer with app name and working directory
+  public init(
+    appName: String,
+    workingDirectory: String? = nil
+  ) {
+    var config = ClaudeCodeConfiguration.default
+    config.workingDirectory = workingDirectory
+    self.init(
+      claudeCodeConfiguration: config,
+      uiConfiguration: UIConfiguration(appName: appName)
+    )
+  }
+  
+  /// Convenience initializer with app name, working directory, and settings visibility
+  public init(
+    appName: String,
+    workingDirectory: String? = nil,
+    showSettingsInNavBar: Bool
+  ) {
+    var config = ClaudeCodeConfiguration.default
+    config.workingDirectory = workingDirectory
+    self.init(
+      claudeCodeConfiguration: config,
+      uiConfiguration: UIConfiguration(
+        appName: appName,
+        showSettingsInNavBar: showSettingsInNavBar
+      )
+    )
+  }
 }

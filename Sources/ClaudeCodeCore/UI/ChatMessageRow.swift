@@ -323,9 +323,9 @@ struct ChatMessageRow: View {
   private var statusColor: Color {
     switch message.messageType {
     case .toolUse, .thinking, .webSearch:
-      return .bookCloth
+      return .brandPrimary
     case .toolResult:
-      return .manilla
+      return .brandTertiary
     case .toolError:
       return .red
     default:
