@@ -29,10 +29,22 @@ extension String {
     split(omittingEmptySubsequences: false) { $0.isNewline }
   }
   
+  /// Converts the string to UTF-8 encoded data.
+  ///
+  /// This property force-unwraps the result as UTF-8 encoding should always succeed
+  /// for valid Swift strings.
+  ///
+  /// - Returns: The string encoded as UTF-8 data.
   var utf8Data: Data {
     data(using: .utf8)!
   }
   
+  /// Formats the string for applying Git diff by adding special tokens to empty lines.
+  ///
+  /// This method adds `<l>` tokens to preserve empty lines when processing Git diffs.
+  /// It handles both existing empty line tokens and actual empty lines in the text.
+  ///
+  /// - Returns: A string with empty lines marked with `<l>` tokens for Git diff processing.
   var formattedToApplyGitDiff: String {
     let emptyLineToken = "<l>"
     return replacingOccurrences(of: "\n\(emptyLineToken)", with: "\n\(emptyLineToken)\(emptyLineToken)")
@@ -42,6 +54,12 @@ extension String {
         options: .regularExpression)
   }
   
+  /// Formats an applied Git diff by removing empty line tokens from diff lines.
+  ///
+  /// This method removes `<l>` tokens from lines that start with diff markers
+  /// (space, +, or -) to clean up the diff output after processing.
+  ///
+  /// - Returns: A string with empty line tokens removed from diff-marked lines.
   var formatAppliedGitDiff: String {
     let emptyLineToken = "<l>"
     return replacingOccurrences(of: "\n \(emptyLineToken)", with: "\n ")
@@ -51,10 +69,31 @@ extension String {
 }
 
 extension StringProtocol {
+  /// Splits a string protocol into lines based on newline characters.
+  ///
+  /// This method preserves empty lines by setting `omittingEmptySubsequences` to `false`.
+  /// It splits on any newline character (including `\n`, `\r`, and `\r\n`).
+  ///
+  /// - Returns: An array of subsequences representing each line in the original string.
+  ///            Empty lines are preserved as empty subsequences.
   func splitLines() -> [SubSequence] {
     split(omittingEmptySubsequences: false) { $0.isNewline }
   }
   
+  /// Extracts a subsequence from the string protocol based on integer indices.
+  ///
+  /// This method provides a convenient way to extract a substring using integer indices
+  /// instead of String.Index values.
+  ///
+  /// - Parameter range: A range of integer indices specifying the substring to extract.
+  /// - Returns: A subsequence of the string from the given range.
+  ///
+  /// - Example:
+  ///   ```swift
+  ///   let text = "Hello, World!"
+  ///   let sub = text.substring(0..<5)
+  ///   // Result: "Hello"
+  ///   ```
   func substring(_ range: Range<Int>) -> SubSequence {
     self[index(startIndex, offsetBy: range.lowerBound)..<index(startIndex, offsetBy: range.upperBound)]
   }
@@ -63,6 +102,21 @@ extension StringProtocol {
 // MARK: - Range Extensions
 
 extension Range where Bound == Int {
+  /// Clamps the range to fit within the specified limits.
+  ///
+  /// This method ensures that the range stays within the specified boundaries,
+  /// adjusting both the lower and upper bounds as necessary. It also prevents
+  /// creating invalid ranges where the lower bound would exceed the upper bound.
+  ///
+  /// - Parameter limits: The range representing the minimum and maximum allowed values.
+  /// - Returns: A new range that fits within the specified limits.
+  ///
+  /// - Example:
+  ///   ```swift
+  ///   let range = 5..<15
+  ///   let clamped = range.clamped(to: 0..<10)
+  ///   // Result: 5..<10
+  ///   ```
   func clamped(to limits: Range<Int>) -> Range<Int> {
     let lowerBound = Swift.max(self.lowerBound, limits.lowerBound)
     let upperBound = Swift.min(self.upperBound, limits.upperBound)
@@ -71,6 +125,19 @@ extension Range where Bound == Int {
     return clampedLower..<upperBound
   }
   
+  /// Returns a string identifier for the range.
+  ///
+  /// This property creates a unique string representation of the range
+  /// using the format "lowerBound-upperBound".
+  ///
+  /// - Returns: A string identifier in the format "lowerBound-upperBound".
+  ///
+  /// - Example:
+  ///   ```swift
+  ///   let range = 5..<10
+  ///   let identifier = range.id
+  ///   // Result: "5-10"
+  ///   ```
   var id: String {
     "\(lowerBound)-\(upperBound)"
   }
@@ -79,6 +146,20 @@ extension Range where Bound == Int {
 // MARK: - Collection Extensions
 
 extension Collection {
+  /// Safely accesses the element at the specified index.
+  ///
+  /// This subscript returns `nil` if the index is out of bounds instead of
+  /// causing a runtime error. It provides a safe way to access collection elements.
+  ///
+  /// - Parameter index: The index of the element to access.
+  /// - Returns: The element at the specified index if it exists, otherwise `nil`.
+  ///
+  /// - Example:
+  ///   ```swift
+  ///   let array = [1, 2, 3]
+  ///   let value = array[safe: 5]
+  ///   // Result: nil (instead of runtime error)
+  ///   ```
   subscript(safe index: Index) -> Element? {
     indices.contains(index) ? self[index] : nil
   }
@@ -87,6 +168,23 @@ extension Collection {
 // MARK: - AttributedString Extensions
 
 extension AttributedString {
+  /// Converts an integer range to an AttributedString index range.
+  ///
+  /// This method provides a convenient way to work with AttributedString ranges
+  /// using integer indices instead of AttributedString.Index values.
+  ///
+  /// - Parameter range: A range of integer indices to convert.
+  /// - Returns: The corresponding AttributedString index range if valid, otherwise `nil`.
+  ///
+  /// - Note: Returns `nil` if the range is invalid or out of bounds.
+  ///
+  /// - Example:
+  ///   ```swift
+  ///   let attrString = AttributedString("Hello, World!")
+  ///   if let indexRange = attrString.range(0..<5) {
+  ///     // Use indexRange to manipulate the attributed string
+  ///   }
+  ///   ```
   func range(_ range: Range<Int>) -> Range<AttributedString.Index>? {
     guard 0 <= range.lowerBound, range.lowerBound <= range.upperBound, range.upperBound <= characters.count else {
       return nil
@@ -102,6 +200,23 @@ extension AttributedString {
 // MARK: - FormattedLineChange Array Extensions
 
 extension [FormattedLineChange] {
+  /// Identifies sections of the array that contain changes with context lines.
+  ///
+  /// This method groups changed lines into sections, including a specified number of
+  /// context lines before and after each change. It merges sections that are close
+  /// together (within `2 * minSeparation` lines).
+  ///
+  /// - Parameter minSeparation: The minimum number of context lines to include around changes.
+  /// - Returns: An array of ranges representing sections that contain changes with context.
+  ///
+  /// - Note: If no changes are found and the array is not empty, returns the entire array as one range.
+  ///
+  /// - Example:
+  ///   ```swift
+  ///   let changes: [FormattedLineChange] = [...]
+  ///   let sections = changes.changedSection(minSeparation: 3)
+  ///   // Returns ranges of changed sections with 3 lines of context
+  ///   ```
   func changedSection(minSeparation: Int) -> [Range<Int>] {
     var partialDiffRanges = [Range<Int>]()
     

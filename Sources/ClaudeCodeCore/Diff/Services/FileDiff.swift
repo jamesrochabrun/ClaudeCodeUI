@@ -85,8 +85,7 @@ extension FileDiff {
           // Add unchanged lines before this hunk
           while currentNewLine < newStart {
             let idx = currentNewLine - 1
-            if idx < newLines.count {
-              let range = newLinesOffset[idx]..<newLinesOffset[idx + 1]
+            if let range = safeOffsetRange(for: idx, in: newLines, offsets: newLinesOffset) {
               result.append(LineChange(
                 oldLineNumber: currentOldLine,
                 newLineNumber: currentNewLine,
@@ -111,9 +110,8 @@ extension FileDiff {
       if line.starts(with: "+") && !line.starts(with: "+++") {
         // Added line - get content from new file
         let idx = currentNewLine - 1
-        if idx < newLines.count {
+        if let range = safeOffsetRange(for: idx, in: newLines, offsets: newLinesOffset) {
           let content = String(newLines[idx])
-          let range = newLinesOffset[idx]..<newLinesOffset[idx + 1]
           
           result.append(LineChange(
             oldLineNumber: nil,
@@ -128,9 +126,8 @@ extension FileDiff {
       } else if line.starts(with: "-") && !line.starts(with: "---") {
         // Removed line - get content from old file
         let idx = currentOldLine - 1
-        if idx < oldLines.count {
+        if let range = safeOffsetRange(for: idx, in: oldLines, offsets: oldLinesOffset) {
           let content = String(oldLines[idx])
-          let range = oldLinesOffset[idx]..<oldLinesOffset[idx + 1]
           
           result.append(LineChange(
             oldLineNumber: currentOldLine,
@@ -145,9 +142,8 @@ extension FileDiff {
       } else if line.starts(with: " ") {
         // Context line (unchanged) - get content from new file
         let idx = currentNewLine - 1
-        if idx < newLines.count {
+        if let range = safeOffsetRange(for: idx, in: newLines, offsets: newLinesOffset) {
           let content = String(newLines[idx])
-          let range = newLinesOffset[idx]..<newLinesOffset[idx + 1]
           
           result.append(LineChange(
             oldLineNumber: currentOldLine,
@@ -167,8 +163,7 @@ extension FileDiff {
     // Add any remaining unchanged lines
     while currentNewLine <= newLines.count {
       let idx = currentNewLine - 1
-      if idx < newLines.count {
-        let range = newLinesOffset[idx]..<newLinesOffset[idx + 1]
+      if let range = safeOffsetRange(for: idx, in: newLines, offsets: newLinesOffset) {
         result.append(LineChange(
           oldLineNumber: currentOldLine,
           newLineNumber: currentNewLine,
@@ -199,6 +194,37 @@ extension FileDiff {
     }
     result.append(offset)
     return result
+  }
+  
+  /// Safely creates a character range for a line at the given index.
+  ///
+  /// This helper function prevents crashes when accessing offset arrays during diff processing,
+  /// particularly when dealing with edge cases like empty files or the last line in a file.
+  ///
+  /// The function validates:
+  /// - The index is non-negative
+  /// - The index is within the lines array bounds
+  /// - The offset array has enough elements (index + 1 must be valid)
+  ///
+  /// - Parameters:
+  ///   - index: The zero-based index of the line to get the range for
+  ///   - lines: The array of text lines (as SubSequences from splitting)
+  ///   - offsets: The array of character offsets, where offsets[i] is the start position of line i
+  ///
+  /// - Returns: A Range<Int> representing the character positions for the line, or nil if the index is invalid
+  ///
+  /// - Note: The offsets array always has lines.count + 1 elements, where the last element
+  ///         represents the total character count. This function ensures we don't access
+  ///         beyond the array bounds when creating ranges.
+  private static func safeOffsetRange(
+    for index: Int,
+    in lines: [String.SubSequence],
+    offsets: [Int]
+  ) -> Range<Int>? {
+    guard index >= 0 && index < lines.count && index + 1 < offsets.count else {
+      return nil
+    }
+    return offsets[index]..<offsets[index + 1]
   }
 }
 
