@@ -103,7 +103,7 @@ struct DetailedPermissionStatusView: View {
           Text("Timeout:")
             .font(.caption)
             .foregroundColor(.secondary)
-          Text("\(Int(globalPreferences.permissionRequestTimeout))s")
+          Text(globalPreferences.permissionTimeoutEnabled ? "\(Int(globalPreferences.permissionRequestTimeout))s" : "Disabled")
             .font(.caption)
             .foregroundColor(.secondary)
 

@@ -210,19 +210,28 @@ struct MCPConfigurationView: View {
           
           // Timeout and limits
           VStack(alignment: .leading, spacing: 8) {
-            HStack {
-              Text("Permission request timeout:")
-              Spacer()
-              TextField("Seconds", value: Binding(
-                get: { Int(preferences.permissionRequestTimeout) },
-                set: { preferences.permissionRequestTimeout = TimeInterval($0) }
-              ), format: .number)
-              .textFieldStyle(.roundedBorder)
-              .frame(width: 80)
-              Text("seconds")
-                .foregroundColor(.secondary)
+            Toggle("Enable timeout for permission requests", isOn: Binding(
+              get: { preferences.permissionTimeoutEnabled },
+              set: { preferences.permissionTimeoutEnabled = $0 }
+            ))
+            .help("When disabled, permission requests will wait indefinitely for user response")
+            
+            if preferences.permissionTimeoutEnabled {
+              HStack {
+                Text("Timeout duration:")
+                Spacer()
+                TextField("Seconds", value: Binding(
+                  get: { Int(preferences.permissionRequestTimeout) },
+                  set: { preferences.permissionRequestTimeout = TimeInterval($0) }
+                ), format: .number)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 80)
+                Text("seconds")
+                  .foregroundColor(.secondary)
+              }
+              .padding(.leading, 20)
+              .help("How long to wait for user response before timing out permission requests")
             }
-            .help("How long to wait for user response before timing out permission requests")
             
             HStack {
               Text("Max concurrent requests:")
@@ -413,7 +422,7 @@ struct QuickAddServerRow: View {
   }
   
   return MCPConfigurationView(
-    isPresented: .constant(true), 
+    isPresented: .constant(true),
     mcpConfigStorage: PreviewMCPStorage(),
     globalPreferences: nil
   )

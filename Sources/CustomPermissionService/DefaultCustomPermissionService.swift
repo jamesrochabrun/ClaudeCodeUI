@@ -35,7 +35,7 @@ public final class DefaultCustomPermissionService: CustomPermissionService, Obse
     $autoApproveToolCalls.eraseToAnyPublisher()
   }
   
-  public func requestApproval(for request: ApprovalRequest, timeout: TimeInterval = 240) async throws -> ApprovalResponse {
+  public func requestApproval(for request: ApprovalRequest, timeout: TimeInterval?) async throws -> ApprovalResponse {
     // Check if auto-approval is enabled
     if autoApproveToolCalls {
       return ApprovalResponse(
@@ -64,13 +64,23 @@ public final class DefaultCustomPermissionService: CustomPermissionService, Obse
     }
     
     return try await withCheckedThrowingContinuation { continuation in
-      let pendingRequest = PendingRequest(
-        request: request,
-        continuation: continuation,
-        timeoutTask: Task {
+      let timeoutTask: Task<Void, Error>
+      if let timeout = timeout {
+        timeoutTask = Task {
           try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
           await self.handleTimeout(for: request.toolUseId)
         }
+      } else {
+        // Create a never-ending task for no timeout
+        timeoutTask = Task {
+          try await Task.sleep(nanoseconds: UInt64.max)
+        }
+      }
+      
+      let pendingRequest = PendingRequest(
+        request: request,
+        continuation: continuation,
+        timeoutTask: timeoutTask
       )
       
       pendingRequests[request.toolUseId] = pendingRequest
@@ -180,15 +190,11 @@ public final class DefaultCustomPermissionService: CustomPermissionService, Obse
       isToastVisible = true
     }
     
-    // Auto-hide after 30 seconds if no action taken
-    Task {
-      try await Task.sleep(nanoseconds: 30_000_000_000) // 30 seconds
-      await MainActor.run {
-        if currentToastRequest?.toolUseId == request.toolUseId {
-          handleToastTimeout(for: request.toolUseId)
-        }
-      }
-    }
+    // Note: Toast will be hidden when:
+    // - User approves/denies the request
+    // - The configured timeout expires (handled by the main timeout mechanism)
+    // - The request is cancelled
+    // We don't auto-hide the toast to respect the user's timeout configuration
   }
   
   private func hideToast() {
@@ -255,11 +261,6 @@ public final class DefaultCustomPermissionService: CustomPermissionService, Obse
     }
   }
   
-  private func handleToastTimeout(for toolUseId: String) {
-    Task {
-      await handleTimeout(for: toolUseId)
-    }
-  }
   
   private func createContextForTool(toolName: String, input: [String: Any]) -> ApprovalContext {
     // Analyze the tool name and input to determine risk level and context

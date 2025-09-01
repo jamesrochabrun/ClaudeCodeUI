@@ -26,7 +26,9 @@ struct ClaudeCodeUIAppWrapper: App {
           terminalService: deps.terminalService,
           customPermissionService: deps.customPermissionService,
           columnVisibility: .constant(.detailOnly), // No sidebar
-          uiConfiguration: UIConfiguration(appName: "Claude Code UI")
+          uiConfiguration: UIConfiguration(
+            appName: "Claude Code UI",
+            showSettingsInNavBar: true)
         )
         .environment(globalPreferences)
       } else {

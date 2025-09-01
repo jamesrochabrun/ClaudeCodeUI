@@ -208,7 +208,7 @@ final class DefaultCustomPermissionServiceTests: XCTestCase {
     func testPermissionConfigurationDefaults() {
         let config = PermissionConfiguration.default
         
-        XCTAssertEqual(config.defaultTimeout, 240) // 4 minutes
+        XCTAssertNil(config.defaultTimeout) // Default is no timeout
         XCTAssertFalse(config.autoApproveLowRisk)
         XCTAssertTrue(config.showDetailedInfo)
         XCTAssertEqual(config.maxConcurrentRequests, 5)

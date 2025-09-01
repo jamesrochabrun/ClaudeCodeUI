@@ -26,7 +26,7 @@ public final class MockCustomPermissionService: CustomPermissionService {
     // Tracking for tests
     public private(set) var requestApprovalCallCount = 0
     public private(set) var lastRequest: ApprovalRequest?
-    public private(set) var lastTimeout: TimeInterval?
+    public private(set) var lastTimeout: TimeInterval??
     public private(set) var cancelAllRequestsCallCount = 0
     public private(set) var getApprovalStatusCallCount = 0
     public private(set) var setupMCPToolCallCount = 0
@@ -37,7 +37,7 @@ public final class MockCustomPermissionService: CustomPermissionService {
     
     public init() {}
     
-    public func requestApproval(for request: ApprovalRequest, timeout: TimeInterval) async throws -> ApprovalResponse {
+    public func requestApproval(for request: ApprovalRequest, timeout: TimeInterval?) async throws -> ApprovalResponse {
         requestApprovalCallCount += 1
         lastRequest = request
         lastTimeout = timeout

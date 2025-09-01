@@ -94,7 +94,7 @@ final class PermissionConfigurationTests: XCTestCase {
     func testDefaultConfiguration() {
         let config = PermissionConfiguration.default
         
-        XCTAssertEqual(config.defaultTimeout, 240.0)
+        XCTAssertNil(config.defaultTimeout) // Default is no timeout
         XCTAssertFalse(config.autoApproveLowRisk)
         XCTAssertTrue(config.showDetailedInfo)
         XCTAssertEqual(config.maxConcurrentRequests, 5)
@@ -112,6 +112,20 @@ final class PermissionConfigurationTests: XCTestCase {
         XCTAssertTrue(config.autoApproveLowRisk)
         XCTAssertFalse(config.showDetailedInfo)
         XCTAssertEqual(config.maxConcurrentRequests, 3)
+    }
+    
+    func testConfigurationWithNoTimeout() {
+        let config = PermissionConfiguration(
+            defaultTimeout: nil,
+            autoApproveLowRisk: false,
+            showDetailedInfo: true,
+            maxConcurrentRequests: 5
+        )
+        
+        XCTAssertNil(config.defaultTimeout)
+        XCTAssertFalse(config.autoApproveLowRisk)
+        XCTAssertTrue(config.showDetailedInfo)
+        XCTAssertEqual(config.maxConcurrentRequests, 5)
     }
 }
 

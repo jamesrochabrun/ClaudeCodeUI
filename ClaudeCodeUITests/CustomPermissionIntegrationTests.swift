@@ -63,6 +63,7 @@ final class CustomPermissionIntegrationTests: XCTestCase {
   func testPermissionConfigurationCreation() {
     globalPreferences.autoApproveLowRisk = true
     globalPreferences.showDetailedPermissionInfo = false
+    globalPreferences.permissionTimeoutEnabled = true
     globalPreferences.permissionRequestTimeout = 180.0
     globalPreferences.maxConcurrentPermissionRequests = 2
 
@@ -72,6 +73,21 @@ final class CustomPermissionIntegrationTests: XCTestCase {
     XCTAssertFalse(config.showDetailedInfo)
     XCTAssertEqual(config.defaultTimeout, 180.0)
     XCTAssertEqual(config.maxConcurrentRequests, 2)
+  }
+  
+  func testPermissionConfigurationWithNoTimeout() {
+    globalPreferences.autoApproveLowRisk = false
+    globalPreferences.showDetailedPermissionInfo = true
+    globalPreferences.permissionTimeoutEnabled = false
+    globalPreferences.permissionRequestTimeout = 180.0 // This value should be ignored
+    globalPreferences.maxConcurrentPermissionRequests = 5
+
+    let config = globalPreferences.createPermissionConfiguration()
+
+    XCTAssertFalse(config.autoApproveLowRisk)
+    XCTAssertTrue(config.showDetailedInfo)
+    XCTAssertNil(config.defaultTimeout) // Should be nil when timeout is disabled
+    XCTAssertEqual(config.maxConcurrentRequests, 5)
   }
 
   func testPermissionConfigurationUpdate() {
@@ -84,10 +100,27 @@ final class CustomPermissionIntegrationTests: XCTestCase {
 
     globalPreferences.updateFromPermissionConfiguration(config)
 
+    XCTAssertTrue(globalPreferences.permissionTimeoutEnabled) // Should be enabled when timeout is provided
     XCTAssertEqual(globalPreferences.permissionRequestTimeout, 300.0)
     XCTAssertTrue(globalPreferences.autoApproveLowRisk)
     XCTAssertFalse(globalPreferences.showDetailedPermissionInfo)
     XCTAssertEqual(globalPreferences.maxConcurrentPermissionRequests, 1)
+  }
+  
+  func testPermissionConfigurationUpdateWithNoTimeout() {
+    let config = PermissionConfiguration(
+      defaultTimeout: nil,
+      autoApproveLowRisk: false,
+      showDetailedInfo: true,
+      maxConcurrentRequests: 3
+    )
+
+    globalPreferences.updateFromPermissionConfiguration(config)
+
+    XCTAssertFalse(globalPreferences.permissionTimeoutEnabled) // Should be disabled when timeout is nil
+    XCTAssertFalse(globalPreferences.autoApproveLowRisk)
+    XCTAssertTrue(globalPreferences.showDetailedPermissionInfo)
+    XCTAssertEqual(globalPreferences.maxConcurrentPermissionRequests, 3)
   }
 
   func testResetToDefaults() {
