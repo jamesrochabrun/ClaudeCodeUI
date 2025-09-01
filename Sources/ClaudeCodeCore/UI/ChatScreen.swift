@@ -134,7 +134,7 @@ public struct ChatScreen: View {
   
   @ViewBuilder
   private var loadingView: some View {
-    if viewModel.isLoading, let startTime = viewModel.streamingStartTime {
+    if viewModel.isLoading, !observedPermissionService.isToastVisible, let startTime = viewModel.streamingStartTime {
       LoadingIndicator(
         startTime: startTime,
         inputTokens: viewModel.currentInputTokens,
