@@ -70,44 +70,10 @@ public struct ChatScreen: View {
       messagesListView
       
       // Error message if present
-      if let error = viewModel.error {
-        HStack {
-          Image(systemName: "exclamationmark.triangle.fill")
-            .foregroundColor(.red)
-          Text(error.localizedDescription)
-            .foregroundColor(.red)
-            .multilineTextAlignment(.leading)
-            .fixedSize(horizontal: false, vertical: true)
-          Spacer()
-          Button(action: {
-            viewModel.error = nil
-          }) {
-            Image(systemName: "xmark.circle.fill")
-              .foregroundColor(.secondary)
-          }
-          .buttonStyle(.plain)
-        }
-        .padding()
-        .background(Color.red.opacity(0.1))
-        .cornerRadius(8)
-        .padding(.horizontal)
-        .padding(.bottom, 8)
-      }
+      errorView
+      
       // Loading indicator
-      if viewModel.isLoading, let startTime = viewModel.streamingStartTime {
-        LoadingIndicator(
-          startTime: startTime,
-          inputTokens: viewModel.currentInputTokens,
-          outputTokens: viewModel.currentOutputTokens,
-          costUSD: viewModel.currentCostUSD
-        )
-        .padding(.horizontal)
-        .padding(.bottom, 8)
-        .transition(.asymmetric(
-          insertion: .move(edge: .bottom).combined(with: .opacity),
-          removal: .move(edge: .bottom).combined(with: .opacity)
-        ))
-      }
+      loadingView
       
       ChatInputView(
         text: $messageText,
@@ -118,91 +84,172 @@ public struct ChatScreen: View {
         placeholder: "Type a message...",
         triggerFocus: $triggerTextEditorFocus)
     }
-    .overlay(
-      // Approval Toast Overlay
-      ToastContainer(isPresented: $observedPermissionService.isToastVisible) {
-        if let request = observedPermissionService.currentToastRequest {
-          ApprovalToast(
-            request: request,
-            onApprove: {
-              observedPermissionService.approveCurrentToast()
-            },
-            onDeny: {
-              observedPermissionService.denyCurrentToast()
-            }
-          )
-        }
-      }
-    )
+    .overlay(approvalToastOverlay)
     .navigationTitle(uiConfiguration.appName)
     .toolbar {
       ToolbarItem(placement: .automatic) {
-        HStack(spacing: 8) {
-          // PermissionStatusView(customPermissionService: customPermissionService)
-          
-          // Copy session ID button
-          if let sessionId = viewModel.currentSessionId {
-            Button(action: {
-              copyToClipboard(sessionId)
-            }) {
-              Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
-                .font(.title2)
-            }
-            .help("Copy Session ID")
-            .disabled(isCopied)
-          }
-          
-          Button(action: clearChat) {
-            Image(systemName: "trash")
-              .font(.title2)
-          }
-          .disabled(viewModel.messages.isEmpty)
-          
-          // Show settings button if configured
-          if uiConfiguration.showSettingsInNavBar {
-            Button(action: {
-              settingsTypeToShow = .global
-              showingSettings = true
-            }) {
-              Image(systemName: "gearshape")
-                .font(.title2)
-            }
-            .help("Global Settings")
-          }
-        }
+        toolbarContent
       }
     }
     .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
     .sheet(isPresented: $showingSettings) {
-      switch settingsTypeToShow {
-      case .session:
-        SettingsView(chatViewModel: viewModel, xcodeObservationViewModel: xcodeObservationViewModel, permissionsService: permissionsService)
-      case .global:
-        GlobalSettingsView()
-      }
+      settingsSheet
     }
     .sheet(item: $artifact) { artifact in
       ArtifactView(artifact: artifact)
     }
-    .onChange(of: keyboardManager.capturedText) { oldValue, newValue in
-      if !newValue.isEmpty && newValue != oldValue {
-        // First try to capture from Xcode if available
-        if contextManager.captureCurrentSelection() != nil {
-          // Successfully captured from Xcode, ignore clipboard text
-        } else {
-          // No Xcode selection, use clipboard text
-          contextManager.addCapturedText(newValue)
-        }
-      }
-    }
-    .onChange(of: keyboardManager.shouldFocusTextEditor) { _, shouldFocus in
-      if shouldFocus {
-        triggerTextEditorFocus = true
-        // Reset the flag after using it
-        keyboardManager.shouldFocusTextEditor = false
-      }
-    }
+    .onChange(of: keyboardManager.capturedText, keyboardTextChanged)
+    .onChange(of: keyboardManager.shouldFocusTextEditor, focusTextEditorChanged)
     .focusedValue(\.toggleSidebar, toggleSidebar)
+  }
+  
+  // MARK: - Subviews
+  
+  @ViewBuilder
+  private var errorView: some View {
+    if let error = viewModel.error {
+      HStack {
+        Image(systemName: "exclamationmark.triangle.fill")
+          .foregroundColor(.red)
+        Text(error.localizedDescription)
+          .foregroundColor(.red)
+          .multilineTextAlignment(.leading)
+          .fixedSize(horizontal: false, vertical: true)
+        Spacer()
+        Button(action: {
+          viewModel.error = nil
+        }) {
+          Image(systemName: "xmark.circle.fill")
+            .foregroundColor(.secondary)
+        }
+        .buttonStyle(.plain)
+      }
+      .padding()
+      .background(Color.red.opacity(0.1))
+      .cornerRadius(8)
+      .padding(.horizontal)
+      .padding(.bottom, 8)
+    }
+  }
+  
+  @ViewBuilder
+  private var loadingView: some View {
+    if viewModel.isLoading, let startTime = viewModel.streamingStartTime {
+      LoadingIndicator(
+        startTime: startTime,
+        inputTokens: viewModel.currentInputTokens,
+        outputTokens: viewModel.currentOutputTokens,
+        costUSD: viewModel.currentCostUSD
+      )
+      .padding(.horizontal)
+      .padding(.bottom, 8)
+      .transition(.asymmetric(
+        insertion: .move(edge: .bottom).combined(with: .opacity),
+        removal: .move(edge: .bottom).combined(with: .opacity)
+      ))
+    }
+  }
+  
+  @ViewBuilder
+  private var approvalToastOverlay: some View {
+    ToastContainer(isPresented: $observedPermissionService.isToastVisible) {
+      if let request = observedPermissionService.currentToastRequest {
+        ApprovalToast(
+          request: request,
+          onApprove: {
+            observedPermissionService.approveCurrentToast()
+          },
+          onDeny: {
+            observedPermissionService.denyCurrentToast()
+          }
+        )
+      }
+    }
+  }
+  
+  private var toolbarContent: some View {
+    HStack(spacing: 8) {
+      // Copy session ID button
+      copySessionButton
+      
+      // Clear chat button
+      clearChatButton
+      
+      // Settings button
+      settingsButton
+    }
+  }
+  
+  @ViewBuilder
+  private var copySessionButton: some View {
+    if let sessionId = viewModel.currentSessionId {
+      Button(action: {
+        copyToClipboard(sessionId)
+      }) {
+        Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
+          .font(.title2)
+      }
+      .help("Copy Session ID")
+      .disabled(isCopied)
+    }
+  }
+  
+  private var clearChatButton: some View {
+    Button(action: clearChat) {
+      Image(systemName: "trash")
+        .font(.title2)
+    }
+    .disabled(viewModel.messages.isEmpty)
+  }
+  
+  @ViewBuilder
+  private var settingsButton: some View {
+    if uiConfiguration.showSettingsInNavBar {
+      Button(action: {
+        settingsTypeToShow = .global
+        showingSettings = true
+      }) {
+        Image(systemName: "gearshape")
+          .font(.title2)
+      }
+      .help("Global Settings")
+    }
+  }
+  
+  @ViewBuilder
+  private var settingsSheet: some View {
+    switch settingsTypeToShow {
+    case .session:
+      SettingsView(
+        chatViewModel: viewModel,
+        xcodeObservationViewModel: xcodeObservationViewModel,
+        permissionsService: permissionsService
+      )
+    case .global:
+      GlobalSettingsView()
+    }
+  }
+  
+  // MARK: - Actions
+  
+  private func keyboardTextChanged(oldValue: String, newValue: String) {
+    if !newValue.isEmpty && newValue != oldValue {
+      // First try to capture from Xcode if available
+      if contextManager.captureCurrentSelection() != nil {
+        // Successfully captured from Xcode, ignore clipboard text
+      } else {
+        // No Xcode selection, use clipboard text
+        contextManager.addCapturedText(newValue)
+      }
+    }
+  }
+  
+  private func focusTextEditorChanged(_: Bool, shouldFocus: Bool) {
+    if shouldFocus {
+      triggerTextEditorFocus = true
+      // Reset the flag after using it
+      keyboardManager.shouldFocusTextEditor = false
+    }
   }
   
   private func clearChat() {
@@ -210,10 +257,10 @@ public struct ChatScreen: View {
   }
   
   private func copyToClipboard(_ text: String) {
-    #if os(macOS)
+#if os(macOS)
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(text, forType: .string)
-    #endif
+#endif
     
     isCopied = true
     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {

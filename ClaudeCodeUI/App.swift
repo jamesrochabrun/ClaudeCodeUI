@@ -7,11 +7,72 @@
 
 import SwiftUI
 import ClaudeCodeCore
+import ClaudeCodeSDK
 
 @main
 struct ClaudeCodeUIAppWrapper: App {
-    var body: some Scene {
-        // Use the complete app implementation from the package
-        ClaudeCodeUIApp().body
+  @State private var globalPreferences = GlobalPreferencesStorage()
+  @State private var viewModel: ChatViewModel?
+  @State private var dependencies: DependencyContainer?
+  
+  var body: some Scene {
+    WindowGroup {
+      if let viewModel = viewModel, let deps = dependencies {
+        ChatScreen(
+          viewModel: viewModel,
+          contextManager: deps.contextManager,
+          xcodeObservationViewModel: deps.xcodeObservationViewModel,
+          permissionsService: deps.permissionsService,
+          terminalService: deps.terminalService,
+          customPermissionService: deps.customPermissionService,
+          columnVisibility: .constant(.detailOnly), // No sidebar
+          uiConfiguration: UIConfiguration(appName: "Claude Code UI")
+        )
+        .environment(globalPreferences)
+      } else {
+        ProgressView("Initializing Claude Code...")
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .onAppear { setupChatScreen() }
+      }
     }
+  }
+  
+  private func setupChatScreen() {
+    // Initialize dependencies
+    let deps = DependencyContainer(globalPreferences: globalPreferences)
+    
+    // Configure Claude client with additional paths for Claude CLI
+    let homeDir = NSHomeDirectory()
+    var config = ClaudeCodeConfiguration.default
+    config.additionalPaths = [
+      "/usr/local/bin",
+      "/opt/homebrew/bin",
+      "/usr/bin",
+      "\(homeDir)/.claude/local",  // Claude standalone installation
+      "\(homeDir)/.nvm/versions/node/v22.16.0/bin",  // Common Node versions
+      "\(homeDir)/.nvm/current/bin",
+      "\(homeDir)/.nvm/versions/node/v20.11.1/bin",
+      "\(homeDir)/.nvm/versions/node/v18.19.0/bin"
+    ]
+    
+    // Create view model with all dependencies
+    let vm = ChatViewModel(
+      claudeClient: ClaudeCodeClient(configuration: config),
+      sessionStorage: deps.sessionStorage,
+      settingsStorage: deps.settingsStorage,
+      globalPreferences: globalPreferences,
+      customPermissionService: deps.customPermissionService
+    )
+    
+    // Optional: Inject a session with a default working directory
+    // This can be customized or removed to let the user select manually
+    // vm.injectSession(
+    //     sessionId: UUID().uuidString,
+    //     messages: [],
+    //     workingDirectory: nil  // User will select manually
+    // )
+    
+    self.viewModel = vm
+    self.dependencies = deps
+  }
 }
