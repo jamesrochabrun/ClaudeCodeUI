@@ -300,6 +300,9 @@ public final class ChatViewModel {
     // Cancel the stream subscription only (not the process)
     streamProcessor.cancelStream()
     
+    // Cancel any pending tool approval requests
+    customPermissionService.cancelAllRequests()
+    
     // Clean up UI state
     isLoading = false
     streamingStartTime = nil

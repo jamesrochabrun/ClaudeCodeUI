@@ -21,6 +21,9 @@ final class StreamProcessor {
   private var cancellables = Set<AnyCancellable>()
   private let formatter = DynamicContentFormatter()
   
+  // Track active continuation for proper cleanup
+  private var activeContinuation: CheckedContinuation<Void, Never>?
+  
   // Stream state holder
   private class StreamState {
     var contentBuffer = ""
@@ -43,6 +46,13 @@ final class StreamProcessor {
     // Cancel all active subscriptions
     cancellables.forEach { $0.cancel() }
     cancellables.removeAll()
+    
+    // Resume any active continuation to prevent leaks
+    if let continuation = activeContinuation {
+      continuation.resume()
+      activeContinuation = nil
+      logger.debug("Stream cancelled and continuation resumed")
+    }
   }
   
   func processStream(
@@ -54,6 +64,9 @@ final class StreamProcessor {
     onCostUpdate: ((Double) -> Void)? = nil
   ) async {
     await withCheckedContinuation { continuation in
+      // Store the continuation for cancellation handling
+      self.activeContinuation = continuation
+      
       let state = StreamState()
       
       publisher
@@ -112,6 +125,8 @@ final class StreamProcessor {
               onError?(error)
             }
             
+            // Clear the active continuation reference
+            self.activeContinuation = nil
             continuation.resume()
             
             // Clean up the subscription
