@@ -156,6 +156,7 @@ public struct ChatScreen: View {
       if let request = observedPermissionService.currentToastRequest {
         ApprovalToast(
           request: request,
+          showRiskLabel: uiConfiguration.showRiskLabel,
           onApprove: {
             observedPermissionService.approveCurrentToast()
           },

@@ -28,7 +28,8 @@ struct ClaudeCodeUIAppWrapper: App {
           columnVisibility: .constant(.detailOnly), // No sidebar
           uiConfiguration: UIConfiguration(
             appName: "Claude Code UI",
-            showSettingsInNavBar: true)
+            showSettingsInNavBar: true,
+            showRiskLabel: false)
         )
         .environment(globalPreferences)
       } else {
@@ -47,6 +48,7 @@ struct ClaudeCodeUIAppWrapper: App {
     // Configure Claude client with additional paths for Claude CLI
     let homeDir = NSHomeDirectory()
     var config = ClaudeCodeConfiguration.default
+    config.enableDebugLogging = true
     config.additionalPaths = [
       "/usr/local/bin",
       "/opt/homebrew/bin",

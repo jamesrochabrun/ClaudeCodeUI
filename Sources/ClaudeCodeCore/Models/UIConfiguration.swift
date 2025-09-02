@@ -15,11 +15,15 @@ public struct UIConfiguration {
   /// Whether to show the settings button in the navigation bar
   public let showSettingsInNavBar: Bool
   
+  /// Whether to show the risk label in approval toasts
+  public let showRiskLabel: Bool
+  
   /// Default configuration for ClaudeCodeUI app
   public static var `default`: UIConfiguration {
     UIConfiguration(
       appName: "Claude Code UI",
-      showSettingsInNavBar: true
+      showSettingsInNavBar: true,
+      showRiskLabel: true
     )
   }
   
@@ -27,16 +31,19 @@ public struct UIConfiguration {
   public static var library: UIConfiguration {
     UIConfiguration(
       appName: "Claude Code",
-      showSettingsInNavBar: false
+      showSettingsInNavBar: false,
+      showRiskLabel: true
     )
   }
   
   /// Initialize a custom UI configuration
   public init(
     appName: String,
-    showSettingsInNavBar: Bool = false
+    showSettingsInNavBar: Bool = false,
+    showRiskLabel: Bool = true
   ) {
     self.appName = appName
     self.showSettingsInNavBar = showSettingsInNavBar
+    self.showRiskLabel = showRiskLabel
   }
 }

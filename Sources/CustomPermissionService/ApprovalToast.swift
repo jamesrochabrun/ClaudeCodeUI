@@ -10,10 +10,12 @@ public struct ApprovalToast: View {
 
   public init(
     request: ApprovalRequest,
+    showRiskLabel: Bool = true,
     onApprove: @escaping () -> Void,
     onDeny: @escaping () -> Void
   ) {
     self.request = request
+    self.showRiskLabel = showRiskLabel
     self.onApprove = onApprove
     self.onDeny = onDeny
   }
@@ -43,6 +45,7 @@ public struct ApprovalToast: View {
   // MARK: Internal
 
   let request: ApprovalRequest
+  let showRiskLabel: Bool
   let onApprove: () -> Void
   let onDeny: () -> Void
 
@@ -74,13 +77,15 @@ public struct ApprovalToast: View {
 
         Spacer()
 
-        Text(request.context?.riskLevel.displayName ?? "Unknown")
-          .font(.system(size: 11))
-          .padding(.horizontal, 6)
-          .padding(.vertical, 2)
-          .background(riskColor.opacity(0.2))
-          .foregroundColor(riskColor)
-          .cornerRadius(4)
+        if showRiskLabel {
+          Text(request.context?.riskLevel.displayName ?? "Unknown")
+            .font(.system(size: 11))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(riskColor.opacity(0.2))
+            .foregroundColor(riskColor)
+            .cornerRadius(4)
+        }
       }
 
       Text(request.toolName)
@@ -95,13 +100,13 @@ public struct ApprovalToast: View {
         onDeny()
       }
       .buttonStyle(.bordered)
-      .controlSize(.small)
+      .controlSize(.regular)
 
       Button("Approve") {
         onApprove()
       }
       .buttonStyle(.borderedProminent)
-      .controlSize(.small)
+      .controlSize(.regular)
     }
   }
 
