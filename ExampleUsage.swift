@@ -88,7 +88,8 @@ struct MyAppWithDirectory: App {
   }
 }
 
-// Example 6: Direct ChatScreen usage with session injection
+// Example 6: Direct ChatScreen usage without session management
+// This approach avoids unnecessary session loading operations
 struct DirectChatApp: App {
   @State private var globalPreferences = GlobalPreferencesStorage()
   @State private var viewModel: ChatViewModel?
@@ -105,30 +106,24 @@ struct DirectChatApp: App {
           terminalService: deps.terminalService,
           customPermissionService: deps.customPermissionService,
           columnVisibility: .constant(.detailOnly), // No sidebar
-          uiConfiguration: UIConfiguration(appName: "Direct Chat App")
+          uiConfiguration: UIConfiguration(appName: "Chat App", showSettingsInNavBar: true)
         )
       } else {
         ProgressView("Loading...")
-          .onAppear { setupWithInjectedSession() }
+          .onAppear { setupOptimized() }
       }
     }
   }
   
-  func setupWithInjectedSession() {
-    let deps = DependencyContainer(globalPreferences: globalPreferences)
-    let vm = ChatViewModel(
-      claudeClient: ClaudeCodeClient(configuration: .default),
-      sessionStorage: UserDefaultsSessionStorage(),
-      settingsStorage: deps.settingsStorage,
-      globalPreferences: globalPreferences,
-      customPermissionService: deps.customPermissionService
-    )
+  func setupOptimized() {
+    // Use the optimized factory method for direct ChatScreen usage
+    // This completely avoids session storage initialization and file system checks
+    let deps = DependencyContainer.forDirectChatScreen(globalPreferences: globalPreferences)
     
-    // Inject a session with working directory - ready to use immediately!
-    vm.injectSession(
-      sessionId: "my-session-123",
-      messages: [], // Can pre-populate with saved messages
-      workingDirectory: "/Users/me/my-project"
+    // Create ChatViewModel with session management disabled for better performance
+    let vm = deps.createChatViewModelWithoutSessions(
+      claudeClient: ClaudeCodeClient(configuration: .default),
+      workingDirectory: "/Users/me/my-project" // Optional: set working directory
     )
     
     self.viewModel = vm

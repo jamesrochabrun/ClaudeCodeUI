@@ -60,14 +60,22 @@ public final class DependencyContainer {
   ///   - globalPreferences: The global preferences storage instance
   ///   - customSessionStorage: Optional custom implementation of SessionStorageProtocol.
   ///     If nil, the default storage will be selected based on available Claude CLI storage.
+  ///   - useNoOpStorage: When true, uses NoOpSessionStorage to avoid any session loading overhead.
+  ///     Ideal for direct ChatScreen usage without session management.
   public init(
     globalPreferences: GlobalPreferencesStorage,
-    customSessionStorage: SessionStorageProtocol? = nil
+    customSessionStorage: SessionStorageProtocol? = nil,
+    useNoOpStorage: Bool = false
   ) {
     self.settingsStorage = SettingsStorageManager()
     
-    // Use custom storage if provided, otherwise use default logic
-    if let customStorage = customSessionStorage {
+    // Determine which session storage to use
+    if useNoOpStorage {
+      // Use no-op storage for lightweight initialization (direct ChatScreen usage)
+      self.sessionStorage = NoOpSessionStorage()
+      print("[DependencyContainer] Using NoOp session storage (no session management)")
+    } else if let customStorage = customSessionStorage {
+      // Use custom storage if provided
       self.sessionStorage = customStorage
       print("[DependencyContainer] Using custom session storage")
     } else {
@@ -132,5 +140,44 @@ public final class DependencyContainer {
         print("[DependencyContainer] New session '\(sessionId)' with no working directory")
       }
     }
+  }
+  
+  /// Creates a ChatViewModel optimized for direct ChatScreen usage without session management.
+  /// This factory method is ideal when using ChatScreen as the root of your app,
+  /// avoiding unnecessary session loading operations.
+  /// - Parameters:
+  ///   - claudeClient: The Claude client for API communication
+  ///   - workingDirectory: Optional working directory to set
+  /// - Returns: A configured ChatViewModel with session management disabled
+  public func createChatViewModelWithoutSessions(
+    claudeClient: ClaudeCode,
+    workingDirectory: String? = nil
+  ) -> ChatViewModel {
+    // Set working directory if provided
+    if let dir = workingDirectory {
+      settingsStorage.setProjectPath(dir)
+    }
+    
+    return ChatViewModel(
+      claudeClient: claudeClient,
+      sessionStorage: sessionStorage,
+      settingsStorage: settingsStorage,
+      globalPreferences: globalPreferences,
+      customPermissionService: customPermissionService,
+      shouldManageSessions: false, // Disable session management for direct usage
+      onSessionChange: nil
+    )
+  }
+  
+  /// Creates a lightweight DependencyContainer optimized for direct ChatScreen usage.
+  /// This factory method avoids all session storage initialization overhead.
+  /// - Parameter globalPreferences: The global preferences storage instance
+  /// - Returns: A DependencyContainer configured with NoOpSessionStorage
+  public static func forDirectChatScreen(globalPreferences: GlobalPreferencesStorage) -> DependencyContainer {
+    return DependencyContainer(
+      globalPreferences: globalPreferences,
+      customSessionStorage: nil,
+      useNoOpStorage: true // Use NoOp storage to avoid any file system checks
+    )
   }
 }

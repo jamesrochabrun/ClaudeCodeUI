@@ -124,10 +124,63 @@ struct MyCustomApp: App {
 
 ### Advanced - Use Individual Components
 
-For maximum control, use the components directly:
+#### Direct ChatScreen Usage (Recommended)
+
+For maximum control and performance, use ChatScreen directly without session management overhead. This approach completely avoids session storage initialization and file system checks:
 
 ```swift
 import ClaudeCodeCore
+import ClaudeCodeSDK
+
+struct DirectChatApp: App {
+    @State private var globalPreferences = GlobalPreferencesStorage()
+    @State private var viewModel: ChatViewModel?
+    @State private var dependencies: DependencyContainer?
+    
+    var body: some Scene {
+        WindowGroup {
+            if let viewModel = viewModel, let deps = dependencies {
+                ChatScreen(
+                    viewModel: viewModel,
+                    contextManager: deps.contextManager,
+                    xcodeObservationViewModel: deps.xcodeObservationViewModel,
+                    permissionsService: deps.permissionsService,
+                    terminalService: deps.terminalService,
+                    customPermissionService: deps.customPermissionService,
+                    columnVisibility: .constant(.detailOnly), // No sidebar
+                    uiConfiguration: UIConfiguration(appName: "My Chat App")
+                )
+                .environment(globalPreferences)
+            } else {
+                ProgressView("Loading...")
+                    .onAppear { setupChatScreen() }
+            }
+        }
+    }
+    
+    func setupChatScreen() {
+        // Use optimized factory method that avoids all session storage overhead
+        let deps = DependencyContainer.forDirectChatScreen(globalPreferences: globalPreferences)
+        
+        // Create ChatViewModel without session management for better performance
+        let vm = deps.createChatViewModelWithoutSessions(
+            claudeClient: ClaudeCodeClient(configuration: .default),
+            workingDirectory: "/path/to/your/project" // Optional: set working directory
+        )
+        
+        self.viewModel = vm
+        self.dependencies = deps
+    }
+}
+```
+
+#### With Session Management
+
+If you need session switching capabilities, enable session management:
+
+```swift
+import ClaudeCodeCore
+import ClaudeCodeSDK
 
 struct MyCustomChatView: View {
     @StateObject private var dependencyContainer: DependencyContainer
@@ -139,9 +192,12 @@ struct MyCustomChatView: View {
         
         _dependencyContainer = StateObject(wrappedValue: container)
         _chatViewModel = StateObject(wrappedValue: ChatViewModel(
-            claudeClient: container.claudeClient,
-            sessionManager: container.sessionManager,
-            // ... other dependencies
+            claudeClient: ClaudeCodeClient(configuration: .default),
+            sessionStorage: container.sessionStorage,
+            settingsStorage: container.settingsStorage,
+            globalPreferences: globalPrefs,
+            customPermissionService: container.customPermissionService,
+            shouldManageSessions: true // Enable session management
         ))
     }
     
@@ -572,6 +628,8 @@ class CloudKitSessionStorage: SessionStorageProtocol {
 ```
 
 ### Session Injection and Management
+
+> **Note**: When using ChatScreen directly without RootView, consider using `createChatViewModelWithoutSessions()` as shown in the Advanced section above to avoid unnecessary session loading operations.
 
 #### Basic Session Injection
 

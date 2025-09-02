@@ -25,6 +25,10 @@ public final class ChatViewModel {
   let customPermissionService: CustomPermissionService
   private let onSessionChange: ((String) -> Void)?
   
+  /// Controls whether this view model should manage sessions (load, save, switch, etc.)
+  /// Set to false when using ChatScreen directly without RootView to avoid unnecessary session operations
+  public let shouldManageSessions: Bool
+  
   private let streamProcessor: StreamProcessor
   private let messageStore = MessageStore()
   private var firstMessageInSession: String?
@@ -93,6 +97,8 @@ public final class ChatViewModel {
   ///   - settingsStorage: Storage for application settings
   ///   - globalPreferences: Global preferences storage
   ///   - customPermissionService: Service for custom permission management
+  ///   - shouldManageSessions: Whether to manage sessions (load, save, switch). Default is true for backward compatibility.
+  ///                           Set to false when using ChatScreen directly without session management needs.
   ///   - onSessionChange: Optional callback when session changes
   public init(
     claudeClient: ClaudeCode,
@@ -100,6 +106,7 @@ public final class ChatViewModel {
     settingsStorage: SettingsStorage,
     globalPreferences: GlobalPreferencesStorage,
     customPermissionService: CustomPermissionService,
+    shouldManageSessions: Bool = true,
     onSessionChange: ((String) -> Void)? = nil)
   {
     self.claudeClient = claudeClient
@@ -107,6 +114,7 @@ public final class ChatViewModel {
     self.settingsStorage = settingsStorage
     self.globalPreferences = globalPreferences
     self.customPermissionService = customPermissionService
+    self.shouldManageSessions = shouldManageSessions
     self.onSessionChange = onSessionChange
     self.sessionManager = SessionManager(sessionStorage: sessionStorage)
     self.streamProcessor = StreamProcessor(
@@ -115,9 +123,12 @@ public final class ChatViewModel {
       onSessionChange: onSessionChange
     )
     
-    // Load sessions on initialization
-    Task {
-      await loadSessions()
+    // Only load sessions if we're managing them (e.g., when used with RootView)
+    // Skip loading when using ChatScreen directly to avoid wasteful operations
+    if shouldManageSessions {
+      Task {
+        await loadSessions()
+      }
     }
     
     // Initialize project path
@@ -269,7 +280,8 @@ public final class ChatViewModel {
   
   /// Saves the current session's messages to storage
   private func saveCurrentSessionMessages() async {
-    guard let sessionId = currentSessionId else { return }
+    // Only save if we're managing sessions
+    guard shouldManageSessions, let sessionId = currentSessionId else { return }
     
     let messages = messageStore.getAllMessages()
     do {
@@ -314,6 +326,8 @@ public final class ChatViewModel {
   
   /// Loads all available sessions
   public func loadSessions() async {
+    // Only fetch sessions if we're managing them
+    guard shouldManageSessions else { return }
     await sessionManager.fetchSessions()
   }
   
@@ -426,6 +440,9 @@ public final class ChatViewModel {
   
   /// Switches to a different session in the same window
   public func switchToSession(_ sessionId: String) async {
+    // Only switch if we're managing sessions
+    guard shouldManageSessions else { return }
+    
     // If switching to the same session, do nothing
     guard sessionId != currentSessionId else { return }
     
@@ -468,6 +485,9 @@ public final class ChatViewModel {
   // MARK: - Session Resumption Helpers
   
   private func validateSessionExists(id: String) async -> Bool {
+    // Skip validation if not managing sessions
+    guard shouldManageSessions else { return false }
+    
     // First ensure sessions are loaded
     if sessions.isEmpty {
       await loadSessions()

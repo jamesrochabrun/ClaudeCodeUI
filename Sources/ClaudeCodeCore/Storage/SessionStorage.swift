@@ -79,6 +79,47 @@ public protocol SessionStorageProtocol {
   func updateSessionId(oldId: String, newId: String) async throws
 }
 
+/// No-operation implementation of SessionStorage for direct ChatScreen usage.
+/// This implementation doesn't store or load any sessions, avoiding unnecessary overhead.
+public actor NoOpSessionStorage: SessionStorageProtocol {
+  
+  public init() {}
+  
+  public func saveSession(id: String, firstMessage: String) async throws {
+    // No-op: Don't save anything
+  }
+  
+  public func getAllSessions() async throws -> [StoredSession] {
+    // Return empty array - no sessions to load
+    return []
+  }
+  
+  public func getSession(id: String) async throws -> StoredSession? {
+    // No session exists
+    return nil
+  }
+  
+  public func updateLastAccessed(id: String) async throws {
+    // No-op: Nothing to update
+  }
+  
+  public func deleteSession(id: String) async throws {
+    // No-op: Nothing to delete
+  }
+  
+  public func deleteAllSessions() async throws {
+    // No-op: Nothing to delete
+  }
+  
+  public func updateSessionMessages(id: String, messages: [ChatMessage]) async throws {
+    // No-op: Don't store messages
+  }
+  
+  public func updateSessionId(oldId: String, newId: String) async throws {
+    // No-op: No session to update
+  }
+}
+
 /// UserDefaults-based implementation of SessionStorage
 public actor UserDefaultsSessionStorage: SessionStorageProtocol {
   private let userDefaults: UserDefaults

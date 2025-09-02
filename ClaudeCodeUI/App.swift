@@ -40,8 +40,9 @@ struct ClaudeCodeUIAppWrapper: App {
   }
   
   private func setupChatScreen() {
-    // Initialize dependencies
-    let deps = DependencyContainer(globalPreferences: globalPreferences)
+    // Use optimized initialization for direct ChatScreen usage
+    // This avoids all session storage overhead and file system checks
+    let deps = DependencyContainer.forDirectChatScreen(globalPreferences: globalPreferences)
     
     // Configure Claude client with additional paths for Claude CLI
     let homeDir = NSHomeDirectory()
@@ -57,13 +58,10 @@ struct ClaudeCodeUIAppWrapper: App {
       "\(homeDir)/.nvm/versions/node/v18.19.0/bin"
     ]
     
-    // Create view model with all dependencies
-    let vm = ChatViewModel(
+    // Create view model without session management for better performance
+    let vm = deps.createChatViewModelWithoutSessions(
       claudeClient: ClaudeCodeClient(configuration: config),
-      sessionStorage: deps.sessionStorage,
-      settingsStorage: deps.settingsStorage,
-      globalPreferences: globalPreferences,
-      customPermissionService: deps.customPermissionService
+      workingDirectory: nil // User will select working directory manually
     )
     
     // Optional: Inject a session with a default working directory
