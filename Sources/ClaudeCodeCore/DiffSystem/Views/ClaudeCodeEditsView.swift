@@ -1,5 +1,5 @@
 //
-//  ClaudeCodeDiffView.swift
+//  ClaudeCodeEditsView.swift
 //  ClaudeCodeUI
 //
 //  Created by James Rochabrun on 9/2/25.
@@ -9,10 +9,9 @@ import CCTerminalServiceInterface
 import Foundation
 import SwiftUI
 
-/// Main view for displaying Claude Code diffs
 public struct ClaudeCodeEditsView: View {
   let messageID: UUID
-  let toolName: String
+  let editTool: EditTool
   let toolParameters: [String: String]
   let terminalService: TerminalService
   let projectPath: String?
@@ -30,13 +29,13 @@ public struct ClaudeCodeEditsView: View {
   
   public init(
     messageID: UUID,
-    toolName: String,
+    editTool: EditTool,
     toolParameters: [String: String],
     terminalService: TerminalService,
     projectPath: String? = nil
   ) {
     self.messageID = messageID
-    self.toolName = toolName
+    self.editTool = editTool
     self.toolParameters = toolParameters
     self.terminalService = terminalService
     self.projectPath = projectPath
@@ -224,19 +223,15 @@ extension ClaudeCodeEditsView {
     
     let diffResults: [DiffResult]?
     
-    switch toolName.lowercased() {
-    case "edit":
+    switch editTool {
+    case .edit:
       diffResults = await processEditTool(processor: processor)
       
-    case "multiedit":
+    case .multiEdit:
       diffResults = await processMultiEditTool(processor: processor)
       
-    case "write":
+    case .write:
       diffResults = await processWriteTool(processor: processor)
-      
-    default:
-      diffResults = nil
-      processingError = "Unsupported tool type: \(toolName)"
     }
     
     if let diffResults {

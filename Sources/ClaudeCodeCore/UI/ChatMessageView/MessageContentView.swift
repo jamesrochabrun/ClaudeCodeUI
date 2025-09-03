@@ -61,34 +61,13 @@ struct MessageContentView: View {
   /// when users click "Apply" buttons in the diff interface.
   let terminalService: TerminalService
   
+  /// The project path for file operations
+  let projectPath: String?
+  
   /// Current color scheme for adaptive styling.
   /// Used to adjust text colors and font weights for optimal readability
   /// in both light and dark modes.
   @Environment(\.colorScheme) private var colorScheme
-  
-  /// Parses the edits string from MultiEdit tool parameters
-  private func parseMultiEditEdits(from editsString: String) -> [[String: String]]? {
-    guard let editsData = editsString.data(using: .utf8) else { return nil }
-    
-    do {
-      if let parsed = try JSONSerialization.jsonObject(with: editsData) as? [[String: Any]] {
-        // Convert to [[String: String]]
-        return parsed.compactMap { dict in
-          var stringDict: [String: String] = [:]
-          for (key, value) in dict {
-            if let stringValue = value as? String {
-              stringDict[key] = stringValue
-            }
-          }
-          return stringDict.isEmpty ? nil : stringDict
-        }
-      }
-    } catch {
-      print("DEBUG: Failed to parse edits as JSON:", error)
-    }
-    
-    return nil
-  }
   
   /// Determines if the message type should be displayed in a collapsible format.
   /// Tool-related messages (toolUse, toolResult, toolError, thinking, webSearch) are collapsible,
@@ -132,62 +111,52 @@ struct MessageContentView: View {
     if message.messageType == .toolUse,
        let rawParams = message.toolInputData?.rawParameters {
       
-      switch message.toolName {
-      case "Edit":
+      switch EditTool(rawValue: message.toolName ?? "") {
+      case .edit:
         // Extract Edit tool parameters for diff view
-        if let oldString = rawParams["old_string"],
-           let newString = rawParams["new_string"],
-           let filePath = rawParams["file_path"] {
-          // Show diff view for Edit tool
-          EditToolDiffView(
-            oldString: oldString,
-            newString: newString,
-            filePath: filePath,
-            fontSize: fontSize,
-            contentTextColor: contentTextColor,
-            terminalService: terminalService
+        if let filePath = rawParams["file_path"],
+           rawParams["old_string"] != nil,
+           rawParams["new_string"] != nil {
+          // Show diff view for Edit tool using new system
+          ClaudeCodeEditsView(
+            messageID: message.id,
+            editTool: .edit,
+            toolParameters: rawParams,
+            terminalService: terminalService,
+            projectPath: projectPath
           )
         } else {
           defaultToolDisplay
         }
         
-      case "MultiEdit":
+      case .multiEdit:
         // Extract MultiEdit tool parameters
         if let filePath = rawParams["file_path"],
-           let editsString = rawParams["edits"] {
+           rawParams["edits"] != nil {
           
-          let _ = print("DEBUG: MultiEdit rawParams:", rawParams)
-          let _ =  print("DEBUG: edits string:", editsString)
-          
-          // Parse the edits array from JSON string
-          if let editsArray = parseMultiEditEdits(from: editsString), !editsArray.isEmpty {
-            // Show diff view for MultiEdit tool
-            MultiEditToolDiffView(
-              edits: editsArray,
-              filePath: filePath,
-              fontSize: fontSize,
-              contentTextColor: contentTextColor,
-              terminalService: terminalService
-            )
-          } else {
-            let _ =  print("DEBUG: Failed to parse edits or empty array, falling back to default display")
-            defaultToolDisplay
-          }
+          // Show diff view for MultiEdit tool using new system
+          ClaudeCodeEditsView(
+            messageID: message.id,
+            editTool: .multiEdit,
+            toolParameters: rawParams,
+            terminalService: terminalService,
+            projectPath: projectPath
+          )
         } else {
           defaultToolDisplay
         }
         
-      case "Write":
+      case .write:
         // Extract Write tool parameters
         if let filePath = rawParams["file_path"],
-           let content = rawParams["content"] {
-          // Show formatted content view for Write tool
-          WriteToolContentView(
-            content: content,
-            filePath: filePath,
-            fontSize: fontSize,
-            textFormatter: textFormatter,
-            maxWidth: maxWidth
+           rawParams["content"] != nil {
+          // Show diff view for Write tool using new system
+          ClaudeCodeEditsView(
+            messageID: message.id,
+            editTool: .write,
+            toolParameters: rawParams,
+            terminalService: terminalService,
+            projectPath: projectPath
           )
         } else {
           defaultToolDisplay

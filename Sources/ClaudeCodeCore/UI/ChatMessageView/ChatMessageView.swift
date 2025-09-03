@@ -123,7 +123,8 @@ struct ChatMessageView: View {
                       horizontalPadding: horizontalPadding,
                       showArtifact: showArtifact,
                       maxWidth: size.width,
-                      terminalService: terminalService
+                      terminalService: terminalService,
+                      projectPath: settingsStorage.projectPath
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
                   }
@@ -145,7 +146,8 @@ struct ChatMessageView: View {
             horizontalPadding: horizontalPadding,
             showArtifact: showArtifact,
             maxWidth: size.width,
-            terminalService: terminalService
+            terminalService: terminalService,
+            projectPath: settingsStorage.projectPath
           )
         }
       }
