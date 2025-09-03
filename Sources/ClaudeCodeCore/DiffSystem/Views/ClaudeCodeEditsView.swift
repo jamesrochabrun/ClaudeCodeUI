@@ -267,7 +267,7 @@ extension ClaudeCodeEditsView {
       return nil
     }
     
-    return await processor.processMCPToolResponse(
+    return await processor.processEditTool(
       response: jsonString,
       tool: .edit
     )
@@ -307,7 +307,7 @@ extension ClaudeCodeEditsView {
       return nil
     }
     
-    return await processor.processMCPToolResponse(
+    return await processor.processEditTool(
       response: jsonString,
       tool: .multiEdit
     )
@@ -332,7 +332,7 @@ extension ClaudeCodeEditsView {
       return nil
     }
     
-    return await processor.processMCPToolResponse(
+    return await processor.processEditTool(
       response: jsonString,
       tool: .write
     )
