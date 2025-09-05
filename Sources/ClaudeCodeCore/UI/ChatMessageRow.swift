@@ -42,7 +42,7 @@ struct ChatMessageRow: View {
       defaultExpanded = true
     }
     
-    self._isExpanded = State(initialValue: defaultExpanded)
+    _isExpanded = State(initialValue: defaultExpanded)
   }
   
   @Environment(\.colorScheme) private var colorScheme

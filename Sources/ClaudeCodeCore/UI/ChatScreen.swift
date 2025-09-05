@@ -162,14 +162,14 @@ public struct ChatScreen: View {
             observedPermissionService.approveCurrentToast()
             // Find and collapse the tool message that was just approved
             if let toolMessage = findCurrentToolMessage() {
-              viewModel.collapsedMessageIDs.insert(toolMessage.id)
+              viewModel.messageExpansionStates[toolMessage.id] = false
             }
           },
           onDeny: {
             observedPermissionService.denyCurrentToast()
             // Find and collapse the tool message that was just denied
             if let toolMessage = findCurrentToolMessage() {
-              viewModel.collapsedMessageIDs.insert(toolMessage.id)
+              viewModel.messageExpansionStates[toolMessage.id] = false
             }
           }
         )

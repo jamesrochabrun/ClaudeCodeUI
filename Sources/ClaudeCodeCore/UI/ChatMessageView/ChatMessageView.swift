@@ -61,21 +61,29 @@ struct ChatMessageView: View {
     
     _textFormatter = State(initialValue: formatter)
     
-    // Set default expanded state based on tool type or message type
-    var defaultExpanded = false
-    
-    // Check if it's a tool that should be expanded by default
-    if let toolName = message.toolName,
-       let tool = ToolRegistry.shared.tool(for: toolName) {
-      defaultExpanded = tool.defaultExpandedState
+    // Check if we have a persisted expansion state for this message
+    let initialExpanded: Bool
+    if let persistedState = viewModel.messageExpansionStates[message.id] {
+      initialExpanded = persistedState
+    } else {
+      // Set default expanded state based on tool type or message type
+      var defaultExpanded = false
+      
+      // Check if it's a tool that should be expanded by default
+      if let toolName = message.toolName,
+         let tool = ToolRegistry.shared.tool(for: toolName) {
+        defaultExpanded = tool.defaultExpandedState
+      }
+      
+      // Thinking messages should also be expanded by default
+      if message.messageType == .thinking {
+        defaultExpanded = true
+      }
+      
+      initialExpanded = defaultExpanded
     }
     
-    // Thinking messages should also be expanded by default
-    if message.messageType == .thinking {
-      defaultExpanded = true
-    }
-    
-    _isExpanded = State(initialValue: defaultExpanded)
+    _isExpanded = State(initialValue: initialExpanded)
   }
   
   var body: some View {
@@ -106,7 +114,14 @@ struct ChatMessageView: View {
             messageType: message.messageType,
             toolName: message.toolName,
             toolInputData: message.toolInputData,
-            isExpanded: $isExpanded,
+            isExpanded: Binding(
+              get: { isExpanded },
+              set: { newValue in
+                isExpanded = newValue
+                // Persist the expansion state
+                viewModel.messageExpansionStates[message.id] = newValue
+              }
+            ),
             fontSize: fontSize
           )
           
@@ -150,6 +165,8 @@ struct ChatMessageView: View {
                       onApprovalAction: {
                         withAnimation(.easeInOut(duration: 0.3)) {
                           isExpanded = false
+                          // Persist the collapsed state
+                          viewModel.messageExpansionStates[message.id] = false
                         }
                       }
                     )
@@ -178,6 +195,8 @@ struct ChatMessageView: View {
             onApprovalAction: {
               withAnimation(.easeInOut(duration: 0.3)) {
                 isExpanded = false
+                // Persist the collapsed state
+                viewModel.messageExpansionStates[message.id] = false
               }
             }
           )
@@ -200,14 +219,12 @@ struct ChatMessageView: View {
     .onChange(of: message.content) { oldContent, newContent in
       handleContentChange(oldContent: oldContent, newContent: newContent)
     }
-    .onChange(of: viewModel.collapsedMessageIDs) { _, newValue in
-      // Check if this message should be collapsed due to approval/denial
-      if newValue.contains(message.id) && isExpanded {
+    .onChange(of: viewModel.messageExpansionStates[message.id]) { _, newValue in
+      // React to external changes in expansion state (e.g., from approve/deny)
+      if let newValue, newValue != isExpanded {
         withAnimation(.easeInOut(duration: 0.3)) {
-          isExpanded = false
+          isExpanded = newValue
         }
-        // Remove from the set after collapsing to keep it clean
-        viewModel.collapsedMessageIDs.remove(message.id)
       }
     }
   }
