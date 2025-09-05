@@ -7,17 +7,14 @@ struct TwoSideReviewPanel: View {
   
   init(
     group: DiffTerminalService.DiffGroup,
-    isApplied: Bool,
-    onReviewTap: (() -> Void)? = nil
-  ) {
+    isApplied: Bool)
+  {
     self.group = group
     self.isApplied = isApplied
-    self.onReviewTap = onReviewTap
   }
   
   let group: DiffTerminalService.DiffGroup
   let isApplied: Bool
-  let onReviewTap: (() -> Void)?
   
   @State private var sideLines: [SideLine] = []
   @Environment(\.colorScheme) private var colorScheme

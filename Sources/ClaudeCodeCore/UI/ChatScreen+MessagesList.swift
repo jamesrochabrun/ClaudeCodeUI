@@ -113,6 +113,7 @@ extension ChatScreen {
               settingsStorage: viewModel.settingsStorage,
               terminalService: terminalService,
               fontSize: 13.0,  // Default font size for now
+              viewModel: viewModel,
               showArtifact: { artifactItem in
                 artifact = artifactItem
               }

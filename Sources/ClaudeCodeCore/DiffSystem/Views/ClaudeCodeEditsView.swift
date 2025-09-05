@@ -16,14 +16,29 @@ public struct ClaudeCodeEditsView: View {
   let terminalService: TerminalService
   let projectPath: String?
   
-  @State private var diffStore: DiffStateManager
+  /// Optional callback for when user wants to expand to full-screen
+  var onExpandRequest: (() -> Void)?
+  
+  /// Optional shared diff store to avoid reprocessing
+  let diffStore: DiffStateManager?
+  
+  @State private var ownDiffStore: DiffStateManager?
   @State private var isProcessing = false
   @State private var processingError: String?
   @State private var viewMode: DiffViewMode = .grouped
   
+  /// Get the active diff store (shared or owned)
+  private var activeDiffStore: DiffStateManager {
+    diffStore ?? ownDiffStore ?? DiffStateManager(terminalService: terminalService)
+  }
+  
+  /// Display modes for presenting code differences.
   enum DiffViewMode {
+    /// Shows changes in grouped sections with context
     case grouped
+    /// Shows old and new versions side by side
     case split
+    /// Shows changes inline within the code
     case inline
   }
   
@@ -32,14 +47,22 @@ public struct ClaudeCodeEditsView: View {
     editTool: EditTool,
     toolParameters: [String: String],
     terminalService: TerminalService,
-    projectPath: String? = nil
+    projectPath: String? = nil,
+    onExpandRequest: (() -> Void)? = nil,
+    diffStore: DiffStateManager? = nil
   ) {
     self.messageID = messageID
     self.editTool = editTool
     self.toolParameters = toolParameters
     self.terminalService = terminalService
     self.projectPath = projectPath
-    _diffStore = State(initialValue: DiffStateManager(terminalService: terminalService))
+    self.onExpandRequest = onExpandRequest
+    self.diffStore = diffStore
+    
+    // Only create own store if no shared one provided
+    if diffStore == nil {
+      _ownDiffStore = State(initialValue: DiffStateManager(terminalService: terminalService))
+    }
   }
   
   public var body: some View {
@@ -50,14 +73,21 @@ public struct ClaudeCodeEditsView: View {
         ErrorView(error: error)
       } else {
         DiffContentView(
-          state: diffStore.getState(for: messageID),
+          state: activeDiffStore.getState(for: messageID),
           viewMode: $viewMode,
-          toolParameters: toolParameters)
+          toolParameters: toolParameters,
+          onExpandRequest: onExpandRequest)
       }
     }
     .onAppear {
-      Task {
-        await processTool()
+      let currentState = activeDiffStore.getState(for: messageID)
+      let isEmpty = currentState == .empty
+      
+      // Only process if we don't have a shared store or if the state is empty
+      if diffStore == nil || isEmpty {
+        Task {
+          await processTool()
+        }
       }
     }
   }
@@ -97,12 +127,14 @@ private struct DiffContentView: View {
   let state: DiffState
   @Binding var viewMode: ClaudeCodeEditsView.DiffViewMode
   let toolParameters: [String: String]
+  let onExpandRequest: (() -> Void)?
   
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       HeaderView(
         filePath: toolParameters["file_path"],
-        viewMode: $viewMode
+        viewMode: $viewMode,
+        onExpandRequest: onExpandRequest
       )
       
       if state.diffGroups.isEmpty {
@@ -131,6 +163,7 @@ private struct DiffContentView: View {
 private struct HeaderView: View {
   let filePath: String?
   @Binding var viewMode: ClaudeCodeEditsView.DiffViewMode
+  let onExpandRequest: (() -> Void)?
   
   var body: some View {
     VStack {
@@ -144,13 +177,29 @@ private struct HeaderView: View {
           }
         }
         Spacer()
-        Picker("", selection: $viewMode) {
-          Text("Grouped").tag(ClaudeCodeEditsView.DiffViewMode.grouped)
-          Text("Split").tag(ClaudeCodeEditsView.DiffViewMode.split)
-          Text("Inline").tag(ClaudeCodeEditsView.DiffViewMode.inline)
+        
+        HStack(spacing: 12) {
+          // Expand button
+          if let onExpandRequest = onExpandRequest {
+            Button(action: {
+              onExpandRequest()
+            }) {
+              Image(systemName: "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: 14))
+            }
+            .buttonStyle(.plain)
+            .help("Expand to full screen")
+          }
+          
+          // View mode picker
+          Picker("", selection: $viewMode) {
+            Text("Grouped").tag(ClaudeCodeEditsView.DiffViewMode.grouped)
+            Text("Split").tag(ClaudeCodeEditsView.DiffViewMode.split)
+            Text("Inline").tag(ClaudeCodeEditsView.DiffViewMode.inline)
+          }
+          .pickerStyle(.segmented)
+          .frame(width: 200)
         }
-        .pickerStyle(.segmented)
-        .frame(width: 200)
       }
       if let filePath = filePath {
         Text(filePath)
@@ -213,9 +262,15 @@ private struct DiffGroupView: View {
 
 extension ClaudeCodeEditsView {
   
+  /// Processes the tool response based on the tool type (edit, multiEdit, or write).
+  /// 
+  /// This method coordinates the processing of different tool types, creating diff results
+  /// and updating the diff store with the processed changes.
   private func processTool() async {
     isProcessing = true
-    defer { isProcessing = false }
+    defer {
+      isProcessing = false
+    }
     
     let processor = DiffResultProcessor(
       fileDataReader: DefaultFileDataReader(projectPath: projectPath)
@@ -235,12 +290,19 @@ extension ClaudeCodeEditsView {
     }
     
     if let diffResults {
-      await diffStore.process(diffs: diffResults, for: messageID)
+      await activeDiffStore.process(diffs: diffResults, for: messageID)
     } else if processingError == nil {
       processingError = "Failed to process tool response"
     }
   }
   
+  /// Processes an Edit tool response to generate diff results.
+  ///
+  /// Extracts the required parameters (file_path, old_string, new_string) from the tool
+  /// parameters and creates a FileEdit object for processing.
+  ///
+  /// - Parameter processor: The DiffResultProcessor used to process the edit.
+  /// - Returns: An array of DiffResult objects if successful, nil if parameters are missing or invalid.
   private func processEditTool(processor: DiffResultProcessor) async -> [DiffResult]? {
     guard
       let filePath = toolParameters["file_path"],
@@ -273,6 +335,13 @@ extension ClaudeCodeEditsView {
     )
   }
   
+  /// Processes a MultiEdit tool response to generate diff results.
+  ///
+  /// Extracts the file path and edits array from the tool parameters, parses the edits
+  /// into structured Edit objects, and creates a FileEdit object for processing.
+  ///
+  /// - Parameter processor: The DiffResultProcessor used to process the edits.
+  /// - Returns: An array of DiffResult objects if successful, nil if parameters are missing or invalid.
   private func processMultiEditTool(processor: DiffResultProcessor) async -> [DiffResult]? {
     guard
       let filePath = toolParameters["file_path"],
@@ -313,6 +382,13 @@ extension ClaudeCodeEditsView {
     )
   }
   
+  /// Processes a Write tool response to generate diff results.
+  ///
+  /// Extracts the file path and content from the tool parameters and creates
+  /// a FileContent object for processing. This handles creating or overwriting files.
+  ///
+  /// - Parameter processor: The DiffResultProcessor used to process the write operation.
+  /// - Returns: An array of DiffResult objects if successful, nil if parameters are missing or invalid.
   private func processWriteTool(processor: DiffResultProcessor) async -> [DiffResult]? {
     guard
       let filePath = toolParameters["file_path"],
@@ -338,6 +414,14 @@ extension ClaudeCodeEditsView {
     )
   }
   
+  /// Parses a JSON string containing multiple edit operations into a dictionary array.
+  ///
+  /// Converts a JSON string representing an array of edit objects into a Swift array
+  /// of dictionaries. Handles both string and boolean values, converting booleans to
+  /// string representations ("true"/"false").
+  ///
+  /// - Parameter editsString: A JSON string containing an array of edit objects.
+  /// - Returns: An array of dictionaries with string keys and values, or nil if parsing fails.
   private func parseMultiEditEdits(from editsString: String) -> [[String: String]]? {
     // Try to parse as JSON array first
     if let data = editsString.data(using: .utf8),

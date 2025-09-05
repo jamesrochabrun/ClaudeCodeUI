@@ -17,6 +17,7 @@ struct ChatMessageView: View {
   let settingsStorage: SettingsStorage
   let fontSize: Double
   let terminalService: TerminalService
+  let viewModel: ChatViewModel
   let showArtifact: ((Artifact) -> Void)?
   
   @State private var size = CGSize.zero
@@ -24,6 +25,9 @@ struct ChatMessageView: View {
   @State private var showTimestamp = false
   @State private var isExpanded = false
   @State private var textFormatter: TextFormatter
+  /// Tracks whether the initial message content has been processed by the TextFormatter.
+  /// This prevents duplicate processing of pre-existing content while allowing incremental
+  /// updates for streaming messages. Set to true after the first content ingestion.
   @State private var hasProcessedInitialContent = false
   
   @Environment(\.colorScheme) private var colorScheme
@@ -33,12 +37,14 @@ struct ChatMessageView: View {
     settingsStorage: SettingsStorage,
     terminalService: TerminalService,
     fontSize: Double = 13.0,
+    viewModel: ChatViewModel,
     showArtifact: ((Artifact) -> Void)? = nil)
   {
     self.message = message
     self.settingsStorage = settingsStorage
     self.terminalService = terminalService
     self.fontSize = fontSize
+    self.viewModel = viewModel
     self.showArtifact = showArtifact
     
     // Initialize text formatter with project root if available
@@ -54,6 +60,22 @@ struct ChatMessageView: View {
     }
     
     _textFormatter = State(initialValue: formatter)
+    
+    // Set default expanded state based on tool type or message type
+    var defaultExpanded = false
+    
+    // Check if it's a tool that should be expanded by default
+    if let toolName = message.toolName,
+       let tool = ToolRegistry.shared.tool(for: toolName) {
+      defaultExpanded = tool.defaultExpandedState
+    }
+    
+    // Thinking messages should also be expanded by default
+    if message.messageType == .thinking {
+      defaultExpanded = true
+    }
+    
+    _isExpanded = State(initialValue: defaultExpanded)
   }
   
   var body: some View {
@@ -124,7 +146,12 @@ struct ChatMessageView: View {
                       showArtifact: showArtifact,
                       maxWidth: size.width,
                       terminalService: terminalService,
-                      projectPath: settingsStorage.projectPath
+                      projectPath: settingsStorage.projectPath,
+                      onApprovalAction: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                          isExpanded = false
+                        }
+                      }
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
                   }
@@ -147,7 +174,12 @@ struct ChatMessageView: View {
             showArtifact: showArtifact,
             maxWidth: size.width,
             terminalService: terminalService,
-            projectPath: settingsStorage.projectPath
+            projectPath: settingsStorage.projectPath,
+            onApprovalAction: {
+              withAnimation(.easeInOut(duration: 0.3)) {
+                isExpanded = false
+              }
+            }
           )
         }
       }
@@ -167,6 +199,16 @@ struct ChatMessageView: View {
     }
     .onChange(of: message.content) { oldContent, newContent in
       handleContentChange(oldContent: oldContent, newContent: newContent)
+    }
+    .onChange(of: viewModel.collapsedMessageIDs) { _, newValue in
+      // Check if this message should be collapsed due to approval/denial
+      if newValue.contains(message.id) && isExpanded {
+        withAnimation(.easeInOut(duration: 0.3)) {
+          isExpanded = false
+        }
+        // Remove from the set after collapsing to keep it clean
+        viewModel.collapsedMessageIDs.remove(message.id)
+      }
     }
   }
   
@@ -239,4 +281,5 @@ struct ChatMessageView: View {
       }
     }
   }
+  
 }

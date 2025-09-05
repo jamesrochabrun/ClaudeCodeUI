@@ -44,6 +44,7 @@ public struct ChatScreen: View {
     self._columnVisibility = columnVisibility
     self.uiConfiguration = uiConfiguration
     // Cast to DefaultCustomPermissionService for @ObservedObject support
+    // TODO: Fix this so we don't force unwrapp.
     self.observedPermissionService = customPermissionService as! DefaultCustomPermissionService
   }
   
@@ -159,12 +160,34 @@ public struct ChatScreen: View {
           showRiskLabel: uiConfiguration.showRiskLabel,
           onApprove: {
             observedPermissionService.approveCurrentToast()
+            // Find and collapse the tool message that was just approved
+            if let toolMessage = findCurrentToolMessage() {
+              viewModel.collapsedMessageIDs.insert(toolMessage.id)
+            }
           },
           onDeny: {
             observedPermissionService.denyCurrentToast()
+            // Find and collapse the tool message that was just denied
+            if let toolMessage = findCurrentToolMessage() {
+              viewModel.collapsedMessageIDs.insert(toolMessage.id)
+            }
           }
         )
       }
+    }
+  }
+  
+  /// Find the most recent tool message that matches the current approval request
+  private func findCurrentToolMessage() -> ChatMessage? {
+    guard let request = observedPermissionService.currentToastRequest else { return nil }
+    
+    // Look for the most recent tool message with matching toolName
+    // Iterate from end (most recent) to find the matching tool
+    return viewModel.messages.reversed().first { message in
+      message.messageType == .toolUse &&
+      message.toolName == request.toolName &&
+      // Only collapse Edit, MultiEdit, Write tools (the ones with diffs)
+      ["Edit", "MultiEdit", "Write"].contains(message.toolName ?? "")
     }
   }
   

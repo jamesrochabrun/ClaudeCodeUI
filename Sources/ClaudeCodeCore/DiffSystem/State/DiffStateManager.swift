@@ -12,7 +12,7 @@ import SwiftUI
 // MARK: - DiffStateManager
 
 @Observable
-final class DiffStateManager {
+public final class DiffStateManager {
   
   // MARK: Lifecycle
   
@@ -33,7 +33,9 @@ final class DiffStateManager {
   
   @MainActor
   func process(diffs: [DiffResult], for messageID: UUID) async {
-    guard !diffs.isEmpty, let firstResult = diffs.first else { return }
+    guard !diffs.isEmpty, let firstResult = diffs.first else { 
+      return 
+    }
     
     if
       let existingState = states[messageID],

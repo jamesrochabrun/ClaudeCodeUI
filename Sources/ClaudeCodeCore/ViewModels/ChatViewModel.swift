@@ -39,6 +39,9 @@ public final class ChatViewModel {
   // Stream cancellation: track if user cancelled the current stream
   private var isCancelled = false
   
+  // Track message IDs that should be collapsed after approval/denial
+  var collapsedMessageIDs: Set<UUID> = []
+  
   /// Sessions loading state
   public var isLoadingSessions: Bool {
     sessionManager.isLoadingSessions

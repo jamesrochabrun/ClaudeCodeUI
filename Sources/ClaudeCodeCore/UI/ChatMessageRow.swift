@@ -27,12 +27,28 @@ struct ChatMessageRow: View {
     self.message = message
     self.settingsStorage = settingsStorage
     self.fontSize = fontSize
+    
+    // Set default expanded state based on tool type or message type
+    var defaultExpanded = false
+    
+    // Check if it's a tool that should be expanded by default
+    if let toolName = message.toolName,
+       let tool = ToolRegistry.shared.tool(for: toolName) {
+      defaultExpanded = tool.defaultExpandedState
+    }
+    
+    // Thinking messages should also be expanded by default
+    if message.messageType == .thinking {
+      defaultExpanded = true
+    }
+    
+    self._isExpanded = State(initialValue: defaultExpanded)
   }
   
   @Environment(\.colorScheme) private var colorScheme
   @State private var isHovered = false
   @State private var showTimestamp = false
-  @State private var isExpanded = false
+  @State private var isExpanded: Bool
   
   // Determine if this message type should be collapsible
   private var isCollapsible: Bool {
