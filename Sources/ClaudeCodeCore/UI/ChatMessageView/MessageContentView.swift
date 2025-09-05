@@ -112,6 +112,18 @@ struct MessageContentView: View {
   /// Tracks whether the diff manager is ready for use
   @State private var isDiffManagerReady = false
   
+  /// Creates a new message content view with the specified configuration.
+  ///
+  /// - Parameters:
+  ///   - message: The chat message to display, containing content, role, and metadata
+  ///   - textFormatter: Formatter for rendering markdown and code blocks with syntax highlighting
+  ///   - fontSize: Base font size in points for message text
+  ///   - horizontalPadding: Padding between message content and container edges
+  ///   - showArtifact: Optional callback to display artifacts like Mermaid diagrams
+  ///   - maxWidth: Maximum width constraint to ensure readable line lengths
+  ///   - terminalService: Service for executing terminal commands in diff views
+  ///   - projectPath: Optional path to the project root for file operations
+  ///   - onApprovalAction: Optional callback invoked when approval/denial actions occur
   init(
     message: ChatMessage,
     textFormatter: TextFormatter,
@@ -261,25 +273,27 @@ struct MessageContentView: View {
   
   @ViewBuilder
   private func diffView(editTool: EditTool, rawParams: [String: String]) -> some View {
-    if isDiffManagerReady && diffStateManager != nil {
-      ClaudeCodeEditsView(
-        messageID: message.id,
-        editTool: editTool,
-        toolParameters: rawParams,
-        terminalService: terminalService,
-        projectPath: projectPath,
-        onExpandRequest: {
-          modalDiffData = DiffModalData(messageID: message.id, tool: editTool, params: rawParams)
-        },
-        diffStore: diffStateManager
-      )
-      .transition(.asymmetric(
-        insertion: .opacity.combined(with: .scale(scale: 0.95, anchor: .top)),
-        removal: .opacity
-      ))
-    } else {
-      DiffLoadingView()
-        .transition(.opacity.combined(with: .scale))
+    Group {
+      if isDiffManagerReady && diffStateManager != nil {
+        ClaudeCodeEditsView(
+          messageID: message.id,
+          editTool: editTool,
+          toolParameters: rawParams,
+          terminalService: terminalService,
+          projectPath: projectPath,
+          onExpandRequest: {
+            modalDiffData = DiffModalData(messageID: message.id, tool: editTool, params: rawParams)
+          },
+          diffStore: diffStateManager
+        )
+        .transition(.asymmetric(
+          insertion: .opacity.combined(with: .scale(scale: 0.95, anchor: .top)),
+          removal: .opacity
+        ))
+      } else {
+        DiffLoadingView()
+          .transition(.opacity.combined(with: .scale))
+      }
     }
   }
   

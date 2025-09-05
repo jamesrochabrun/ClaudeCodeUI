@@ -9,7 +9,20 @@ import CCTerminalServiceInterface
 import Foundation
 import SwiftUI
 
+/// Tool parameter keys used throughout the view
+private enum ParameterKeys {
+  static let filePath = "file_path"
+  static let oldString = "old_string"
+  static let newString = "new_string"
+  static let replaceAll = "replace_all"
+  static let edits = "edits"
+  static let content = "content"
+}
+
 public struct ClaudeCodeEditsView: View {
+  
+  // MARK: - Constants
+
   let messageID: UUID
   let editTool: EditTool
   let toolParameters: [String: String]
@@ -38,8 +51,6 @@ public struct ClaudeCodeEditsView: View {
     case grouped
     /// Shows old and new versions side by side
     case split
-    /// Shows changes inline within the code
-    case inline
   }
   
   public init(
@@ -132,7 +143,7 @@ private struct DiffContentView: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       HeaderView(
-        filePath: toolParameters["file_path"],
+        filePath: toolParameters[ParameterKeys.filePath],
         viewMode: $viewMode,
         onExpandRequest: onExpandRequest
       )
@@ -195,7 +206,6 @@ private struct HeaderView: View {
           Picker("", selection: $viewMode) {
             Text("Grouped").tag(ClaudeCodeEditsView.DiffViewMode.grouped)
             Text("Split").tag(ClaudeCodeEditsView.DiffViewMode.split)
-            Text("Inline").tag(ClaudeCodeEditsView.DiffViewMode.inline)
           }
           .pickerStyle(.segmented)
           .frame(width: 200)
@@ -233,7 +243,7 @@ private struct DiffGroupView: View {
     case .grouped:
       DiffContainerView(
         group: group,
-        filePath: toolParameters["file_path"] ?? "",
+        filePath: toolParameters[ParameterKeys.filePath] ?? "",
         isApplied: isApplied,
         slotContent: {
           VStack(alignment: .leading, spacing: 0) {
@@ -242,17 +252,6 @@ private struct DiffGroupView: View {
             }
           }
         }
-      )
-      
-    case .inline:
-      VStack(alignment: .leading, spacing: 0) {
-        ForEach(Array(group.lines.enumerated()), id: \.offset) { _, line in
-          LineView(line: line)
-        }
-      }
-      .overlay(
-        RoundedRectangle(cornerRadius: 8)
-          .stroke(isApplied ? Color.green.opacity(0.5) : Color.gray.opacity(0.3), lineWidth: 1)
       )
     }
   }
@@ -305,9 +304,9 @@ extension ClaudeCodeEditsView {
   /// - Returns: An array of DiffResult objects if successful, nil if parameters are missing or invalid.
   private func processEditTool(processor: DiffResultProcessor) async -> [DiffResult]? {
     guard
-      let filePath = toolParameters["file_path"],
-      let oldString = toolParameters["old_string"],
-      let newString = toolParameters["new_string"]
+      let filePath = toolParameters[ParameterKeys.filePath],
+      let oldString = toolParameters[ParameterKeys.oldString],
+      let newString = toolParameters[ParameterKeys.newString]
     else {
       processingError = "Missing required parameters for Edit tool"
       return nil
@@ -318,7 +317,7 @@ extension ClaudeCodeEditsView {
       edits: nil,
       newString: newString,
       oldString: oldString,
-      replaceAll: toolParameters["replace_all"] == "true"
+      replaceAll: toolParameters[ParameterKeys.replaceAll] == "true"
     )
     
     guard
@@ -344,8 +343,8 @@ extension ClaudeCodeEditsView {
   /// - Returns: An array of DiffResult objects if successful, nil if parameters are missing or invalid.
   private func processMultiEditTool(processor: DiffResultProcessor) async -> [DiffResult]? {
     guard
-      let filePath = toolParameters["file_path"],
-      let editsString = toolParameters["edits"],
+      let filePath = toolParameters[ParameterKeys.filePath],
+      let editsString = toolParameters[ParameterKeys.edits],
       let editsArray = parseMultiEditEdits(from: editsString)
     else {
       processingError = "Missing or invalid parameters for MultiEdit tool"
@@ -354,9 +353,9 @@ extension ClaudeCodeEditsView {
     
     let edits = editsArray.map { dict in
       Edit(
-        newString: dict["new_string"] ?? "",
-        oldString: dict["old_string"] ?? "",
-        replaceAll: dict["replace_all"] == "true"
+        newString: dict[ParameterKeys.newString] ?? "",
+        oldString: dict[ParameterKeys.oldString] ?? "",
+        replaceAll: dict[ParameterKeys.replaceAll] == "true"
       )
     }
     
@@ -391,8 +390,8 @@ extension ClaudeCodeEditsView {
   /// - Returns: An array of DiffResult objects if successful, nil if parameters are missing or invalid.
   private func processWriteTool(processor: DiffResultProcessor) async -> [DiffResult]? {
     guard
-      let filePath = toolParameters["file_path"],
-      let content = toolParameters["content"]
+      let filePath = toolParameters[ParameterKeys.filePath],
+      let content = toolParameters[ParameterKeys.content]
     else {
       processingError = "Missing required parameters for Write tool"
       return nil
