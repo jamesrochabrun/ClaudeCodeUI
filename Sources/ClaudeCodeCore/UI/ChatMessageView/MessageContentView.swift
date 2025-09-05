@@ -117,13 +117,13 @@ struct MessageContentView: View {
   /// - Parameters:
   ///   - message: The chat message to display, containing content, role, and metadata
   ///   - textFormatter: Formatter for rendering markdown and code blocks with syntax highlighting
-  ///   - fontSize: Base font size in points for message text
+  ///   - fontSize: Base font size in points for message content
   ///   - horizontalPadding: Padding between message content and container edges
   ///   - showArtifact: Optional callback to display artifacts like Mermaid diagrams
-  ///   - maxWidth: Maximum width constraint to ensure readable line lengths
-  ///   - terminalService: Service for executing terminal commands in diff views
-  ///   - projectPath: Optional path to the project root for file operations
-  ///   - onApprovalAction: Optional callback invoked when approval/denial actions occur
+  ///   - maxWidth: Maximum width constraint to ensure optimal readability
+  ///   - terminalService: Service for executing commands in diff views
+  ///   - projectPath: Optional project directory path for file operations
+  ///   - onApprovalAction: Optional callback invoked when user approves/denies tool actions
   init(
     message: ChatMessage,
     textFormatter: TextFormatter,
