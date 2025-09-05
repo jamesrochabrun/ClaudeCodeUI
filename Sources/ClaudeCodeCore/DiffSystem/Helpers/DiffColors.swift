@@ -2,11 +2,11 @@ import SwiftUI
 
 struct DiffColors {
   static func backgroundColorForAddedLines(in colorScheme: ColorScheme) -> Color {
-    colorScheme == .dark ? Color.green.opacity(0.2) : Color.green.opacity(0.1)
+    colorScheme == .dark ? Color(hex: "#29EC39").opacity(0.1) : Color.green.opacity(0.1)
   }
   
   static func backgroundColorForRemovedLines(in colorScheme: ColorScheme) -> Color {
-    colorScheme == .dark ? Color.red.opacity(0.2) : Color.red.opacity(0.1)
+    colorScheme == .dark ? Color(hex: "#FF3E41").opacity(0.1) : Color.red.opacity(0.1)
   }
   
   static func backgroundColorForCodeBlockHeader(in colorScheme: ColorScheme) -> Color {
