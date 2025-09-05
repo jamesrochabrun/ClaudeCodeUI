@@ -17,6 +17,7 @@ struct ChatMessageView: View {
   let settingsStorage: SettingsStorage
   let fontSize: Double
   let terminalService: TerminalService
+  let viewModel: ChatViewModel
   let showArtifact: ((Artifact) -> Void)?
   
   @State private var size = CGSize.zero
@@ -24,6 +25,9 @@ struct ChatMessageView: View {
   @State private var showTimestamp = false
   @State private var isExpanded = false
   @State private var textFormatter: TextFormatter
+  /// Tracks whether the initial message content has been processed by the TextFormatter.
+  /// This prevents duplicate processing of pre-existing content while allowing incremental
+  /// updates for streaming messages. Set to true after the first content ingestion.
   @State private var hasProcessedInitialContent = false
   
   @Environment(\.colorScheme) private var colorScheme
@@ -33,12 +37,14 @@ struct ChatMessageView: View {
     settingsStorage: SettingsStorage,
     terminalService: TerminalService,
     fontSize: Double = 13.0,
+    viewModel: ChatViewModel,
     showArtifact: ((Artifact) -> Void)? = nil)
   {
     self.message = message
     self.settingsStorage = settingsStorage
     self.terminalService = terminalService
     self.fontSize = fontSize
+    self.viewModel = viewModel
     self.showArtifact = showArtifact
     
     // Initialize text formatter with project root if available
@@ -54,103 +60,37 @@ struct ChatMessageView: View {
     }
     
     _textFormatter = State(initialValue: formatter)
+    
+    // Check if we have a persisted expansion state for this message
+    let initialExpanded: Bool
+    if let persistedState = viewModel.messageExpansionStates[message.id] {
+      initialExpanded = persistedState
+    } else {
+      // Set default expanded state based on tool type or message type
+      var defaultExpanded = false
+      
+      // Check if it's a tool that should be expanded by default
+      if let toolName = message.toolName,
+         let tool = ToolRegistry.shared.tool(for: toolName) {
+        defaultExpanded = tool.defaultExpandedState
+      }
+      
+      // Thinking messages should also be expanded by default
+      if message.messageType == .thinking {
+        defaultExpanded = true
+      }
+      
+      initialExpanded = defaultExpanded
+    }
+    
+    _isExpanded = State(initialValue: initialExpanded)
   }
   
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      // Code selections for user messages
-      if message.role == .user, let codeSelections = message.codeSelections, !codeSelections.isEmpty {
-        CodeSelectionsSectionView(selections: codeSelections)
-          .padding(.top, 6)
-      }
-      
-      // File attachments for user messages
-      if message.role == .user, let attachments = message.attachments, !attachments.isEmpty {
-        AttachmentsSectionView(attachments: attachments)
-          .padding(.top, 6)
-      }
-      
-      GeometryReader { geometry in
-        Color.clear
-          .onAppear { size = geometry.size }
-          .onChange(of: geometry.size) { _, newSize in
-            size = newSize
-          }
-      }.frame(height: 0)
-      
-      VStack(alignment: .leading, spacing: 0) {
-        if isCollapsible {
-          CollapsibleHeaderView(
-            messageType: message.messageType,
-            toolName: message.toolName,
-            toolInputData: message.toolInputData,
-            isExpanded: $isExpanded,
-            fontSize: fontSize
-          )
-          
-          // Expandable content with indentation
-          if isExpanded {
-            VStack(alignment: .leading, spacing: 0) {
-              // Connection line
-              HStack(spacing: 0) {
-                Color.clear
-                  .frame(width: 20)
-                
-                Rectangle()
-                  .fill(borderColor)
-                  .frame(width: 2)
-                  .padding(.vertical, -1)
-              }
-              .frame(height: 8)
-              
-              // Content area
-              HStack(alignment: .top, spacing: 0) {
-                Color.clear
-                  .frame(width: 20)
-                
-                VStack(alignment: .leading, spacing: 0) {
-                  Rectangle()
-                    .fill(borderColor)
-                    .frame(height: 1)
-                    .frame(maxWidth: .infinity)
-                  
-                  // Message content
-                  ScrollView {
-                    MessageContentView(
-                      message: message,
-                      textFormatter: textFormatter,
-                      fontSize: fontSize,
-                      horizontalPadding: horizontalPadding,
-                      showArtifact: showArtifact,
-                      maxWidth: size.width,
-                      terminalService: terminalService
-                    )
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                  }
-                  .frame(maxHeight: 400)
-                  .background(contentBackgroundColor)
-                }
-              }
-            }
-            .transition(.asymmetric(
-              insertion: .push(from: .top).combined(with: .opacity),
-              removal: .push(from: .bottom).combined(with: .opacity)
-            ))
-          }
-        } else {
-          MessageContentView(
-            message: message,
-            textFormatter: textFormatter,
-            fontSize: fontSize,
-            horizontalPadding: horizontalPadding,
-            showArtifact: showArtifact,
-            maxWidth: size.width,
-            terminalService: terminalService
-          )
-        }
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      
+      userMessageAttachments
+      sizeReader
+      messageContent
       Spacer(minLength: 0)
     }
     .padding(.horizontal, 12)
@@ -166,6 +106,146 @@ struct ChatMessageView: View {
     .onChange(of: message.content) { oldContent, newContent in
       handleContentChange(oldContent: oldContent, newContent: newContent)
     }
+    .onChange(of: viewModel.messageExpansionStates[message.id]) { _, newValue in
+      if let newValue, newValue != isExpanded {
+        withAnimation(.easeInOut(duration: 0.3)) {
+          isExpanded = newValue
+        }
+      }
+    }
+  }
+  
+  @ViewBuilder
+  private var userMessageAttachments: some View {
+    if message.role == .user {
+      if let codeSelections = message.codeSelections, !codeSelections.isEmpty {
+        CodeSelectionsSectionView(selections: codeSelections)
+          .padding(.top, 6)
+      }
+      
+      if let attachments = message.attachments, !attachments.isEmpty {
+        AttachmentsSectionView(attachments: attachments)
+          .padding(.top, 6)
+      }
+    }
+  }
+  
+  private var sizeReader: some View {
+    GeometryReader { geometry in
+      Color.clear
+        .onAppear { size = geometry.size }
+        .onChange(of: geometry.size) { _, newSize in
+          size = newSize
+        }
+    }.frame(height: 0)
+  }
+  
+  @ViewBuilder
+  private var messageContent: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      if isCollapsible {
+        collapsibleContent
+      } else {
+        standardMessageContent
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+  
+  private var collapsibleContent: some View {
+    VStack {
+      CollapsibleHeaderView(
+        messageType: message.messageType,
+        toolName: message.toolName,
+        toolInputData: message.toolInputData,
+        isExpanded: expansionBinding,
+        fontSize: fontSize
+      )
+      if isExpanded {
+        expandedContent
+      }
+    }
+    .animation(.easeInOut, value: isExpanded)
+  }
+  
+  private var expandedContent: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      if !isEditTool {
+        connectionLine
+      }
+      contentArea
+    }
+  }
+  
+  private var connectionLine: some View {
+    HStack(spacing: 0) {
+      Color.clear
+        .frame(width: 20)
+      
+      Rectangle()
+        .fill(borderColor)
+        .frame(width: 2)
+        .padding(.vertical, -1)
+    }
+    .frame(height: 8)
+  }
+  
+  private var contentArea: some View {
+    HStack(alignment: .top, spacing: 0) {
+      if !isEditTool {
+        Color.clear
+          .frame(width: 20)
+      }
+      
+      VStack(alignment: .leading, spacing: 0) {
+        if !isEditTool {
+          Rectangle()
+            .fill(borderColor)
+            .frame(height: 1)
+            .frame(maxWidth: .infinity)
+        }
+        
+        ScrollView {
+          messageContentView
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxHeight: 400)
+        .background(contentBackgroundColor)
+      }
+    }
+  }
+  
+  private var standardMessageContent: some View {
+    messageContentView
+  }
+  
+  private var messageContentView: some View {
+    MessageContentView(
+      message: message,
+      textFormatter: textFormatter,
+      fontSize: fontSize,
+      horizontalPadding: horizontalPadding,
+      showArtifact: showArtifact,
+      maxWidth: size.width,
+      terminalService: terminalService,
+      projectPath: settingsStorage.projectPath,
+      onApprovalAction: onApprovalAction
+    )
+  }
+  
+  private var expansionBinding: Binding<Bool> {
+    Binding(
+      get: { isExpanded },
+      set: { newValue in
+        isExpanded = newValue
+        viewModel.messageExpansionStates[message.id] = newValue
+      }
+    )
+  }
+  
+  private func onApprovalAction() {
+    isExpanded = false
+    viewModel.messageExpansionStates[message.id] = false
   }
   
   // MARK: - Helper Properties
@@ -176,11 +256,16 @@ struct ChatMessageView: View {
   
   private var isCollapsible: Bool {
     switch message.messageType {
-    case .toolUse, .toolResult, .toolError, .thinking, .webSearch:
+    case .toolUse, .toolResult, .toolError, .toolDenied, .thinking, .webSearch:
       return true
     case .text:
       return false
     }
+  }
+  
+  private var isEditTool: Bool {
+    guard let toolName = message.toolName else { return false }
+    return EditTool(rawValue: toolName) != nil
   }
   
   private var contentBackgroundColor: SwiftUI.Color {
@@ -237,4 +322,5 @@ struct ChatMessageView: View {
       }
     }
   }
+  
 }

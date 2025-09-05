@@ -17,12 +17,27 @@ public final class ChatViewModel {
   
   // MARK: - Dependencies
   
+  // Problem, row is not collapsing on deny /approve
+  
+  /// The Claude API client for sending messages and receiving responses from Claude
   var claudeClient: ClaudeCode
+  
+  /// Manages chat sessions including creation, selection, and lifecycle
   let sessionManager: SessionManager
+  
+  /// Protocol for persisting session data to disk (messages, metadata)
   let sessionStorage: SessionStorageProtocol
+  
+  /// Stores application settings like project paths and session-specific configurations
   let settingsStorage: SettingsStorage
+  
+  /// Global user preferences including allowed tools, max turns, and system prompts
   let globalPreferences: GlobalPreferencesStorage
+  
+  /// Service for handling custom tool permission requests and user approvals
   let customPermissionService: CustomPermissionService
+  
+  /// Optional callback invoked when session changes, used for external state synchronization
   private let onSessionChange: ((String) -> Void)?
   
   /// Controls whether this view model should manage sessions (load, save, switch, etc.)
@@ -38,6 +53,9 @@ public final class ChatViewModel {
   
   // Stream cancellation: track if user cancelled the current stream
   private var isCancelled = false
+  
+  // Track expansion states for each message to persist across view recreations
+  var messageExpansionStates: [UUID: Bool] = [:]
   
   /// Sessions loading state
   public var isLoadingSessions: Bool {

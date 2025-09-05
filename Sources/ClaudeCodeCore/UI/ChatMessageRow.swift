@@ -27,17 +27,33 @@ struct ChatMessageRow: View {
     self.message = message
     self.settingsStorage = settingsStorage
     self.fontSize = fontSize
+    
+    // Set default expanded state based on tool type or message type
+    var defaultExpanded = false
+    
+    // Check if it's a tool that should be expanded by default
+    if let toolName = message.toolName,
+       let tool = ToolRegistry.shared.tool(for: toolName) {
+      defaultExpanded = tool.defaultExpandedState
+    }
+    
+    // Thinking messages should also be expanded by default
+    if message.messageType == .thinking {
+      defaultExpanded = true
+    }
+    
+    _isExpanded = State(initialValue: defaultExpanded)
   }
   
   @Environment(\.colorScheme) private var colorScheme
   @State private var isHovered = false
   @State private var showTimestamp = false
-  @State private var isExpanded = false
+  @State private var isExpanded: Bool
   
   // Determine if this message type should be collapsible
   private var isCollapsible: Bool {
     switch message.messageType {
-    case .toolUse, .toolResult, .toolError, .thinking, .webSearch:
+    case .toolUse, .toolResult, .toolError, .toolDenied, .thinking, .webSearch:
       return true
     case .text:
       return false
@@ -83,104 +99,136 @@ struct ChatMessageRow: View {
   @ViewBuilder
   private var collapsibleMessageView: some View {
     VStack(alignment: .leading, spacing: 0) {
-      // Header that's always visible
-      HStack(spacing: 12) {
-        // Checkmark indicator
-        Image(systemName: isExpanded ? "checkmark.circle.fill" : "checkmark.circle")
-          .font(.system(size: 14))
-          .foregroundStyle(statusColor)
-          .frame(width: 20, height: 20)
-        
-        // Message type label
-        Text(collapsibleHeaderText)
-          .font(.system(size: fontSize - 1, design: fontDesign))
-          .foregroundStyle(.primary)
-        
-        Spacer()
-        
-        // Expand/collapse chevron
-        Image(systemName: "chevron.right")
-          .font(.system(size: 12, weight: .medium))
-          .foregroundStyle(.secondary)
-          .rotationEffect(.degrees(isExpanded ? 90 : 0))
-      }
-      .padding(.horizontal, 8)
-      .padding(.vertical, 4)
-      .background(
-        RoundedRectangle(cornerRadius: bubbleCornerRadius, style: .continuous)
-          .fill(.ultraThinMaterial)
-          .overlay(
-            RoundedRectangle(cornerRadius: bubbleCornerRadius, style: .continuous)
-              .strokeBorder(
-                LinearGradient(
-                  colors: [
-                    Color(red: 147/255, green: 51/255, blue: 234/255).opacity(0.3),
-                    Color(red: 147/255, green: 51/255, blue: 234/255).opacity(0.1)
-                  ],
-                  startPoint: .topLeading,
-                  endPoint: .bottomTrailing
-                ),
-                lineWidth: 1
-              )
-          )
-      )
-      .contentShape(Rectangle())
-      .onTapGesture {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-          isExpanded.toggle()
+      collapsibleHeader
+        .contentShape(Rectangle())
+        .onTapGesture {
+          withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            isExpanded.toggle()
+          }
         }
-      }
       
-      // Expandable content
       if isExpanded {
-        VStack(alignment: .leading, spacing: 0) {
-          // Connection line
-          HStack(spacing: 0) {
-            Color.clear
-              .frame(width: 20)
-            
-            Rectangle()
-              .fill(borderColor)
-              .frame(width: 2)
-              .padding(.vertical, -1)
-          }
-          .frame(height: 8)
-          
-          // Content area
-          HStack(alignment: .top, spacing: 0) {
-            Color.clear
-              .frame(width: 20)
-            
-            VStack(alignment: .leading, spacing: 0) {
-              Rectangle()
-                .fill(borderColor)
-                .frame(height: 1)
-                .frame(maxWidth: .infinity)
-              
-              // Message content
-              ScrollView {
-                Text(message.content)
-                  .font(.system(size: fontSize - 1, design: fontDesign))
-                  .foregroundColor(contentTextColor)
-                  .padding(16)
-                  .frame(maxWidth: .infinity, alignment: .leading)
-                  .textSelection(.enabled)
-              }
-              .frame(maxHeight: 400)
-              .background(contentBackgroundColor)
-            }
-          }
-        }
-        .transition(.asymmetric(
-          insertion: .push(from: .top).combined(with: .opacity),
-          removal: .push(from: .bottom).combined(with: .opacity)
-        ))
+        expandedContent
       }
     }
   }
   
-  // MARK: - Standard Message View
+  // MARK: - Collapsible Header
   @ViewBuilder
+  private var collapsibleHeader: some View {
+    HStack(spacing: 12) {
+      statusIndicator
+      
+      Text(collapsibleHeaderText)
+        .font(.system(size: fontSize - 1, design: fontDesign))
+        .foregroundStyle(.primary)
+      
+      Spacer()
+      
+      expandChevron
+    }
+    .padding(.horizontal, 8)
+    .padding(.vertical, 4)
+    .background(bubbleBackground)
+  }
+  
+  // MARK: - Status Indicator
+  @ViewBuilder
+  private var statusIndicator: some View {
+    Image(systemName: isExpanded ? "checkmark.circle.fill" : "checkmark.circle")
+      .font(.system(size: 14))
+      .foregroundStyle(statusColor)
+      .frame(width: 20, height: 20)
+  }
+  
+  // MARK: - Expand Chevron
+  @ViewBuilder
+  private var expandChevron: some View {
+    Image(systemName: "chevron.right")
+      .font(.system(size: 12, weight: .medium))
+      .foregroundStyle(.secondary)
+      .rotationEffect(.degrees(isExpanded ? 90 : 0))
+  }
+  
+  // MARK: - Bubble Background
+  @ViewBuilder
+  private var bubbleBackground: some View {
+    RoundedRectangle(cornerRadius: bubbleCornerRadius, style: .continuous)
+      .fill(.ultraThinMaterial)
+      .overlay(
+        RoundedRectangle(cornerRadius: bubbleCornerRadius, style: .continuous)
+          .strokeBorder(
+            LinearGradient(
+              colors: [
+                Color(red: 147/255, green: 51/255, blue: 234/255).opacity(0.3),
+                Color(red: 147/255, green: 51/255, blue: 234/255).opacity(0.1)
+              ],
+              startPoint: .topLeading,
+              endPoint: .bottomTrailing
+            ),
+            lineWidth: 1
+          )
+      )
+  }
+  
+  // MARK: - Expanded Content
+  @ViewBuilder
+  private var expandedContent: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      connectionLine
+      contentArea
+    }
+  }
+  
+  // MARK: - Connection Line
+  @ViewBuilder
+  private var connectionLine: some View {
+    HStack(spacing: 0) {
+      Color.clear
+        .frame(width: 20)
+      
+      Rectangle()
+        .fill(borderColor)
+        .frame(width: 2)
+        .padding(.vertical, -1)
+    }
+    .frame(height: 8)
+  }
+  
+  // MARK: - Content Area
+  @ViewBuilder
+  private var contentArea: some View {
+    HStack(alignment: .top, spacing: 0) {
+      Color.clear
+        .frame(width: 20)
+      
+      VStack(alignment: .leading, spacing: 0) {
+        Rectangle()
+          .fill(borderColor)
+          .frame(height: 1)
+          .frame(maxWidth: .infinity)
+        
+        messageContentScrollView
+      }
+    }
+  }
+  
+  // MARK: - Message Content Scroll View
+
+  private var messageContentScrollView: some View {
+    ScrollView {
+      Text(message.content)
+        .font(.system(size: fontSize - 1, design: fontDesign))
+        .foregroundColor(contentTextColor)
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .textSelection(.enabled)
+    }
+    .frame(maxHeight: 400)
+  }
+  
+  // MARK: - Standard Message View
+
   private var standardMessageView: some View {
     VStack(alignment: .leading, spacing: 0) {
       // Code selections for user messages (leading position)
@@ -199,7 +247,6 @@ struct ChatMessageRow: View {
         
         // Main message content
         messageContentView
-          .background(messageBubbleBackground)
           .overlay(alignment: message.role == .user ? .bottomTrailing : .bottomLeading) {
             if isHovered || showTimestamp {
               timestampView
@@ -213,14 +260,8 @@ struct ChatMessageRow: View {
     }
     .frame(maxWidth: message.role == .user ? nil : .infinity, alignment: message.role == .user ? .trailing : .leading)
   }
+
   
-  // MARK: - Helper Views
-  private var messageBubbleBackground: some View {
-    // No background for any text messages
-    Color.clear
-  }
-  
-  @ViewBuilder
   private var messageContentView: some View {
     Group {
       if message.content.isEmpty && !message.isComplete {
@@ -311,6 +352,8 @@ struct ChatMessageRow: View {
       return "Processing result"
     case .toolError:
       return "Error occurred"
+    case .toolDenied:
+      return "Edit denied by user"
     case .thinking:
       return "Thinking..."
     case .webSearch:
@@ -328,6 +371,8 @@ struct ChatMessageRow: View {
       return .brandTertiary
     case .toolError:
       return .red
+    case .toolDenied:
+      return .secondary
     default:
       return .secondary
     }
@@ -337,12 +382,6 @@ struct ChatMessageRow: View {
     colorScheme == .dark
     ? Color(white: 0.15)
     : Color(white: 0.95)
-  }
-  
-  private var contentBackgroundColor: Color {
-    colorScheme == .dark
-    ? Color(white: 0.1)
-    : Color.white
   }
   
   private var borderColor: Color {
@@ -361,6 +400,8 @@ struct ChatMessageRow: View {
       return Color(red: 52/255, green: 199/255, blue: 89/255)
     case .toolError:
       return Color(red: 255/255, green: 59/255, blue: 48/255)
+    case .toolDenied:
+      return Color.secondary
     case .thinking:
       return Color(red: 90/255, green: 200/255, blue: 250/255)
     case .webSearch:

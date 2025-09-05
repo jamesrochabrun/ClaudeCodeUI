@@ -32,6 +32,9 @@ public protocol ToolType {
   
   /// Priority parameters to display in headers (order matters)
   var priorityParameters: [String] { get }
+  
+  /// Whether this tool should be expanded by default when displayed
+  var defaultExpandedState: Bool { get }
 }
 
 /// Defines how a tool's output should be formatted
@@ -162,6 +165,15 @@ public enum ClaudeCodeTool: String, ToolType, CaseIterable {
     case .exitPlanMode: return ["plan"]
     }
   }
+  
+  public var defaultExpandedState: Bool {
+    switch self {
+    case .edit, .multiEdit, .write, .todoWrite:
+      return true  // These tools should be expanded by default to show their content
+    default:
+      return false
+    }
+  }
 }
 
 /// MCP (Model Context Protocol) tools
@@ -174,6 +186,7 @@ public struct MCPTool: ToolType {
   public let formatType: ToolFormatType
   public let requiresApproval: Bool
   public let priorityParameters: [String]
+  public let defaultExpandedState: Bool
   
   public init(
     identifier: String,
@@ -183,7 +196,8 @@ public struct MCPTool: ToolType {
     isEditTool: Bool = false,
     formatType: ToolFormatType = .plainText,
     requiresApproval: Bool = false,
-    priorityParameters: [String] = []
+    priorityParameters: [String] = [],
+    defaultExpandedState: Bool = false
   ) {
     self.identifier = identifier
     self.friendlyName = friendlyName ?? identifier.replacingOccurrences(of: "_", with: " ").capitalized
@@ -193,6 +207,7 @@ public struct MCPTool: ToolType {
     self.formatType = formatType
     self.requiresApproval = requiresApproval
     self.priorityParameters = priorityParameters
+    self.defaultExpandedState = defaultExpandedState
   }
 }
 

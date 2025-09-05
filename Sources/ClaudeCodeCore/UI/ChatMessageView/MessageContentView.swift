@@ -1,6 +1,23 @@
 import SwiftUI
 import CCTerminalServiceInterface
 
+// MARK: - JSON Keys
+private enum JSONKeys {
+  static let filePath = "file_path"
+  static let oldString = "old_string"
+  static let newString = "new_string"
+  static let edits = "edits"
+  static let content = "content"
+}
+
+/// Data for presenting the diff modal
+struct DiffModalData: Identifiable {
+  let id = UUID()
+  let messageID: UUID
+  let tool: EditTool
+  let params: [String: String]
+}
+
 /// A view that renders the content of a chat message with appropriate formatting based on the message type.
 ///
 /// This view handles different message types including:
@@ -27,6 +44,20 @@ import CCTerminalServiceInterface
 ///     terminalService: terminalService
 /// )
 /// ```
+/// A loading view specifically for diff tools with consistent styling
+private struct DiffLoadingView: View {
+  var body: some View {
+    VStack(spacing: 12) {
+      ProgressView()
+      Text("Preparing diff view...")
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+    .frame(maxWidth: .infinity)
+    .padding()
+  }
+}
+
 struct MessageContentView: View {
   /// The chat message to display.
   /// Contains the message content, role (user/assistant/system), type (text/toolUse/toolResult/etc),
@@ -61,41 +92,66 @@ struct MessageContentView: View {
   /// when users click "Apply" buttons in the diff interface.
   let terminalService: TerminalService
   
+  /// The project path for file operations
+  let projectPath: String?
+  
+  /// Optional callback when approval/denial action occurs
+  let onApprovalAction: (() -> Void)?
+  
   /// Current color scheme for adaptive styling.
   /// Used to adjust text colors and font weights for optimal readability
   /// in both light and dark modes.
   @Environment(\.colorScheme) private var colorScheme
   
-  /// Parses the edits string from MultiEdit tool parameters
-  private func parseMultiEditEdits(from editsString: String) -> [[String: String]]? {
-    guard let editsData = editsString.data(using: .utf8) else { return nil }
-    
-    do {
-      if let parsed = try JSONSerialization.jsonObject(with: editsData) as? [[String: Any]] {
-        // Convert to [[String: String]]
-        return parsed.compactMap { dict in
-          var stringDict: [String: String] = [:]
-          for (key, value) in dict {
-            if let stringValue = value as? String {
-              stringDict[key] = stringValue
-            }
-          }
-          return stringDict.isEmpty ? nil : stringDict
-        }
-      }
-    } catch {
-      print("DEBUG: Failed to parse edits as JSON:", error)
-    }
-    
-    return nil
+  /// Data for the modal diff view - when non-nil, shows the modal
+  @State private var modalDiffData: DiffModalData?
+  
+  /// Single diff state manager for this message
+  @State private var diffStateManager: DiffStateManager?
+  
+  /// Tracks whether the diff manager is ready for use
+  @State private var isDiffManagerReady = false
+  
+  /// Creates a new message content view with the specified configuration.
+  ///
+  /// - Parameters:
+  ///   - message: The chat message to display, containing content, role, and metadata
+  ///   - textFormatter: Formatter for rendering markdown and code blocks with syntax highlighting
+  ///   - fontSize: Base font size in points for message content
+  ///   - horizontalPadding: Padding between message content and container edges
+  ///   - showArtifact: Optional callback to display artifacts like Mermaid diagrams
+  ///   - maxWidth: Maximum width constraint to ensure optimal readability
+  ///   - terminalService: Service for executing commands in diff views
+  ///   - projectPath: Optional project directory path for file operations
+  ///   - onApprovalAction: Optional callback invoked when user approves/denies tool actions
+  init(
+    message: ChatMessage,
+    textFormatter: TextFormatter,
+    fontSize: Double,
+    horizontalPadding: CGFloat,
+    showArtifact: ((Artifact) -> Void)?,
+    maxWidth: CGFloat,
+    terminalService: TerminalService,
+    projectPath: String?,
+    onApprovalAction: (() -> Void)? = nil
+  ) {
+    self.message = message
+    self.textFormatter = textFormatter
+    self.fontSize = fontSize
+    self.horizontalPadding = horizontalPadding
+    self.showArtifact = showArtifact
+    self.maxWidth = maxWidth
+    self.terminalService = terminalService
+    self.projectPath = projectPath
+    self.onApprovalAction = onApprovalAction
   }
   
   /// Determines if the message type should be displayed in a collapsible format.
-  /// Tool-related messages (toolUse, toolResult, toolError, thinking, webSearch) are collapsible,
+  /// Tool-related messages (toolUse, toolResult, toolError, toolDenied, thinking, webSearch) are collapsible,
   /// while plain text messages are not.
   private var isCollapsible: Bool {
     switch message.messageType {
-    case .toolUse, .toolResult, .toolError, .thinking, .webSearch:
+    case .toolUse, .toolResult, .toolError, .toolDenied, .thinking, .webSearch:
       return true
     case .text:
       return false
@@ -104,6 +160,27 @@ struct MessageContentView: View {
   
   var body: some View {
     contentView
+      .sheet(item: $modalDiffData) { data in
+        DiffModalView(
+          messageID: data.messageID,
+          editTool: data.tool,
+          toolParameters: data.params,
+          terminalService: terminalService,
+          projectPath: projectPath,
+          diffStore: diffStateManager ?? DiffStateManager(terminalService: terminalService),
+          onDismiss: {
+            modalDiffData = nil
+          }
+        )
+        .task {
+          if diffStateManager == nil {
+            diffStateManager = DiffStateManager(terminalService: terminalService)
+            withAnimation(.easeInOut(duration: 0.3)) {
+              isDiffManagerReady = true
+            }
+          }
+        }
+      }
   }
   
   @ViewBuilder
@@ -128,76 +205,95 @@ struct MessageContentView: View {
   
   @ViewBuilder
   private var collapsibleContent: some View {
-    // Check if this is an Edit or MultiEdit tool message with diff data
-    if message.messageType == .toolUse,
-       let rawParams = message.toolInputData?.rawParameters {
-      
-      switch message.toolName {
-      case "Edit":
-        // Extract Edit tool parameters for diff view
-        if let oldString = rawParams["old_string"],
-           let newString = rawParams["new_string"],
-           let filePath = rawParams["file_path"] {
-          // Show diff view for Edit tool
-          EditToolDiffView(
-            oldString: oldString,
-            newString: newString,
-            filePath: filePath,
-            fontSize: fontSize,
-            contentTextColor: contentTextColor,
-            terminalService: terminalService
-          )
-        } else {
+    Group {
+      // Check if this is an Edit or MultiEdit tool message with diff data
+      if message.messageType == .toolUse,
+         let rawParams = message.toolInputData?.rawParameters {
+        
+        switch EditTool(rawValue: message.toolName ?? "") {
+        case .edit:
+          editToolContent(rawParams: rawParams)
+        case .multiEdit:
+          multiEditToolContent(rawParams: rawParams)
+        case .write:
+          writeToolContent(rawParams: rawParams)
+        default:
           defaultToolDisplay
         }
-        
-      case "MultiEdit":
-        // Extract MultiEdit tool parameters
-        if let filePath = rawParams["file_path"],
-           let editsString = rawParams["edits"] {
-          
-          let _ = print("DEBUG: MultiEdit rawParams:", rawParams)
-          let _ =  print("DEBUG: edits string:", editsString)
-          
-          // Parse the edits array from JSON string
-          if let editsArray = parseMultiEditEdits(from: editsString), !editsArray.isEmpty {
-            // Show diff view for MultiEdit tool
-            MultiEditToolDiffView(
-              edits: editsArray,
-              filePath: filePath,
-              fontSize: fontSize,
-              contentTextColor: contentTextColor,
-              terminalService: terminalService
-            )
-          } else {
-            let _ =  print("DEBUG: Failed to parse edits or empty array, falling back to default display")
-            defaultToolDisplay
-          }
-        } else {
-          defaultToolDisplay
-        }
-        
-      case "Write":
-        // Extract Write tool parameters
-        if let filePath = rawParams["file_path"],
-           let content = rawParams["content"] {
-          // Show formatted content view for Write tool
-          WriteToolContentView(
-            content: content,
-            filePath: filePath,
-            fontSize: fontSize,
-            textFormatter: textFormatter,
-            maxWidth: maxWidth
-          )
-        } else {
-          defaultToolDisplay
-        }
-        
-      default:
+      } else {
         defaultToolDisplay
       }
+    }
+    .task {
+      // Initialize DiffStateManager if needed for diff tools
+      if message.messageType == .toolUse,
+         let toolName = message.toolName,
+         [EditTool.edit.rawValue, EditTool.multiEdit.rawValue, EditTool.write.rawValue].contains(toolName),
+         diffStateManager == nil {
+        diffStateManager = DiffStateManager(terminalService: terminalService)
+        withAnimation(.easeInOut(duration: 0.3)) {
+          isDiffManagerReady = true
+        }
+      }
+    }
+  }
+  
+  // MARK: - Tool Content Views
+  
+  @ViewBuilder
+  private func editToolContent(rawParams: [String: String]) -> some View {
+    if let filePath = rawParams[JSONKeys.filePath],
+       rawParams[JSONKeys.oldString] != nil,
+       rawParams[JSONKeys.newString] != nil {
+      diffView(editTool: .edit, rawParams: rawParams)
     } else {
       defaultToolDisplay
+    }
+  }
+  
+  @ViewBuilder
+  private func multiEditToolContent(rawParams: [String: String]) -> some View {
+    if let filePath = rawParams[JSONKeys.filePath],
+       rawParams[JSONKeys.edits] != nil {
+      diffView(editTool: .multiEdit, rawParams: rawParams)
+    } else {
+      defaultToolDisplay
+    }
+  }
+  
+  @ViewBuilder
+  private func writeToolContent(rawParams: [String: String]) -> some View {
+    if let filePath = rawParams[JSONKeys.filePath],
+       rawParams[JSONKeys.content] != nil {
+      diffView(editTool: .write, rawParams: rawParams)
+    } else {
+      defaultToolDisplay
+    }
+  }
+  
+  @ViewBuilder
+  private func diffView(editTool: EditTool, rawParams: [String: String]) -> some View {
+    Group {
+      if isDiffManagerReady && diffStateManager != nil {
+        ClaudeCodeEditsView(
+          messageID: message.id,
+          editTool: editTool,
+          toolParameters: rawParams,
+          terminalService: terminalService,
+          projectPath: projectPath,
+          onExpandRequest: {
+            modalDiffData = DiffModalData(messageID: message.id, tool: editTool, params: rawParams)
+          },
+          diffStore: diffStateManager
+        )
+        .transition(.asymmetric(
+          insertion: .opacity.combined(with: .scale(scale: 0.95, anchor: .top)),
+          removal: .opacity
+        ))
+      } else {
+        DiffLoadingView()
+          .transition(.opacity.combined(with: .scale))
+      }
     }
   }
   
@@ -241,9 +337,5 @@ struct MessageContentView: View {
       return .system(size: fontSize, weight: colorScheme == .dark ? .ultraLight : .light, design: .monospaced)
     }
     return SwiftUI.Font.system(.body)
-  }
-  
-  private var contentTextColor: SwiftUI.Color {
-    colorScheme == .dark ? .white : SwiftUI.Color.black.opacity(0.85)
   }
 }

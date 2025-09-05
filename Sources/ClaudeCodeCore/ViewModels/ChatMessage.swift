@@ -117,6 +117,8 @@ public enum MessageType: String, Codable {
   case toolResult
   /// Error returned from a failed tool execution
   case toolError
+  /// Tool execution denied by user
+  case toolDenied
   /// Assistant's internal reasoning/thinking process
   case thinking
   /// Web search results
@@ -137,6 +139,8 @@ public enum MessageRole: String, Codable {
   case toolResult
   /// Tool execution error
   case toolError
+  /// Tool execution denied by user
+  case toolDenied
   /// Assistant's thinking process
   case thinking
 }
