@@ -177,7 +177,7 @@ private struct HeaderView: View {
   let onExpandRequest: (() -> Void)?
   
   var body: some View {
-    VStack {
+    VStack(alignment: .leading) {
       HStack {
         if let filePath = filePath {
           HStack {
@@ -190,6 +190,14 @@ private struct HeaderView: View {
         Spacer()
         
         HStack(spacing: 12) {
+          
+          // View mode picker
+          Picker("", selection: $viewMode.animation(.easeInOut(duration: 0.3))) {
+            Text("Grouped").tag(ClaudeCodeEditsView.DiffViewMode.grouped)
+            Text("Split").tag(ClaudeCodeEditsView.DiffViewMode.split)
+          }
+          .pickerStyle(.segmented)
+          .frame(width: 200)
           // Expand button
           if let onExpandRequest = onExpandRequest {
             Button(action: {
@@ -201,14 +209,6 @@ private struct HeaderView: View {
             .buttonStyle(.plain)
             .help("Expand to full screen")
           }
-          
-          // View mode picker
-          Picker("", selection: $viewMode) {
-            Text("Grouped").tag(ClaudeCodeEditsView.DiffViewMode.grouped)
-            Text("Split").tag(ClaudeCodeEditsView.DiffViewMode.split)
-          }
-          .pickerStyle(.segmented)
-          .frame(width: 200)
         }
       }
       if let filePath = filePath {
