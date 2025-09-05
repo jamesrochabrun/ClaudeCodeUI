@@ -43,6 +43,7 @@ private struct LineNumberView: View {
     if let lineNumber {
       Text("\(lineNumber)")
         .font(.system(.body, design: .monospaced))
+        .fontWeight(.light)
         .padding(.trailing, 6)
     } else {
       // For deleted lines or separator lines, we don't show a line number
@@ -61,6 +62,7 @@ private struct LineContentView: View {
     Text(text)
       .textSelection(.enabled)
       .font(.system(.body, design: .monospaced))
+      .fontWeight(.light)
       .padding(.vertical, 2)
       .padding(.horizontal, 4)
       .cornerRadius(2)
