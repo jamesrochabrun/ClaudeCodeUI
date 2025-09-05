@@ -54,7 +54,6 @@ struct ToolDisplayView: View {
       .padding(.horizontal, 12)
       .padding(.vertical, 6)
       .background(headerBackground(for: content))
-      .clipShape(RoundedRectangle(cornerRadius: 6))
       
       // Formatted content
       formattedContentView(for: content)
@@ -133,8 +132,6 @@ struct ToolDisplayView: View {
       }
     }
     .padding(12)
-    .background(Color.secondary.opacity(0.1))
-    .clipShape(RoundedRectangle(cornerRadius: 8))
   }
   
   @ViewBuilder
@@ -146,8 +143,6 @@ struct ToolDisplayView: View {
         .textSelection(.enabled)
     }
     .padding(12)
-    .background(Color.secondary.opacity(0.1))
-    .clipShape(RoundedRectangle(cornerRadius: 8))
   }
   
   @ViewBuilder
@@ -164,11 +159,6 @@ struct ToolDisplayView: View {
     }
     .padding(12)
     .background(Color.red.opacity(0.1))
-    .clipShape(RoundedRectangle(cornerRadius: 8))
-    .overlay(
-      RoundedRectangle(cornerRadius: 8)
-        .strokeBorder(Color.red.opacity(0.3), lineWidth: 1)
-    )
   }
   
   @ViewBuilder
@@ -178,8 +168,6 @@ struct ToolDisplayView: View {
       .foregroundStyle(contentTextColor)
       .textSelection(.enabled)
       .padding(12)
-      .background(Color.secondary.opacity(0.1))
-      .clipShape(RoundedRectangle(cornerRadius: 8))
   }
   
   // MARK: - Fallback View
@@ -190,8 +178,6 @@ struct ToolDisplayView: View {
       .font(.system(size: fontSize - 1, design: .monospaced))
       .foregroundStyle(contentTextColor)
       .padding(12)
-      .background(Color.secondary.opacity(0.1))
-      .clipShape(RoundedRectangle(cornerRadius: 8))
       .textSelection(.enabled)
   }
   
@@ -272,7 +258,7 @@ struct ToolDisplayView: View {
     case .toolResult:
       return .brandTertiary
     case .toolError:
-      return .red
+      return Color(hex: "#FF5A5F")
     default:
       return .secondary
     }
@@ -283,7 +269,7 @@ struct ToolDisplayView: View {
       if content.isError {
         Color.red.opacity(0.1)
       } else {
-        Color.secondary.opacity(0.1)
+        Color.clear
       }
     }
   }

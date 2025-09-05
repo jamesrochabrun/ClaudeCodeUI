@@ -140,8 +140,8 @@ extension Color {
   }
   static let backgroundDark = Color(hex: "#262624")
   static let backgroundLight = Color(hex: "#FAF9F5")
-  static let expandedContentBackgroundDark = Color(hex: "#222222")
-  static let expandedContentBackgroundLight = Color(hex: "#F8F4E3")
+  static let expandedContentBackgroundDark = Color(hex: "#1F2421")
+  static let expandedContentBackgroundLight = Color.white//(hex: "#F8F4E3")
   
   // MARK: - Adaptive Colors
   
