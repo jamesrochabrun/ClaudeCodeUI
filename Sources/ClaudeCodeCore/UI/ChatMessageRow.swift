@@ -53,7 +53,7 @@ struct ChatMessageRow: View {
   // Determine if this message type should be collapsible
   private var isCollapsible: Bool {
     switch message.messageType {
-    case .toolUse, .toolResult, .toolError, .thinking, .webSearch:
+    case .toolUse, .toolResult, .toolError, .toolDenied, .thinking, .webSearch:
       return true
     case .text:
       return false
@@ -352,6 +352,8 @@ struct ChatMessageRow: View {
       return "Processing result"
     case .toolError:
       return "Error occurred"
+    case .toolDenied:
+      return "Edit denied by user"
     case .thinking:
       return "Thinking..."
     case .webSearch:
@@ -369,6 +371,8 @@ struct ChatMessageRow: View {
       return .brandTertiary
     case .toolError:
       return .red
+    case .toolDenied:
+      return .secondary
     default:
       return .secondary
     }
@@ -396,6 +400,8 @@ struct ChatMessageRow: View {
       return Color(red: 52/255, green: 199/255, blue: 89/255)
     case .toolError:
       return Color(red: 255/255, green: 59/255, blue: 48/255)
+    case .toolDenied:
+      return Color.secondary
     case .thinking:
       return Color(red: 90/255, green: 200/255, blue: 250/255)
     case .webSearch:

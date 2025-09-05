@@ -100,10 +100,15 @@ struct MessageFactory {
       }
     }
     
+    // Check if this is a user denial rather than a system error
+    let isDenial = isError && contentString.contains("Denied by user")
+    let messageType: MessageType = isDenial ? .toolDenied : (isError ? .toolError : .toolResult)
+    let role: MessageRole = isDenial ? .toolDenied : (isError ? .toolError : .toolResult)
+    
     return ChatMessage(
-      role: isError ? .toolError : .toolResult,
+      role: role,
       content: contentString,
-      messageType: isError ? .toolError : .toolResult,
+      messageType: messageType,
       isError: isError,
       taskGroupId: taskGroupId
     )

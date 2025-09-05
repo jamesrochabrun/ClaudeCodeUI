@@ -90,6 +90,8 @@ struct MessageTextFormatterView: View {
       return SwiftUI.Color(red: 52/255, green: 199/255, blue: 89/255)
     case .toolError:
       return SwiftUI.Color(red: 255/255, green: 59/255, blue: 48/255)
+    case .toolDenied:
+      return SwiftUI.Color.secondary
     case .thinking:
       return SwiftUI.Color(red: 90/255, green: 200/255, blue: 250/255)
     case .webSearch:

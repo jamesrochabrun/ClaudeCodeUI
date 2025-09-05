@@ -84,6 +84,13 @@ struct CollapsibleHeaderView: View {
       }
       return "Error occurred"
       
+    case .toolDenied:
+      if let toolName = toolName {
+        let tool = toolRegistry.tool(for: toolName)
+        return "\(tool?.friendlyName ?? toolName) denied"
+      }
+      return "Edit denied by user"
+      
     case .thinking:
       return "Thinking..."
       
@@ -108,6 +115,8 @@ struct CollapsibleHeaderView: View {
       return "globe"
     case .toolError:
       return "exclamationmark.triangle"
+    case .toolDenied:
+      return "xmark.circle"
     default:
       return isExpanded.wrappedValue ? "checkmark.circle.fill" : "checkmark.circle"
     }
@@ -121,6 +130,8 @@ struct CollapsibleHeaderView: View {
       return .brandTertiary
     case .toolError:
       return .red
+    case .toolDenied:
+      return .secondary
     default:
       return .secondary
     }

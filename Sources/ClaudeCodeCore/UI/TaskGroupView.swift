@@ -29,7 +29,7 @@ struct TaskGroupView: View {
         var hasResult = false
         if i + 1 < groupedMessages.count {
           let nextMessage = groupedMessages[i + 1]
-          if nextMessage.messageType == .toolResult || nextMessage.messageType == .toolError {
+          if nextMessage.messageType == .toolResult || nextMessage.messageType == .toolError || nextMessage.messageType == .toolDenied {
             hasResult = true
           }
         }
@@ -67,13 +67,13 @@ struct TaskGroupView: View {
         var result: ChatMessage? = nil
         if i + 1 < groupedMessages.count {
           let nextMessage = groupedMessages[i + 1]
-          if nextMessage.messageType == .toolResult || nextMessage.messageType == .toolError {
+          if nextMessage.messageType == .toolResult || nextMessage.messageType == .toolError || nextMessage.messageType == .toolDenied {
             result = nextMessage
             i += 1 // Skip the result in the next iteration
           }
         }
         pairs.append((toolUse: message, toolResult: result))
-      } else if message.messageType == .toolResult || message.messageType == .toolError {
+      } else if message.messageType == .toolResult || message.messageType == .toolError || message.messageType == .toolDenied {
         // Orphaned result without a tool use - create a placeholder tool use
         let placeholderToolUse = ChatMessage(
           role: .toolUse,

@@ -69,6 +69,7 @@ public struct ChatScreen: View {
     VStack {
       // Always show the messages list (WelcomeRow will handle empty state)
       messagesListView
+        .padding(.bottom, 8)
       
       // Error message if present
       errorView

@@ -220,6 +220,16 @@ struct ToolDisplayView: View {
         isError: true
       )
       
+    case .toolDenied:
+      guard let toolName = message.toolName else { return nil }
+      
+      return formatter.toolResponseMessage(
+        toolName: toolName,
+        arguments: "",
+        result: message.content,
+        isError: false  // Denials are not errors, just user decisions
+      )
+      
     default:
       return nil
     }
@@ -259,6 +269,8 @@ struct ToolDisplayView: View {
       return .brandTertiary
     case .toolError:
       return Color(hex: "#FF5A5F")
+    case .toolDenied:
+      return .secondary
     default:
       return .secondary
     }
