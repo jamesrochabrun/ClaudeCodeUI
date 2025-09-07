@@ -11,11 +11,13 @@ public struct ApprovalToast: View {
   public init(
     request: ApprovalRequest,
     showRiskLabel: Bool = true,
+    queueCount: Int = 0,
     onApprove: @escaping () -> Void,
     onDeny: @escaping () -> Void
   ) {
     self.request = request
     self.showRiskLabel = showRiskLabel
+    self.queueCount = queueCount
     self.onApprove = onApprove
     self.onDeny = onDeny
   }
@@ -46,6 +48,7 @@ public struct ApprovalToast: View {
 
   let request: ApprovalRequest
   let showRiskLabel: Bool
+  let queueCount: Int
   let onApprove: () -> Void
   let onDeny: () -> Void
 
@@ -74,6 +77,12 @@ public struct ApprovalToast: View {
       HStack {
         Text("Permission Request")
           .font(.system(size: 13, weight: .medium))
+        
+        if queueCount > 0 {
+          Text("(\(queueCount) more pending)")
+            .font(.system(size: 11))
+            .foregroundColor(.secondary)
+        }
 
         Spacer()
 

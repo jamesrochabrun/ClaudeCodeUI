@@ -3,36 +3,50 @@ import Combine
 import CCCustomPermissionServiceInterface
 import Foundation
 import SwiftUI
+import Observation
 
 // MARK: - DefaultCustomPermissionService
 
 /// Default implementation of CustomPermissionService
 @MainActor
-public final class DefaultCustomPermissionService: CustomPermissionService, ObservableObject {
+@Observable
+public final class DefaultCustomPermissionService: CustomPermissionService {
   
   // MARK: Lifecycle
   
   public init(configuration: PermissionConfiguration = .default) {
     self.configuration = configuration
     // Default to false for auto-approval to ensure UI shows
-    autoApproveToolCalls = UserDefaults.standard.object(forKey: "AutoApproveToolCalls") as? Bool ?? false
+    let autoApprove = UserDefaults.standard.object(forKey: Self.autoApproveToolCalls) as? Bool ?? false
+    self.autoApproveToolCalls = autoApprove
+    self.autoApproveSubject.send(autoApprove)
   }
   
   // MARK: Public
   
   // Toast UI state management
-  @Published public var currentToastRequest: ApprovalRequest?
-  @Published public var isToastVisible = false
+  public var currentToastRequest: ApprovalRequest?
+  public var isToastVisible = false
   
-  @Published public var autoApproveToolCalls = false {
+  // Queue for handling multiple concurrent requests
+  public var approvalQueue: [ApprovalRequest] = []
+  public var currentProcessingRequest: ApprovalRequest?
+  
+  // Manual publisher for auto-approve changes since @Observable doesn't provide $-prefixed publishers
+  private let autoApproveSubject = CurrentValueSubject<Bool, Never>(false)
+  private static let autoApproveToolCalls = "AutoApproveToolCalls"
+  
+  public var autoApproveToolCalls = false {
     didSet {
       // Persist the setting
-      UserDefaults.standard.set(autoApproveToolCalls, forKey: "AutoApproveToolCalls")
+      UserDefaults.standard.set(autoApproveToolCalls, forKey: autoApproveToolCalls)
+      // Update the manual publisher
+      autoApproveSubject.send(autoApproveToolCalls)
     }
   }
   
   public var autoApprovePublisher: AnyPublisher<Bool, Never> {
-    $autoApproveToolCalls.eraseToAnyPublisher()
+    autoApproveSubject.eraseToAnyPublisher()
   }
   
   public func requestApproval(for request: ApprovalRequest, timeout: TimeInterval?) async throws -> ApprovalResponse {
@@ -85,19 +99,23 @@ public final class DefaultCustomPermissionService: CustomPermissionService, Obse
       
       pendingRequests[request.toolUseId] = pendingRequest
       
-      // Show the approval toast
+      // Add to queue and process
       Task { @MainActor in
-        self.showApprovalToast(for: request)
+        self.addToApprovalQueue(request)
       }
     }
   }
   
   public func cancelAllRequests() {
-    for (toolUseId, pendingRequest) in pendingRequests {
+    for (_, pendingRequest) in pendingRequests {
       pendingRequest.timeoutTask.cancel()
       pendingRequest.continuation.resume(throwing: CustomPermissionError.requestCancelled)
     }
     pendingRequests.removeAll()
+    
+    // Clear the queue
+    approvalQueue.removeAll()
+    currentProcessingRequest = nil
     
     // Hide any active toast
     hideToast()
@@ -169,6 +187,32 @@ public final class DefaultCustomPermissionService: CustomPermissionService, Obse
   // MARK: - Private Methods
   
   @MainActor
+  private func addToApprovalQueue(_ request: ApprovalRequest) {
+    // Check if this request is already in the queue (deduplication)
+    if !approvalQueue.contains(where: { $0.toolUseId == request.toolUseId }) &&
+       currentProcessingRequest?.toolUseId != request.toolUseId {
+      approvalQueue.append(request)
+    }
+    
+    // If no request is currently being processed, start processing
+    if currentProcessingRequest == nil {
+      processNextInQueue()
+    }
+  }
+  
+  @MainActor
+  private func processNextInQueue() {
+    guard !approvalQueue.isEmpty else {
+      currentProcessingRequest = nil
+      return
+    }
+    
+    let request = approvalQueue.removeFirst()
+    currentProcessingRequest = request
+    showApprovalToast(for: request)
+  }
+  
+  @MainActor
   private func showApprovalToast(for request: ApprovalRequest) {
     // Set up toast callbacks
     currentToastCallbacks = (
@@ -202,12 +246,15 @@ public final class DefaultCustomPermissionService: CustomPermissionService, Obse
       isToastVisible = false
     }
     
-    // Clear after animation completes
+    // Process next request after a short delay
     Task {
-      try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+      try await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds (reduced from 0.5)
       await MainActor.run {
         currentToastRequest = nil
         currentToastCallbacks = nil
+        currentProcessingRequest = nil
+        // Process next in queue if any
+        processNextInQueue()
       }
     }
   }
@@ -225,7 +272,7 @@ public final class DefaultCustomPermissionService: CustomPermissionService, Obse
     
     pendingRequest.continuation.resume(returning: response)
     
-    // Hide the toast
+    // Hide the toast and process next
     await MainActor.run {
       hideToast()
     }
@@ -244,7 +291,7 @@ public final class DefaultCustomPermissionService: CustomPermissionService, Obse
     
     pendingRequest.continuation.resume(returning: response)
     
-    // Hide the toast
+    // Hide the toast and process next
     await MainActor.run {
       hideToast()
     }
@@ -255,12 +302,11 @@ public final class DefaultCustomPermissionService: CustomPermissionService, Obse
     
     pendingRequest.continuation.resume(throwing: CustomPermissionError.requestTimedOut)
     
-    // Hide the toast
+    // Hide the toast and process next
     await MainActor.run {
       hideToast()
     }
   }
-  
   
   private func createContextForTool(toolName: String, input: [String: Any]) -> ApprovalContext {
     // Analyze the tool name and input to determine risk level and context

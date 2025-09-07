@@ -16,11 +16,26 @@ import CCCustomPermissionServiceInterface
 import CCCustomPermissionService
 
 /// Main chat interface view that displays the conversation and input controls.
+/// 
+/// `ChatScreen` serves as the primary user interface for chat interactions with Claude.
+/// It manages the display of messages, handles user input, coordinates with various services,
+/// and provides a complete chat experience including:
+/// - Message history with support for different message types (user, assistant, tool use)
+/// - Real-time streaming of responses with token counting
+/// - Context management from Xcode and other sources
+/// - Permission approval workflows for sensitive operations
+/// - Settings management (both session and global)
+/// - Artifact viewing for generated content
+/// 
 /// This view can be used directly for custom UI implementations without requiring RootView.
+/// It's designed to be flexible and configurable through the `UIConfiguration` parameter.
 public struct ChatScreen: View {
   
+  /// Defines the type of settings to display in the settings sheet
   public enum SettingsType {
+    /// Session-specific settings (project path, model, etc.)
     case session
+    /// Global application settings
     case global
   }
   
@@ -40,29 +55,65 @@ public struct ChatScreen: View {
     self.xcodeObservationViewModel = xcodeObservationViewModel
     self.permissionsService = permissionsService
     self.terminalService = terminalService
-    self.customPermissionService = customPermissionService
-    self._columnVisibility = columnVisibility
+    _customPermissionService = State(initialValue: customPermissionService)
+    _columnVisibility = columnVisibility
     self.uiConfiguration = uiConfiguration
-    // Cast to DefaultCustomPermissionService for @ObservedObject support
-    // TODO: Fix this so we don't force unwrapp.
-    self.observedPermissionService = customPermissionService as! DefaultCustomPermissionService
   }
   
+  /// The view model managing the chat conversation state, messages, and streaming
+  /// Handles all chat-related business logic including API interactions
   @State var viewModel: ChatViewModel
+  
+  /// Manages context information from various sources (Xcode, clipboard, etc.)
+  /// Responsible for capturing and providing contextual data to enhance chat interactions
   @State var contextManager: ContextManager
+  
+  /// View model that observes and tracks Xcode state and active projects
+  /// Provides integration with Xcode IDE for context-aware assistance
   let xcodeObservationViewModel: XcodeObservationViewModel
+  
+  /// Service managing system-level permissions (file system, network, etc.)
+  /// Ensures safe execution of operations requiring elevated privileges
   let permissionsService: PermissionsService
+  
+  /// Service for executing terminal commands and managing shell operations
+  /// Provides interface for running shell scripts and terminal commands
   let terminalService: TerminalService
-  let customPermissionService: CustomPermissionService
+  
+  /// Service managing custom permission requests with approval UI
+  /// Handles user approval flow for potentially risky operations
+  @State var customPermissionService: CustomPermissionService
+  
+  /// Configuration object defining UI appearance and behavior
+  /// Includes settings like app name, theme, and feature toggles
   let uiConfiguration: UIConfiguration
-  @ObservedObject private var observedPermissionService: DefaultCustomPermissionService
+  
+  /// Binding controlling the visibility of navigation split view columns
+  /// Used to toggle sidebar visibility in the navigation interface
   @Binding var columnVisibility: NavigationSplitViewVisibility
+  
+  /// The current text in the message input field
+  /// Bound to the ChatInputView for user text entry
   @State private var messageText: String = ""
+  
+  /// Controls the visibility of the settings sheet
   @State var showingSettings = false
+  
+  /// Determines which type of settings to display (session or global)
   @State var settingsTypeToShow: SettingsType = .session
+  
+  /// Manages keyboard shortcuts and captures text from external sources
   @State private var keyboardManager = KeyboardShortcutManager()
+  
+  /// Triggers focus on the text editor when keyboard shortcuts are activated
   @State private var triggerTextEditorFocus = false
+  
+  /// Currently selected artifact for viewing in a sheet
+  /// Set when user clicks on an artifact in a message
   @State var artifact: Artifact? = nil
+  
+  /// Tracks whether the session ID has been copied to clipboard
+  /// Used for visual feedback on the copy button
   @State private var isCopied = false
   
   public var body: some View {
@@ -136,7 +187,8 @@ public struct ChatScreen: View {
   
   @ViewBuilder
   private var loadingView: some View {
-    if viewModel.isLoading, !observedPermissionService.isToastVisible, let startTime = viewModel.streamingStartTime {
+    let isToastVisible = (customPermissionService as? DefaultCustomPermissionService)?.isToastVisible ?? false
+    if viewModel.isLoading, !isToastVisible, let startTime = viewModel.streamingStartTime {
       LoadingIndicator(
         startTime: startTime,
         inputTokens: viewModel.currentInputTokens,
@@ -154,20 +206,22 @@ public struct ChatScreen: View {
   
   @ViewBuilder
   private var approvalToastOverlay: some View {
-    ToastContainer(isPresented: $observedPermissionService.isToastVisible) {
-      if let request = observedPermissionService.currentToastRequest {
+    if let permissionService = customPermissionService as? DefaultCustomPermissionService {
+      ToastContainer(isPresented: .constant(permissionService.isToastVisible)) {
+        if let request = permissionService.currentToastRequest {
         ApprovalToast(
           request: request,
           showRiskLabel: uiConfiguration.showRiskLabel,
+          queueCount: permissionService.approvalQueue.count,
           onApprove: {
-            observedPermissionService.approveCurrentToast()
+            permissionService.approveCurrentToast()
             // Find and collapse the tool message that was just approved
             if let toolMessage = findCurrentToolMessage() {
               viewModel.messageExpansionStates[toolMessage.id] = false
             }
           },
           onDeny: {
-            observedPermissionService.denyCurrentToast()
+            permissionService.denyCurrentToast()
             // Find and collapse the tool message that was just denied
             if let toolMessage = findCurrentToolMessage() {
               viewModel.messageExpansionStates[toolMessage.id] = false
@@ -176,11 +230,13 @@ public struct ChatScreen: View {
         )
       }
     }
+    }
   }
   
   /// Find the most recent tool message that matches the current approval request
   private func findCurrentToolMessage() -> ChatMessage? {
-    guard let request = observedPermissionService.currentToastRequest else { return nil }
+    guard let permissionService = customPermissionService as? DefaultCustomPermissionService,
+          let request = permissionService.currentToastRequest else { return nil }
     
     // Look for the most recent tool message with matching toolName
     // Iterate from end (most recent) to find the matching tool
