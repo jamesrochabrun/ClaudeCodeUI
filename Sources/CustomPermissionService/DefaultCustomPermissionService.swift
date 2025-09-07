@@ -17,7 +17,7 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
   public init(configuration: PermissionConfiguration = .default) {
     self.configuration = configuration
     // Default to false for auto-approval to ensure UI shows
-    let autoApprove = UserDefaults.standard.object(forKey: Self.autoApproveToolCalls) as? Bool ?? false
+    let autoApprove = UserDefaults.standard.object(forKey: "AutoApproveToolCalls") as? Bool ?? false
     self.autoApproveToolCalls = autoApprove
     self.autoApproveSubject.send(autoApprove)
   }
@@ -34,12 +34,11 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
   
   // Manual publisher for auto-approve changes since @Observable doesn't provide $-prefixed publishers
   private let autoApproveSubject = CurrentValueSubject<Bool, Never>(false)
-  private static let autoApproveToolCalls = "AutoApproveToolCalls"
   
   public var autoApproveToolCalls = false {
     didSet {
       // Persist the setting
-      UserDefaults.standard.set(autoApproveToolCalls, forKey: autoApproveToolCalls)
+      UserDefaults.standard.set(autoApproveToolCalls, forKey: "AutoApproveToolCalls")
       // Update the manual publisher
       autoApproveSubject.send(autoApproveToolCalls)
     }

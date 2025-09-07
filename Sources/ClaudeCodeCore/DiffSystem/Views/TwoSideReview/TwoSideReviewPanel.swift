@@ -39,8 +39,9 @@ struct TwoSideReviewPanel: View {
         .padding(.vertical, 4)
     }
     .roundBorder(cornerRadius: 12)
-    .animation(.spring, value: isApplied)
+    .animation(.easeInOut(duration: 0.2), value: isApplied)
     .overlay(DiffBorderOverlay(isApplied: isApplied))
+    .id("\(group.id)-\(isApplied)") // Force recreation when state changes
     .onAppear {
       if sideLines.isEmpty {
         sideLines = processSideLines()

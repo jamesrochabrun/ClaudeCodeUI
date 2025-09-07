@@ -17,7 +17,7 @@ public struct DiffModalView: View {
   let toolParameters: [String: String]
   let terminalService: TerminalService
   let projectPath: String?
-  let diffStore: DiffStateManager?
+  let diffStore: DiffStateManager? // Shared from parent, never creates its own
   
   let onDismiss: () -> Void
   

@@ -32,17 +32,20 @@ public struct ClaudeCodeEditsView: View {
   /// Optional callback for when user wants to expand to full-screen
   var onExpandRequest: (() -> Void)?
   
-  /// Optional shared diff store to avoid reprocessing
+  /// Shared diff store from parent - required to avoid duplicate processing
   let diffStore: DiffStateManager?
   
-  @State private var ownDiffStore: DiffStateManager?
   @State private var isProcessing = false
   @State private var processingError: String?
   @State private var viewMode: DiffViewMode = .grouped
   
-  /// Get the active diff store (shared or owned)
+  /// Get the active diff store - prefer shared, create local only if necessary
   private var activeDiffStore: DiffStateManager {
-    diffStore ?? ownDiffStore ?? DiffStateManager(terminalService: terminalService)
+    if let shared = diffStore {
+      return shared
+    }
+    // This should rarely happen since parent should provide store
+    return DiffStateManager(terminalService: terminalService)
   }
   
   /// Display modes for presenting code differences.
@@ -69,27 +72,30 @@ public struct ClaudeCodeEditsView: View {
     self.projectPath = projectPath
     self.onExpandRequest = onExpandRequest
     self.diffStore = diffStore
-    
-    // Only create own store if no shared one provided
-    if diffStore == nil {
-      _ownDiffStore = State(initialValue: DiffStateManager(terminalService: terminalService))
-    }
   }
   
   public var body: some View {
     Group {
       if isProcessing {
         LoadingView()
+          .transition(.opacity)
       } else if let error = processingError {
         ErrorView(error: error)
+          .transition(.opacity)
       } else {
         DiffContentView(
           state: activeDiffStore.getState(for: messageID),
           viewMode: $viewMode,
           toolParameters: toolParameters,
           onExpandRequest: onExpandRequest)
+          .transition(.asymmetric(
+            insertion: .opacity.combined(with: .move(edge: .top)),
+            removal: .opacity
+          ))
       }
     }
+    .animation(.easeInOut(duration: 0.25), value: isProcessing)
+    .animation(.easeInOut(duration: 0.25), value: processingError)
     .onAppear {
       let currentState = activeDiffStore.getState(for: messageID)
       let isEmpty = currentState == .empty
@@ -108,13 +114,16 @@ public struct ClaudeCodeEditsView: View {
 
 private struct LoadingView: View {
   var body: some View {
-    VStack {
+    VStack(spacing: 12) {
       ProgressView()
+        .controlSize(.small)
+        .frame(width: 20, height: 20) // Explicit size constraints
       Text("Processing diff...")
         .font(.caption)
         .foregroundStyle(.secondary)
     }
-    .frame(maxWidth: .infinity, minHeight: 100)
+    .frame(maxWidth: .infinity, minHeight: 100, idealHeight: 120)
+    .fixedSize(horizontal: false, vertical: true) // Prevent vertical compression
   }
 }
 
@@ -154,7 +163,7 @@ private struct DiffContentView: View {
           .padding()
       } else {
         ScrollView {
-          VStack(spacing: 16) {
+          LazyVStack(spacing: 16) { // Changed to LazyVStack for better performance
             ForEach(state.diffGroups) { group in
               DiffGroupView(
                 group: group,
@@ -163,8 +172,10 @@ private struct DiffContentView: View {
                 toolParameters: toolParameters
               )
               .padding(.horizontal)
+              .id(group.id) // Ensure proper view identity
             }
           }
+          .padding(.vertical, 8) // Add vertical padding to the container
         }
       }
     }
@@ -192,7 +203,7 @@ private struct HeaderView: View {
         HStack(spacing: 12) {
           
           // View mode picker
-          Picker("", selection: $viewMode.animation(.easeInOut(duration: 0.3))) {
+          Picker("", selection: $viewMode) {
             Text("Grouped").tag(ClaudeCodeEditsView.DiffViewMode.grouped)
             Text("Split").tag(ClaudeCodeEditsView.DiffViewMode.split)
           }

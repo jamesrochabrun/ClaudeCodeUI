@@ -49,11 +49,13 @@ private struct DiffLoadingView: View {
   var body: some View {
     VStack(spacing: 12) {
       ProgressView()
+        .controlSize(.small)
+        .frame(width: 20, height: 20) // Explicit size to prevent layout conflicts
       Text("Preparing diff view...")
         .font(.caption)
         .foregroundStyle(.secondary)
     }
-    .frame(maxWidth: .infinity)
+    .frame(maxWidth: .infinity, minHeight: 80) // Explicit minimum height
     .padding()
   }
 }
@@ -106,11 +108,11 @@ struct MessageContentView: View {
   /// Data for the modal diff view - when non-nil, shows the modal
   @State private var modalDiffData: DiffModalData?
   
-  /// Single diff state manager for this message
+  /// Single diff state manager for this message - lazily initialized once
   @State private var diffStateManager: DiffStateManager?
   
-  /// Tracks whether the diff manager is ready for use
-  @State private var isDiffManagerReady = false
+  /// Tracks whether the diff manager has been initialized
+  @State private var isDiffManagerInitialized = false
   
   /// Creates a new message content view with the specified configuration.
   ///
@@ -167,20 +169,27 @@ struct MessageContentView: View {
           toolParameters: data.params,
           terminalService: terminalService,
           projectPath: projectPath,
-          diffStore: diffStateManager ?? DiffStateManager(terminalService: terminalService),
+          diffStore: diffStateManager,
           onDismiss: {
             modalDiffData = nil
           }
         )
-        .task {
-          if diffStateManager == nil {
-            diffStateManager = DiffStateManager(terminalService: terminalService)
-            withAnimation(.easeInOut(duration: 0.3)) {
-              isDiffManagerReady = true
-            }
-          }
-        }
       }
+      .onAppear {
+        initializeDiffManagerIfNeeded()
+      }
+  }
+  
+  private func initializeDiffManagerIfNeeded() {
+    guard !isDiffManagerInitialized,
+          message.messageType == .toolUse,
+          let toolName = message.toolName,
+          [EditTool.edit.rawValue, EditTool.multiEdit.rawValue, EditTool.write.rawValue].contains(toolName) else {
+      return
+    }
+    
+    diffStateManager = DiffStateManager(terminalService: terminalService)
+    isDiffManagerInitialized = true
   }
   
   @ViewBuilder
@@ -224,18 +233,6 @@ struct MessageContentView: View {
         defaultToolDisplay
       }
     }
-    .task {
-      // Initialize DiffStateManager if needed for diff tools
-      if message.messageType == .toolUse,
-         let toolName = message.toolName,
-         [EditTool.edit.rawValue, EditTool.multiEdit.rawValue, EditTool.write.rawValue].contains(toolName),
-         diffStateManager == nil {
-        diffStateManager = DiffStateManager(terminalService: terminalService)
-        withAnimation(.easeInOut(duration: 0.3)) {
-          isDiffManagerReady = true
-        }
-      }
-    }
   }
   
   // MARK: - Tool Content Views
@@ -274,7 +271,7 @@ struct MessageContentView: View {
   @ViewBuilder
   private func diffView(editTool: EditTool, rawParams: [String: String]) -> some View {
     Group {
-      if isDiffManagerReady && diffStateManager != nil {
+      if let diffStore = diffStateManager {
         ClaudeCodeEditsView(
           messageID: message.id,
           editTool: editTool,
@@ -284,17 +281,19 @@ struct MessageContentView: View {
           onExpandRequest: {
             modalDiffData = DiffModalData(messageID: message.id, tool: editTool, params: rawParams)
           },
-          diffStore: diffStateManager
+          diffStore: diffStore
         )
+        .id(message.id) // Force view recreation on message change
         .transition(.asymmetric(
-          insertion: .opacity.combined(with: .scale(scale: 0.95, anchor: .top)),
+          insertion: .opacity.combined(with: .scale(scale: 0.98, anchor: .top)),
           removal: .opacity
         ))
       } else {
         DiffLoadingView()
-          .transition(.opacity.combined(with: .scale))
+          .transition(.opacity)
       }
     }
+    .animation(.easeInOut(duration: 0.2), value: diffStateManager != nil)
   }
   
   /// Default display for tool messages that don't have specialized views.
