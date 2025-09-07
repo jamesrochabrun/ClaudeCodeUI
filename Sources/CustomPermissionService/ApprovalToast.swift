@@ -42,6 +42,11 @@ public struct ApprovalToast: View {
         showDetails.toggle()
       }
     }
+    .focusable()
+    .focused($isFocused)
+    .onAppear {
+      isFocused = true
+    }
   }
 
   // MARK: Internal
@@ -55,6 +60,7 @@ public struct ApprovalToast: View {
   // MARK: Private
 
   @State private var showDetails = false
+  @FocusState private var isFocused: Bool
 
   private var mainCompactView: some View {
     HStack(spacing: 12) {
@@ -105,17 +111,33 @@ public struct ApprovalToast: View {
 
   private var actionButtonsSection: some View {
     HStack(spacing: 8) {
-      Button("Deny") {
+      Button(action: {
         onDeny()
+      }) {
+        HStack(spacing: 4) {
+          Text("Deny")
+          Text("(esc)")
+            .font(.system(size: 10))
+            .foregroundColor(.secondary)
+        }
       }
       .buttonStyle(.bordered)
       .controlSize(.regular)
+      .keyboardShortcut(.escape, modifiers: [])
 
-      Button("Approve") {
+      Button(action: {
         onApprove()
+      }) {
+        HStack(spacing: 4) {
+          Text("Approve")
+          Text("(⏎)")
+            .font(.system(size: 10))
+            .foregroundColor(.secondary)
+        }
       }
       .buttonStyle(.borderedProminent)
       .controlSize(.regular)
+      .keyboardShortcut(.defaultAction)
     }
   }
 
