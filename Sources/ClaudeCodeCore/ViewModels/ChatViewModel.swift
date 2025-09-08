@@ -87,6 +87,13 @@ public final class ChatViewModel {
     sessionManager.currentSessionId
   }
   
+  /// Active session ID (includes pending session during streaming)
+  /// This returns the session ID that Claude is actively using, which may be
+  /// different from currentSessionId during streaming operations
+  var activeSessionId: String? {
+    streamProcessor.activeSessionId
+  }
+  
   /// Loading state
   public private(set) var isLoading: Bool = false
   

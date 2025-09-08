@@ -263,14 +263,14 @@ public struct ChatScreen: View {
   
   @ViewBuilder
   private var copySessionButton: some View {
-    if let sessionId = viewModel.currentSessionId {
+    if let sessionId = viewModel.activeSessionId {
       Button(action: {
-        copyToClipboard(sessionId)
+        launchTerminalWithSession(sessionId)
       }) {
-        Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
+        Image(systemName: isCopied ? "checkmark" : "terminal")
           .font(.title2)
       }
-      .help("Copy Session ID")
+      .help("Continue in Terminal")
       .disabled(isCopied)
     }
   }
@@ -346,6 +346,23 @@ public struct ChatScreen: View {
     isCopied = true
     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
       isCopied = false
+    }
+  }
+  
+  private func launchTerminalWithSession(_ sessionId: String) {
+    // Use the TerminalLauncher helper to launch Terminal
+    if let error = TerminalLauncher.launchTerminalWithSession(
+      sessionId,
+      claudeClient: viewModel.claudeClient,
+      projectPath: viewModel.projectPath
+    ) {
+      viewModel.error = error
+    } else {
+      // Show success indicator
+      isCopied = true
+      DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+        isCopied = false
+      }
     }
   }
   
