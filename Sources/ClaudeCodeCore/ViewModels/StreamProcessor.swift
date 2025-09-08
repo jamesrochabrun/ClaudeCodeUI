@@ -27,6 +27,12 @@ final class StreamProcessor {
   // Track pending session ID during streaming (only commit on success)
   private var pendingSessionId: String?
   
+  /// Gets the currently active session ID (pending or current)
+  /// Returns the pending session ID if streaming is in progress, otherwise the current session ID
+  var activeSessionId: String? {
+    pendingSessionId ?? sessionManager.currentSessionId
+  }
+  
   // Stream state holder
   private class StreamState {
     var contentBuffer = ""

@@ -263,14 +263,14 @@ public struct ChatScreen: View {
   
   @ViewBuilder
   private var copySessionButton: some View {
-    if let sessionId = viewModel.currentSessionId {
+    if let sessionId = viewModel.activeSessionId {
       Button(action: {
-        copyToClipboard(sessionId)
+        launchTerminalWithSession(sessionId)
       }) {
-        Image(systemName: isCopied ? "checkmark" : "doc.on.doc")
+        Image(systemName: isCopied ? "checkmark" : "terminal")
           .font(.title2)
       }
-      .help("Copy Session ID")
+      .help("Continue in Terminal")
       .disabled(isCopied)
     }
   }
@@ -347,6 +347,139 @@ public struct ChatScreen: View {
     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
       isCopied = false
     }
+  }
+  
+  private func launchTerminalWithSession(_ sessionId: String) {
+    // Get the claude command from configuration
+    let claudeCommand = viewModel.claudeClient.configuration.command ?? "claude"
+    
+    // Find the full path to the claude executable
+    guard let claudeExecutablePath = findClaudeExecutable(command: claudeCommand) else {
+      // Show error if claude not found
+      viewModel.error = NSError(
+        domain: "ChatScreen",
+        code: 1,
+        userInfo: [NSLocalizedDescriptionKey: "Could not find '\(claudeCommand)' command. Please ensure Claude Code CLI is installed."]
+      )
+      return
+    }
+    
+    // Get the project path
+    let projectPath = viewModel.projectPath
+    
+    // Escape paths for shell
+    let escapedPath = projectPath.replacingOccurrences(of: "\\", with: "\\\\")
+                                      .replacingOccurrences(of: "\"", with: "\\\"")
+    let escapedClaudePath = claudeExecutablePath.replacingOccurrences(of: "\\", with: "\\\\")
+                                                 .replacingOccurrences(of: "\"", with: "\\\"")
+    let escapedSessionId = sessionId.replacingOccurrences(of: "\\", with: "\\\\")
+                                    .replacingOccurrences(of: "\"", with: "\\\"")
+    
+    // Construct the command
+    var command = ""
+    if !projectPath.isEmpty {
+      command = "cd \"\(escapedPath)\" && \"\(escapedClaudePath)\" -r \"\(escapedSessionId)\""
+    } else {
+      command = "\"\(escapedClaudePath)\" -r \"\(escapedSessionId)\""
+    }
+    
+    // Create a temporary script file
+    let tempDir = NSTemporaryDirectory()
+    let scriptPath = (tempDir as NSString).appendingPathComponent("claude_resume_\(UUID().uuidString).command")
+    
+    // Create the script content
+    let scriptContent = """
+    #!/bin/bash
+    \(command)
+    """
+    
+    do {
+      // Write the script to file
+      try scriptContent.write(toFile: scriptPath, atomically: true, encoding: .utf8)
+      
+      // Make it executable
+      let attributes = [FileAttributeKey.posixPermissions: 0o755]
+      try FileManager.default.setAttributes(attributes, ofItemAtPath: scriptPath)
+      
+      // Open the script with Terminal
+      let url = URL(fileURLWithPath: scriptPath)
+      NSWorkspace.shared.open(url)
+      
+      // Show success indicator
+      isCopied = true
+      DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+        isCopied = false
+      }
+      
+      // Clean up the script file after a delay
+      DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+        try? FileManager.default.removeItem(atPath: scriptPath)
+      }
+      
+    } catch {
+      viewModel.error = NSError(
+        domain: "ChatScreen",
+        code: 2,
+        userInfo: [NSLocalizedDescriptionKey: "Failed to launch Terminal: \(error.localizedDescription)"]
+      )
+    }
+  }
+  
+  private func findClaudeExecutable(command: String) -> String? {
+    let fileManager = FileManager.default
+    let homeDir = NSHomeDirectory()
+    
+    // Get additional paths from configuration if available
+    let additionalPaths = viewModel.claudeClient.configuration.additionalPaths ?? []
+    
+    // Default search paths
+    let defaultPaths = [
+      "/usr/local/bin",
+      "/opt/homebrew/bin",
+      "/usr/bin",
+      "\(homeDir)/.claude/local",
+      "\(homeDir)/.nvm/current/bin",
+      "\(homeDir)/.nvm/versions/node/v22.16.0/bin",
+      "\(homeDir)/.nvm/versions/node/v20.11.1/bin",
+      "\(homeDir)/.nvm/versions/node/v18.19.0/bin"
+    ]
+    
+    // Combine all paths
+    let allPaths = additionalPaths + defaultPaths
+    
+    // Search for the command in all paths
+    for path in allPaths {
+      let fullPath = "\(path)/\(command)"
+      if fileManager.fileExists(atPath: fullPath) {
+        return fullPath
+      }
+    }
+    
+    // Fallback: try using 'which' command
+    let task = Process()
+    task.launchPath = "/usr/bin/which"
+    task.arguments = [command]
+    
+    let pipe = Pipe()
+    task.standardOutput = pipe
+    task.standardError = Pipe()
+    
+    do {
+      try task.run()
+      task.waitUntilExit()
+      
+      if task.terminationStatus == 0 {
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        if let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !path.isEmpty {
+          return path
+        }
+      }
+    } catch {
+      // Ignore errors from which command
+    }
+    
+    return nil
   }
   
   private func toggleSidebar() {
