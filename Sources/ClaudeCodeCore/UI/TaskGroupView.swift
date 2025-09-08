@@ -197,6 +197,17 @@ struct TaskGroupView: View {
           }
         }
       }
+      
+      // Show cancelled indicator if the task was cancelled
+      if taskMessage.wasCancelled {
+        HStack {
+          Text("Interrupted by user")
+            .font(.system(size: fontSize - 1))
+            .foregroundColor(.red)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+        }
+      }
     }
   }
   

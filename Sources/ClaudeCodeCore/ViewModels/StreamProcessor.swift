@@ -24,6 +24,9 @@ final class StreamProcessor {
   // Track active continuation for proper cleanup
   private var activeContinuation: CheckedContinuation<Void, Never>?
   
+  // Track pending session ID during streaming (only commit on success)
+  private var pendingSessionId: String?
+  
   // Stream state holder
   private class StreamState {
     var contentBuffer = ""
@@ -43,15 +46,27 @@ final class StreamProcessor {
   
   /// Cancels the current stream processing
   func cancelStream() {
+    logger.info("🛑 StreamProcessor: Cancelling stream")
+    
+    // Discard any pending session ID since the stream was cancelled
+    if let pending = pendingSessionId {
+      logger.info("🗑️ Discarding pending session ID: \(pending) (stream cancelled)")
+      pendingSessionId = nil
+    }
+    
     // Cancel all active subscriptions
+    let subscriptionCount = cancellables.count
     cancellables.forEach { $0.cancel() }
     cancellables.removeAll()
+    logger.debug("Cancelled \(subscriptionCount) subscriptions")
     
     // Resume any active continuation to prevent leaks
     if let continuation = activeContinuation {
       continuation.resume()
       activeContinuation = nil
-      logger.debug("Stream cancelled and continuation resumed")
+      logger.info("✅ Stream cancelled and continuation resumed")
+    } else {
+      logger.debug("No active continuation to resume")
     }
   }
   
@@ -80,6 +95,14 @@ final class StreamProcessor {
             
             switch completion {
             case .finished:
+              // Commit the pending session ID now that stream completed successfully
+              if let pending = self.pendingSessionId {
+                self.logger.info("✅ Committing session ID: '\(self.sessionManager.currentSessionId ?? "nil")' → '\(pending)'")
+                self.sessionManager.updateCurrentSession(id: pending)
+                self.onSessionChange?(pending)
+                self.pendingSessionId = nil
+              }
+              
               // End any active task execution
               state.isInTaskExecution = false
               state.currentTaskGroupId = nil
@@ -103,6 +126,12 @@ final class StreamProcessor {
               }
             case .failure(let error):
               self.logger.error("Stream failed with error: \(error.localizedDescription)")
+              
+              // Discard pending session ID since stream failed
+              if let pending = self.pendingSessionId {
+                self.logger.warning("🗑️ Discarding pending session ID: \(pending) (stream failed)")
+                self.pendingSessionId = nil
+              }
               
               // Clean up any partial messages
               if state.assistantMessageCreated {
@@ -175,22 +204,22 @@ final class StreamProcessor {
     // Check if Claude is giving us a different session ID than what we have
     if sessionManager.currentSessionId != initMessage.sessionId {
       if sessionManager.currentSessionId == nil {
-        // This is a new conversation
+        // This is a new conversation - can update immediately since there's no previous session
         let firstMessage = firstMessageInSession ?? "New conversation"
         logger.info("🆕 Starting new session with ID: \(initMessage.sessionId)")
         sessionManager.startNewSession(id: initMessage.sessionId, firstMessage: firstMessage)
+        // Notify settings storage of session change
+        onSessionChange?(initMessage.sessionId)
       } else {
-        // Claude has created a new session ID in the chain (expected behavior)
-        // This happens on every --resume call as Claude chains sessions together
+        // Claude has created a new session ID in the chain
+        // DON'T update immediately - wait for successful completion
         let expectedId = sessionManager.currentSessionId ?? "nil"
         let actualId = initMessage.sessionId
-        logger.info("🔗 Session chain: '\(expectedId)' → '\(actualId)' (normal behavior)")
+        logger.info("🔗 Session chain pending: '\(expectedId)' → '\(actualId)' (will commit on success)")
         
-        // Update to match Claude's new session ID in the chain
-        sessionManager.updateCurrentSession(id: initMessage.sessionId)
+        // Store as pending - will only commit if stream completes successfully
+        pendingSessionId = initMessage.sessionId
       }
-      // Notify settings storage of session change
-      onSessionChange?(initMessage.sessionId)
     } else {
       // Session IDs match as expected
       logger.debug("✅ Session ID confirmed: \(initMessage.sessionId)")

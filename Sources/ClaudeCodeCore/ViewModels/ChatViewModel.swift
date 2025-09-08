@@ -312,10 +312,16 @@ public final class ChatViewModel {
   
   /// Cancels any ongoing requests
   public func cancelRequest() {
-    // Set cancellation flag instead of terminating the process
+    logger.info("🛑 Cancel request initiated")
+    
+    // Set cancellation flag
     isCancelled = true
     
-    // Cancel the stream subscription only (not the process)
+    // IMPORTANT: Terminate the Claude Code subprocess first
+    claudeClient.cancel()
+    logger.info("✅ Claude Code subprocess terminated")
+    
+    // Cancel the stream subscription
     streamProcessor.cancelStream()
     
     // Cancel any pending tool approval requests
@@ -325,11 +331,17 @@ public final class ChatViewModel {
     isLoading = false
     streamingStartTime = nil
     
-    // Simply mark the last message as cancelled
+    // Mark the last message as cancelled
+    // This could be either a regular assistant message or a task container
     let messages = messageStore.getAllMessages()
     if let lastMessage = messages.last {
       messageStore.markMessageAsCancelled(id: lastMessage.id)
+      logger.info("Marked message as cancelled - ID: \(lastMessage.id), isTaskContainer: \(lastMessage.isTaskContainer)")
+    } else {
+      logger.warning("No message to mark as cancelled")
     }
+    
+    logger.info("✅ Cancel request completed")
   }
   
   /// Updates token usage from streaming response
@@ -677,9 +689,30 @@ public final class ChatViewModel {
       // Check if it's a session not found error
       let errorMessage = error.localizedDescription.lowercased()
       if errorMessage.contains("no conversation") || errorMessage.contains("not found") {
-        logger.info("Claude doesn't recognize session \(sessionId), starting new conversation")
+        logger.warning("Session \(sessionId) not found - likely a phantom session from cancellation")
         
-        // Start a new conversation instead
+        // Try to revert to previous session
+        if let previousSession = sessionManager.revertToPreviousSession() {
+          logger.info("🔄 Retrying with previous session: \(previousSession)")
+          
+          // Retry with the previous session
+          do {
+            let retryResult = try await claudeClient.resumeConversation(
+              sessionId: previousSession,
+              prompt: prompt,
+              outputFormat: .streamJson,
+              options: options
+            )
+            await processResult(retryResult, messageId: messageId)
+            logger.info("✅ Successfully continued with previous session")
+            return
+          } catch {
+            logger.error("Previous session also failed: \(error.localizedDescription)")
+            // Fall through to start new conversation
+          }
+        }
+        
+        logger.info("Starting new conversation (no valid session to resume)")
         try await startNewConversation(prompt: prompt, messageId: messageId)
       } else {
         throw error
@@ -778,6 +811,64 @@ public final class ChatViewModel {
   
   func handleError(_ error: Error) {
     logger.error("handleError called with: \(error.localizedDescription)")
+    
+    // Check if this is a "No conversation found" error that needs session fallback
+    let errorMessage = error.localizedDescription.lowercased()
+    if errorMessage.contains("no conversation") || errorMessage.contains("not found") {
+      logger.warning("Session not found error detected in stream - attempting fallback")
+      
+      // Try to revert to previous session and retry
+      if let previousSession = sessionManager.revertToPreviousSession() {
+        logger.info("🔄 Attempting to recover with previous session: \(previousSession)")
+        
+        // Get the last user message to retry
+        let messages = messageStore.getAllMessages()
+        if let lastUserMessage = messages.last(where: { $0.role == .user }) {
+          logger.info("Retrying last user message with previous session")
+          
+          // Clean up the failed assistant message
+          if let currentMessageId = currentMessageId {
+            messageStore.removeMessage(id: currentMessageId)
+          }
+          
+          // Reset state
+          self.error = nil
+          self.isLoading = true
+          
+          // Retry with the previous session
+          Task {
+            do {
+              let options = createOptions()
+              let result = try await claudeClient.resumeConversation(
+                sessionId: previousSession,
+                prompt: lastUserMessage.content,
+                outputFormat: .streamJson,
+                options: options
+              )
+              await processResult(result, messageId: currentMessageId ?? UUID())
+              logger.info("✅ Successfully recovered with previous session")
+            } catch {
+              logger.error("Recovery with previous session failed: \(error.localizedDescription)")
+              // Don't call handleError again to avoid infinite loop
+              // Just set the error state
+              await MainActor.run {
+                self.error = error
+                self.isLoading = false
+                self.streamingStartTime = nil
+                if let currentMessageId = self.currentMessageId {
+                  self.messageStore.removeMessage(id: currentMessageId)
+                }
+              }
+            }
+          }
+          return
+        }
+      }
+      
+      logger.info("No previous session available - user will need to retry")
+    }
+    
+    // Standard error handling
     self.error = error
     self.isLoading = false
     self.streamingStartTime = nil

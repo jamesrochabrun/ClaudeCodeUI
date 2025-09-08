@@ -13,6 +13,7 @@ import ClaudeCodeSDK
 @Observable
 final class SessionManager {
   private(set) var currentSessionId: String?
+  private(set) var previousSessionId: String?  // Track previous valid session for fallback
   private(set) var sessions: [StoredSession] = []
   private(set) var isLoadingSessions: Bool = false
   private(set) var sessionsError: Error?
@@ -27,6 +28,7 @@ final class SessionManager {
     // Log if we're replacing an existing session
     if let existingId = currentSessionId {
       print("🔄 Replacing session '\(existingId)' with new session '\(id)'")
+      // Don't set previous when starting fresh
     }
     
     currentSessionId = id
@@ -46,6 +48,7 @@ final class SessionManager {
   }
   
   func clearSession() {
+    previousSessionId = currentSessionId  // Save as previous before clearing
     currentSessionId = nil
   }
   
@@ -77,13 +80,18 @@ final class SessionManager {
   ///
   /// - Parameter id: The new session ID from Claude
   func updateCurrentSession(id: String) {
+    // Save the previous session ID for potential fallback
+    if let current = currentSessionId, current != id {
+      previousSessionId = current
+      print("📌 Saving previous session ID for fallback: '\(current)'")
+    }
+    
     // Update the current session ID when Claude returns a different one
-    let previousId = currentSessionId
     currentSessionId = id
-    print("🔄 Session ID chain updated: '\(previousId ?? "nil")' → '\(id)'")
+    print("🔄 Session ID chain updated: '\(previousSessionId ?? "nil")' → '\(id)'")
     
     // Persist the new session ID to storage
-    if let oldId = previousId {
+    if let oldId = previousSessionId {
       Task {
         do {
           try await sessionStorage.updateSessionId(oldId: oldId, newId: id)
@@ -93,6 +101,19 @@ final class SessionManager {
         }
       }
     }
+  }
+  
+  /// Reverts to the previous session ID (used when current session is invalid)
+  func revertToPreviousSession() -> String? {
+    guard let previous = previousSessionId else {
+      print("⚠️ No previous session ID to revert to")
+      return nil
+    }
+    
+    print("🔙 Reverting from phantom session '\(currentSessionId ?? "nil")' to previous session '\(previous)'")
+    currentSessionId = previous
+    previousSessionId = nil  // Clear to avoid double revert
+    return previous
   }
   
   func updateLastAccessed(id: String) {
