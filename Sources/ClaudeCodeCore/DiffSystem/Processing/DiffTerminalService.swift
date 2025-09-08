@@ -90,13 +90,16 @@ final class DiffTerminalService {
     var lines = [DiffTerminalService.DiffLine]()
     
     // Add the search pattern lines (what will be replaced)
-    let searchLines = diff.searchPattern.components(separatedBy: "\n")
-    for line in searchLines {
-      lines.append(DiffTerminalService.DiffLine(
-        text: line,
-        type: .deleted,
-        lineNumber: nil
-      ))
+    // Only process if searchPattern is not empty to avoid phantom deletions for new files
+    if !diff.searchPattern.isEmpty {
+      let searchLines = diff.searchPattern.components(separatedBy: "\n")
+      for line in searchLines {
+        lines.append(DiffTerminalService.DiffLine(
+          text: line,
+          type: .deleted,
+          lineNumber: nil
+        ))
+      }
     }
     
     // Add the replacement lines

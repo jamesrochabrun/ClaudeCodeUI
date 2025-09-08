@@ -137,13 +137,24 @@ struct DiffResultProcessor {
     filePath: String,
     content: String
   ) -> DiffResult {
-    .init(
+    // For new files, create a special XML diff with no SEARCH section
+    // This ensures only additions are shown, not removals
+    let xmlDiff = """
+    <DIFF id="\(UUID().uuidString)">
+    <SEARCH></SEARCH>
+    <REPLACE>
+    \(content)
+    </REPLACE>
+    </DIFF>
+    """
+    
+    return .init(
       filePath: filePath,
       fileName: filePath,
-      original: content,
-      updated: "",
-      diff: "",
-      storage: content
+      original: "",      // Empty since file doesn't exist
+      updated: content,  // The new content to be created
+      diff: xmlDiff,     // XML diff showing only additions
+      storage: content   // Storage remains the same
     )
   }
   
