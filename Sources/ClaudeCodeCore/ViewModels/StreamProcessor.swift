@@ -406,7 +406,7 @@ final class StreamProcessor {
     for content in userMessage.message.content {
       switch content {
       case .text(let textContent, _):
-        logger.debug("Zizou User text content: \(textContent)")
+        logger.debug("User text content: \(textContent)")
         
       case .toolResult(let toolResult):
         let resultMessage = MessageFactory.toolResultMessage(
