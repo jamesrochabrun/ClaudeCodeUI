@@ -26,11 +26,11 @@ final class SessionManager {
   func startNewSession(id: String, firstMessage: String) {
     // Log if we're replacing an existing session
     if let existingId = currentSessionId {
-      print("🔄 Replacing session '\(existingId)' with new session '\(id)'")
+      // Replacing existing session with new one
     }
     
     currentSessionId = id
-    print("✅ New session started: \(id)")
+    // New session started
     
     // Save to storage
     Task {
@@ -39,8 +39,7 @@ final class SessionManager {
         // Refresh sessions list
         await fetchSessions()
       } catch {
-        // Handle error silently for now
-        print("Failed to save session: \(error)")
+        // Handle error silently
       }
     }
   }
@@ -60,7 +59,7 @@ final class SessionManager {
     currentSessionId = id
     
     if previousId != id {
-      print("🔄 Session switched from '\(previousId ?? "nil")' to '\(id)'")
+      // Session switched
     }
   }
   
@@ -77,19 +76,17 @@ final class SessionManager {
   ///
   /// - Parameter id: The new session ID from Claude
   func updateCurrentSession(id: String) {
-    // Update the current session ID when Claude returns a different one
     let previousId = currentSessionId
     currentSessionId = id
-    print("🔄 Session ID chain updated: '\(previousId ?? "nil")' → '\(id)'")
+    // Session ID updated to match Claude's
     
     // Persist the new session ID to storage
     if let oldId = previousId {
       Task {
         do {
           try await sessionStorage.updateSessionId(oldId: oldId, newId: id)
-          print("✅ Persisted new session ID '\(id)' to storage")
         } catch {
-          print("❌ Failed to update session ID in storage: \(error)")
+          // Failed to update session ID in storage
         }
       }
     }
@@ -100,7 +97,7 @@ final class SessionManager {
       do {
         try await sessionStorage.updateLastAccessed(id: id)
       } catch {
-        print("Failed to update last accessed: \(error)")
+        // Failed to update last accessed
       }
     }
   }

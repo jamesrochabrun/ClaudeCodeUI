@@ -24,6 +24,9 @@ final class StreamProcessor {
   // Track active continuation for proper cleanup
   private var activeContinuation: CheckedContinuation<Void, Never>?
   
+  // Track pending session ID during streaming (only commit on success)
+  private var pendingSessionId: String?
+  
   // Stream state holder
   private class StreamState {
     var contentBuffer = ""
@@ -43,6 +46,12 @@ final class StreamProcessor {
   
   /// Cancels the current stream processing
   func cancelStream() {
+    // Discard any pending session ID since the stream was cancelled
+    if let pending = pendingSessionId {
+      // Discarding pending session ID since stream was cancelled
+      pendingSessionId = nil
+    }
+    
     // Cancel all active subscriptions
     cancellables.forEach { $0.cancel() }
     cancellables.removeAll()
@@ -51,7 +60,6 @@ final class StreamProcessor {
     if let continuation = activeContinuation {
       continuation.resume()
       activeContinuation = nil
-      logger.debug("Stream cancelled and continuation resumed")
     }
   }
   
@@ -80,6 +88,13 @@ final class StreamProcessor {
             
             switch completion {
             case .finished:
+              // Commit the pending session ID now that stream completed successfully
+              if let pending = self.pendingSessionId {
+                self.sessionManager.updateCurrentSession(id: pending)
+                self.onSessionChange?(pending)
+                self.pendingSessionId = nil
+              }
+              
               // End any active task execution
               state.isInTaskExecution = false
               state.currentTaskGroupId = nil
@@ -104,6 +119,12 @@ final class StreamProcessor {
             case .failure(let error):
               self.logger.error("Stream failed with error: \(error.localizedDescription)")
               
+              // Discard pending session ID since stream failed
+              if let pending = self.pendingSessionId {
+                // Discarding pending session ID since stream failed
+                self.pendingSessionId = nil
+              }
+              
               // Clean up any partial messages
               if state.assistantMessageCreated {
                 let finalMessageId = state.currentLocalMessageId ?? messageId
@@ -112,7 +133,7 @@ final class StreamProcessor {
                 if !state.contentBuffer.isEmpty {
                   self.messageStore.updateMessage(
                     id: finalMessageId,
-                    content: state.contentBuffer + "\n\n⚠️ Response interrupted due to error.",
+                    content: state.contentBuffer + "\n\nResponse interrupted due to error.",
                     isComplete: true
                   )
                 } else {
@@ -175,25 +196,25 @@ final class StreamProcessor {
     // Check if Claude is giving us a different session ID than what we have
     if sessionManager.currentSessionId != initMessage.sessionId {
       if sessionManager.currentSessionId == nil {
-        // This is a new conversation
+        // This is a new conversation - can update immediately since there's no previous session
         let firstMessage = firstMessageInSession ?? "New conversation"
-        logger.info("🆕 Starting new session with ID: \(initMessage.sessionId)")
+        let log = "Starting new session with ID: \(initMessage.sessionId)"
+        logger.info("\(log)")
         sessionManager.startNewSession(id: initMessage.sessionId, firstMessage: firstMessage)
+        // Notify settings storage of session change
+        onSessionChange?(initMessage.sessionId)
       } else {
-        // Claude has created a new session ID in the chain (expected behavior)
-        // This happens on every --resume call as Claude chains sessions together
-        let expectedId = sessionManager.currentSessionId ?? "nil"
-        let actualId = initMessage.sessionId
-        logger.info("🔗 Session chain: '\(expectedId)' → '\(actualId)' (normal behavior)")
-        
-        // Update to match Claude's new session ID in the chain
-        sessionManager.updateCurrentSession(id: initMessage.sessionId)
+        // Claude has created a new session ID in the chain
+        // DON'T update immediately - wait for successful completion
+        // Store as pending - will only commit if stream completes successfully
+        pendingSessionId = initMessage.sessionId
+        let log = "Session chain pending: '\(sessionManager.currentSessionId ?? "nil")' → '\(initMessage.sessionId)'"
+        logger.debug("\(log)")
       }
-      // Notify settings storage of session change
-      onSessionChange?(initMessage.sessionId)
     } else {
       // Session IDs match as expected
-      logger.debug("✅ Session ID confirmed: \(initMessage.sessionId)")
+      let log = "Session ID confirmed: \(initMessage.sessionId)"
+      logger.debug("\(log)")
     }
   }
   
@@ -204,7 +225,8 @@ final class StreamProcessor {
     
     // Check if usage data is available in the message
     let usage = message.message.usage
-    logger.debug("Assistant message usage - input: \(usage.inputTokens ?? 0), output: \(usage.outputTokens)")
+    // Log usage data if needed for debugging
+    // logger.debug("Assistant message usage - input: \(usage.inputTokens ?? 0), output: \(usage.outputTokens)")
     if let inputTokens = usage.inputTokens {
       onTokenUsageUpdate?(inputTokens, usage.outputTokens)
     }
@@ -285,7 +307,7 @@ final class StreamProcessor {
           // Start a new task group
           state.currentTaskGroupId = UUID()
           state.isInTaskExecution = true
-          logger.debug("Starting new Task group with ID: \(state.currentTaskGroupId?.uuidString ?? "nil")")
+          // Track task group for UI grouping
         }
         
         // Extract structured data from tool input
@@ -343,15 +365,11 @@ final class StreamProcessor {
             }
           }
           
-          logger.debug("Key: \(key), formatted value: \(formattedValue)")
+          // Formatted value extracted for parameters
         }
         
-        // Debug logging
-        logger.debug("Tool use: \(toolUse.name), parameters: \(parameters)")
-        
-        // Also log what formattedDescription returns
+        // Get formatted description for display
         let formattedDesc = toolUse.input.formattedDescription()
-        logger.debug("FormattedDescription output: \(formattedDesc)")
         
         let toolMessage = MessageFactory.toolUseMessage(
           toolName: toolUse.name,
@@ -412,14 +430,14 @@ final class StreamProcessor {
     
     // Update token usage if available
     if let usage = resultMessage.usage {
-      logger.info("Result message usage - input: \(usage.inputTokens), output: \(usage.outputTokens)")
+      let log = "Token usage - input: \(usage.inputTokens), output: \(usage.outputTokens)"
+      logger.info("\(log)")
       onTokenUsageUpdate?(usage.inputTokens, usage.outputTokens)
     } else {
-      logger.warning("No usage data in result message")
+      // No usage data in result message
     }
     
     // Update cost
-    logger.info("Result message cost: $\(String(format: "%.6f", resultMessage.totalCostUsd))")
     onCostUpdate?(resultMessage.totalCostUsd)
   }
   

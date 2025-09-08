@@ -105,6 +105,11 @@ public final class ChatViewModel {
   /// Tracks whether a session has started (first message sent)
   public private(set) var hasSessionStarted: Bool = false
   
+  /// Check if debug logging is enabled from the Claude client configuration
+  private var isDebugEnabled: Bool {
+    claudeClient.configuration.enableDebugLogging
+  }
+  
   
   // MARK: - Initialization
   
@@ -170,17 +175,12 @@ public final class ChatViewModel {
   public func sendMessage(_ text: String, context: String? = nil, hiddenContext: String? = nil, codeSelections: [TextSelection]? = nil, attachments: [FileAttachment]? = nil) {
     guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
     
-    // Log session state before sending message
-    let sessionInfo = sessionManager.currentSessionId ?? "NEW"
-    logger.info("📨 Sending message - Current session: \(sessionInfo)")
-    
     // Reset cancellation flag for new message
     isCancelled = false
     
     // Store first message if this is a new session
     if sessionManager.currentSessionId == nil {
       firstMessageInSession = text
-      logger.info("🆕 This is the first message in a new session")
     }
     
     // Build message content for display (just the user's text)
@@ -243,10 +243,8 @@ public final class ChatViewModel {
     Task {
       do {
         if let sessionId = sessionManager.currentSessionId {
-          logger.info("📤 Continuing existing session: \(sessionId)")
           try await continueConversation(sessionId: sessionId, prompt: apiContent, messageId: assistantId)
         } else {
-          logger.info("🚀 No current session, starting new conversation")
           try await startNewConversation(prompt: apiContent, messageId: assistantId)
         }
       } catch {
@@ -304,7 +302,10 @@ public final class ChatViewModel {
     let messages = messageStore.getAllMessages()
     do {
       try await sessionStorage.updateSessionMessages(id: sessionId, messages: messages)
-      logger.debug("Saved \(messages.count) messages for current session \(sessionId)")
+      if isDebugEnabled {
+        let log = "Saved \(messages.count) messages for current session \(sessionId)"
+        logger.debug("\(log)")
+      }
     } catch {
       logger.error("Failed to save messages for session \(sessionId): \(error)")
     }
@@ -312,10 +313,13 @@ public final class ChatViewModel {
   
   /// Cancels any ongoing requests
   public func cancelRequest() {
-    // Set cancellation flag instead of terminating the process
+    // Set cancellation flag
     isCancelled = true
     
-    // Cancel the stream subscription only (not the process)
+    // IMPORTANT: Terminate the Claude Code subprocess first
+    claudeClient.cancel()
+    
+    // Cancel the stream subscription
     streamProcessor.cancelStream()
     
     // Cancel any pending tool approval requests
@@ -325,7 +329,7 @@ public final class ChatViewModel {
     isLoading = false
     streamingStartTime = nil
     
-    // Simply mark the last message as cancelled
+    // Mark the last message as cancelled
     let messages = messageStore.getAllMessages()
     if let lastMessage = messages.last {
       messageStore.markMessageAsCancelled(id: lastMessage.id)
@@ -334,14 +338,20 @@ public final class ChatViewModel {
   
   /// Updates token usage from streaming response
   public func updateTokenUsage(inputTokens: Int, outputTokens: Int) {
-    logger.info("Updating token usage - input: \(inputTokens), output: \(outputTokens)")
+    if isDebugEnabled {
+      let log = "Updating token usage - input: \(inputTokens), output: \(outputTokens)"
+      logger.info("\(log)")
+    }
     currentInputTokens = inputTokens
     currentOutputTokens = outputTokens
   }
   
   /// Updates cost from streaming response
   public func updateCost(_ costUSD: Double) {
-    logger.info("Updating cost: $\(String(format: "%.6f", costUSD))")
+    if isDebugEnabled {
+      let log = "Updating cost: $\(String(format: "%.6f", costUSD))"
+      logger.info("\(log)")
+    }
     currentCostUSD = costUSD
   }
   
@@ -371,12 +381,18 @@ public final class ChatViewModel {
       claudeClient.configuration.workingDirectory = sessionPath
       // Update the observable project path
       projectPath = sessionPath
-      logger.debug("Loaded path '\(sessionPath)' for selected session '\(sessionId)'")
+      if isDebugEnabled {
+        let log = "Loaded path '\(sessionPath)' for selected session '\(sessionId)'"
+        logger.debug("\(log)")
+      }
     } else {
       // No stored path for this session
       claudeClient.configuration.workingDirectory = nil
       projectPath = ""
-      logger.debug("No stored path for selected session '\(sessionId)'")
+      if isDebugEnabled {
+        let log = "No stored path for selected session '\(sessionId)'"
+        logger.debug("\(log)")
+      }
     }
     
     // We would load previous messages here if we had that capability
@@ -391,7 +407,10 @@ public final class ChatViewModel {
     // Ensure sessions are loaded and validate
     guard await validateSessionExists(id: id) else { return }
     
-    logger.debug("Resuming session: \(id)")
+    if isDebugEnabled {
+      let log = "Resuming session: \(id)"
+      logger.debug("\(log)")
+    }
     
     // Prepare session for resumption
     prepareSessionForResumption(id: id)
@@ -400,7 +419,10 @@ public final class ChatViewModel {
     do {
       if let session = try await sessionStorage.getSession(id: id) {
         messageStore.loadMessages(session.messages)
-        logger.debug("Loaded \(session.messages.count) messages for session \(id)")
+        if isDebugEnabled {
+          let log = "Loaded \(session.messages.count) messages for session \(id)"
+          logger.debug("\(log)")
+        }
       }
     } catch {
       logger.error("Failed to load messages for session \(id): \(error)")
@@ -441,7 +463,10 @@ public final class ChatViewModel {
     hasSessionStarted = true
     error = nil
     
-    logger.info("Injected session '\(sessionId)' with \(messages.count) messages")
+    if isDebugEnabled {
+      let log = "Injected session '\(sessionId)' with \(messages.count) messages"
+      logger.info("\(log)")
+    }
   }
   
   /// Deletes a session
@@ -476,7 +501,10 @@ public final class ChatViewModel {
     isSwitchingSession = true
     defer { isSwitchingSession = false }
     
-    logger.debug("Switching to session: \(sessionId)")
+    if isDebugEnabled {
+      let log = "Switching to session: \(sessionId)"
+      logger.debug("\(log)")
+    }
     
     // Cancel any ongoing requests first
     if isLoading {
@@ -490,7 +518,10 @@ public final class ChatViewModel {
       let currentMessages = messageStore.getAllMessages()
       do {
         try await sessionStorage.updateSessionMessages(id: currentId, messages: currentMessages)
-        logger.debug("Saved \(currentMessages.count) messages for session \(currentId)")
+        if isDebugEnabled {
+          let log = "Saved \(currentMessages.count) messages for session \(currentId)"
+          logger.debug("\(log)")
+        }
       } catch {
         logger.error("Failed to save messages for session \(currentId): \(error)")
       }
@@ -539,12 +570,18 @@ public final class ChatViewModel {
       claudeClient.configuration.workingDirectory = sessionPath
       // Update the observable project path
       projectPath = sessionPath
-      logger.debug("Loaded path '\(sessionPath)' for resumed session '\(id)'")
+      if isDebugEnabled {
+        let log = "Loaded path '\(sessionPath)' for resumed session '\(id)'"
+        logger.debug("\(log)")
+      }
     } else {
       // No stored path for this session
       claudeClient.configuration.workingDirectory = nil
       projectPath = ""
-      logger.debug("No stored path for resumed session '\(id)'")
+      if isDebugEnabled {
+        let log = "No stored path for resumed session '\(id)'"
+        logger.debug("\(log)")
+      }
     }
     
     // Clear any errors
@@ -575,8 +612,10 @@ public final class ChatViewModel {
   private func performSessionResumption(id: String, initialPrompt: String?, assistantId: UUID) async {
     // Ensure we're resuming the correct session
     if id != sessionManager.currentSessionId {
-      let log = "🔄 Switching to resume session '\(id)' (was: '\(sessionManager.currentSessionId ?? "nil")')"
-      logger.info("\(log)")
+      if isDebugEnabled {
+        let log = "Switching to resume session '\(id)'"
+        logger.info("\(log)")
+      }
       // Update to match the requested session
       sessionManager.selectSession(id: id)
     }
@@ -584,7 +623,10 @@ public final class ChatViewModel {
     // Only make API call if there's an actual prompt to send
     guard let prompt = initialPrompt, !prompt.isEmpty else {
       // Just switch to the session without making an API call
-      logger.debug("✅ Switched to session \(id) without sending a message")
+      if isDebugEnabled {
+        let log = "Switched to session \(id) without sending a message"
+        logger.debug("\(log)")
+      }
       
       // Mark as not loading since we're not making an API call
       await MainActor.run {
@@ -594,7 +636,10 @@ public final class ChatViewModel {
       return
     }
     
-    logger.info("📤 Resuming session '\(id)' after app relaunch with new message")
+    if isDebugEnabled {
+      let log = "📤 Resuming session '\(id)' after app relaunch with new message"
+      logger.info("\(log)")
+    }
     
     do {
       // Resume the conversation with the provided prompt
@@ -624,7 +669,10 @@ public final class ChatViewModel {
       if errorMessage.contains("no conversation") || errorMessage.contains("not found") {
         // Session exists in our storage but not in Claude
         // This is expected after app restart - Claude sessions don't persist
-        logger.info("Session \(sessionId) exists locally but not in Claude. Continuing with local history.")
+        if isDebugEnabled {
+          let log = "Session \(sessionId) exists locally but not in Claude. Continuing with local history."
+          logger.info("\(log)")
+        }
         self.error = nil
         
         // Keep the session active with its message history
@@ -641,10 +689,13 @@ public final class ChatViewModel {
   private func startNewConversation(prompt: String, messageId: UUID) async throws {
     // Log if we're starting fresh when there's already a session
     if let existingId = sessionManager.currentSessionId {
-      logger.warning("⚠️ Starting new conversation while session '\(existingId)' exists - this may indicate an issue")
+      let log = "Starting new conversation while session '\(existingId)' exists"
+      logger.warning("\(log)")
     }
     
-    logger.info("🚀 Starting new conversation")
+    if isDebugEnabled {
+      logger.info("Starting new conversation")
+    }
     
     let options = createOptions()
     
@@ -658,8 +709,10 @@ public final class ChatViewModel {
   }
   
   private func continueConversation(sessionId: String, prompt: String, messageId: UUID) async throws {
-    // Log the session continuation
-    logger.info("📤 Continuing session '\(sessionId)' with message")
+    if isDebugEnabled {
+      let log = "Continuing session '\(sessionId)'"
+      logger.debug("\(log)")
+    }
     
     let options = createOptions()
     
@@ -671,15 +724,14 @@ public final class ChatViewModel {
         options: options
       )
       
-      // Pass the expected session ID to handle mismatches
       await processResult(result, messageId: messageId)
     } catch {
       // Check if it's a session not found error
       let errorMessage = error.localizedDescription.lowercased()
       if errorMessage.contains("no conversation") || errorMessage.contains("not found") {
-        logger.info("Claude doesn't recognize session \(sessionId), starting new conversation")
-        
-        // Start a new conversation instead
+        if isDebugEnabled {
+          logger.info("Session not found, starting new conversation")
+        }
         try await startNewConversation(prompt: prompt, messageId: messageId)
       } else {
         throw error
@@ -696,7 +748,10 @@ public final class ChatViewModel {
     // Always ensure the approval tool is in the allowed list
     let approvalToolName = "mcp__approval_server__approval_prompt"
     if !allowedTools.contains(approvalToolName) {
-      print("[ChatViewModel] Adding approval tool to allowed tools: \(approvalToolName)")
+      if isDebugEnabled {
+        let log = "Adding approval tool to allowed tools: \(approvalToolName)"
+        logger.debug("\(log)")
+      }
       allowedTools.append(approvalToolName)
     }
     
@@ -713,19 +768,27 @@ public final class ChatViewModel {
     let mcpHelper = ApprovalMCPHelper(permissionService: customPermissionService)
     
     if !globalPreferences.mcpConfigPath.isEmpty {
-      print("[MCP] Setting mcpConfigPath in options: \(globalPreferences.mcpConfigPath)")
+      if isDebugEnabled {
+        let log = "Setting mcpConfigPath in options: \(globalPreferences.mcpConfigPath)"
+        logger.debug("\(log)")
+      }
       options.mcpConfigPath = globalPreferences.mcpConfigPath
       
       // Also configure approval tool integration
       mcpHelper.configureOptions(&options)
     } else {
-      print("[MCP] No mcpConfigPath found in settings, configuring approval tool only")
+      if isDebugEnabled {
+        logger.debug("No mcpConfigPath found in settings, configuring approval tool only")
+      }
       // Configure just the approval tool
       mcpHelper.configureOptions(&options)
     }
     
-    print("[CustomPermission] Custom permission service integration configured")
-    print("[ChatViewModel] Final allowed tools: \(options.allowedTools ?? [])")
+    if isDebugEnabled {
+      logger.debug("Custom permission service integration configured")
+      let finalToolsLog = "Final allowed tools: \(options.allowedTools ?? [])"
+      logger.debug("\(finalToolsLog)")
+    }
     return options
   }
   
@@ -777,7 +840,8 @@ public final class ChatViewModel {
   
   
   func handleError(_ error: Error) {
-    logger.error("handleError called with: \(error.localizedDescription)")
+    logger.error("Error: \(error.localizedDescription)")
+    
     self.error = error
     self.isLoading = false
     self.streamingStartTime = nil
