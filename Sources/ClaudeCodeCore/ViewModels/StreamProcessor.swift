@@ -46,27 +46,20 @@ final class StreamProcessor {
   
   /// Cancels the current stream processing
   func cancelStream() {
-    logger.info("🛑 StreamProcessor: Cancelling stream")
-    
     // Discard any pending session ID since the stream was cancelled
     if let pending = pendingSessionId {
-      logger.info("🗑️ Discarding pending session ID: \(pending) (stream cancelled)")
+      // Discarding pending session ID since stream was cancelled
       pendingSessionId = nil
     }
     
     // Cancel all active subscriptions
-    let subscriptionCount = cancellables.count
     cancellables.forEach { $0.cancel() }
     cancellables.removeAll()
-    logger.debug("Cancelled \(subscriptionCount) subscriptions")
     
     // Resume any active continuation to prevent leaks
     if let continuation = activeContinuation {
       continuation.resume()
       activeContinuation = nil
-      logger.info("✅ Stream cancelled and continuation resumed")
-    } else {
-      logger.debug("No active continuation to resume")
     }
   }
   
@@ -97,7 +90,6 @@ final class StreamProcessor {
             case .finished:
               // Commit the pending session ID now that stream completed successfully
               if let pending = self.pendingSessionId {
-                self.logger.info("✅ Committing session ID: '\(self.sessionManager.currentSessionId ?? "nil")' → '\(pending)'")
                 self.sessionManager.updateCurrentSession(id: pending)
                 self.onSessionChange?(pending)
                 self.pendingSessionId = nil
@@ -129,7 +121,7 @@ final class StreamProcessor {
               
               // Discard pending session ID since stream failed
               if let pending = self.pendingSessionId {
-                self.logger.warning("🗑️ Discarding pending session ID: \(pending) (stream failed)")
+                // Discarding pending session ID since stream failed
                 self.pendingSessionId = nil
               }
               
@@ -141,7 +133,7 @@ final class StreamProcessor {
                 if !state.contentBuffer.isEmpty {
                   self.messageStore.updateMessage(
                     id: finalMessageId,
-                    content: state.contentBuffer + "\n\n⚠️ Response interrupted due to error.",
+                    content: state.contentBuffer + "\n\nResponse interrupted due to error.",
                     isComplete: true
                   )
                 } else {
@@ -206,23 +198,23 @@ final class StreamProcessor {
       if sessionManager.currentSessionId == nil {
         // This is a new conversation - can update immediately since there's no previous session
         let firstMessage = firstMessageInSession ?? "New conversation"
-        logger.info("🆕 Starting new session with ID: \(initMessage.sessionId)")
+        let log = "Starting new session with ID: \(initMessage.sessionId)"
+        logger.info("\(log)")
         sessionManager.startNewSession(id: initMessage.sessionId, firstMessage: firstMessage)
         // Notify settings storage of session change
         onSessionChange?(initMessage.sessionId)
       } else {
         // Claude has created a new session ID in the chain
         // DON'T update immediately - wait for successful completion
-        let expectedId = sessionManager.currentSessionId ?? "nil"
-        let actualId = initMessage.sessionId
-        logger.info("🔗 Session chain pending: '\(expectedId)' → '\(actualId)' (will commit on success)")
-        
         // Store as pending - will only commit if stream completes successfully
         pendingSessionId = initMessage.sessionId
+        let log = "Session chain pending: '\(sessionManager.currentSessionId ?? "nil")' → '\(initMessage.sessionId)'"
+        logger.debug("\(log)")
       }
     } else {
       // Session IDs match as expected
-      logger.debug("✅ Session ID confirmed: \(initMessage.sessionId)")
+      let log = "Session ID confirmed: \(initMessage.sessionId)"
+      logger.debug("\(log)")
     }
   }
   
@@ -233,7 +225,8 @@ final class StreamProcessor {
     
     // Check if usage data is available in the message
     let usage = message.message.usage
-    logger.debug("Assistant message usage - input: \(usage.inputTokens ?? 0), output: \(usage.outputTokens)")
+    // Log usage data if needed for debugging
+    // logger.debug("Assistant message usage - input: \(usage.inputTokens ?? 0), output: \(usage.outputTokens)")
     if let inputTokens = usage.inputTokens {
       onTokenUsageUpdate?(inputTokens, usage.outputTokens)
     }
@@ -314,7 +307,7 @@ final class StreamProcessor {
           // Start a new task group
           state.currentTaskGroupId = UUID()
           state.isInTaskExecution = true
-          logger.debug("Starting new Task group with ID: \(state.currentTaskGroupId?.uuidString ?? "nil")")
+          // Track task group for UI grouping
         }
         
         // Extract structured data from tool input
@@ -372,15 +365,11 @@ final class StreamProcessor {
             }
           }
           
-          logger.debug("Key: \(key), formatted value: \(formattedValue)")
+          // Formatted value extracted for parameters
         }
         
-        // Debug logging
-        logger.debug("Tool use: \(toolUse.name), parameters: \(parameters)")
-        
-        // Also log what formattedDescription returns
+        // Get formatted description for display
         let formattedDesc = toolUse.input.formattedDescription()
-        logger.debug("FormattedDescription output: \(formattedDesc)")
         
         let toolMessage = MessageFactory.toolUseMessage(
           toolName: toolUse.name,
@@ -417,7 +406,7 @@ final class StreamProcessor {
     for content in userMessage.message.content {
       switch content {
       case .text(let textContent, _):
-        logger.debug("User text content: \(textContent)")
+        logger.debug("Zizou User text content: \(textContent)")
         
       case .toolResult(let toolResult):
         let resultMessage = MessageFactory.toolResultMessage(
@@ -441,14 +430,14 @@ final class StreamProcessor {
     
     // Update token usage if available
     if let usage = resultMessage.usage {
-      logger.info("Result message usage - input: \(usage.inputTokens), output: \(usage.outputTokens)")
+      let log = "Token usage - input: \(usage.inputTokens), output: \(usage.outputTokens)"
+      logger.info("\(log)")
       onTokenUsageUpdate?(usage.inputTokens, usage.outputTokens)
     } else {
-      logger.warning("No usage data in result message")
+      // No usage data in result message
     }
     
     // Update cost
-    logger.info("Result message cost: $\(String(format: "%.6f", resultMessage.totalCostUsd))")
     onCostUpdate?(resultMessage.totalCostUsd)
   }
   

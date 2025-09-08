@@ -170,17 +170,12 @@ public final class ChatViewModel {
   public func sendMessage(_ text: String, context: String? = nil, hiddenContext: String? = nil, codeSelections: [TextSelection]? = nil, attachments: [FileAttachment]? = nil) {
     guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
     
-    // Log session state before sending message
-    let sessionInfo = sessionManager.currentSessionId ?? "NEW"
-    logger.info("📨 Sending message - Current session: \(sessionInfo)")
-    
     // Reset cancellation flag for new message
     isCancelled = false
     
     // Store first message if this is a new session
     if sessionManager.currentSessionId == nil {
       firstMessageInSession = text
-      logger.info("🆕 This is the first message in a new session")
     }
     
     // Build message content for display (just the user's text)
@@ -243,10 +238,8 @@ public final class ChatViewModel {
     Task {
       do {
         if let sessionId = sessionManager.currentSessionId {
-          logger.info("📤 Continuing existing session: \(sessionId)")
           try await continueConversation(sessionId: sessionId, prompt: apiContent, messageId: assistantId)
         } else {
-          logger.info("🚀 No current session, starting new conversation")
           try await startNewConversation(prompt: apiContent, messageId: assistantId)
         }
       } catch {
@@ -312,14 +305,11 @@ public final class ChatViewModel {
   
   /// Cancels any ongoing requests
   public func cancelRequest() {
-    logger.info("🛑 Cancel request initiated")
-    
     // Set cancellation flag
     isCancelled = true
     
     // IMPORTANT: Terminate the Claude Code subprocess first
     claudeClient.cancel()
-    logger.info("✅ Claude Code subprocess terminated")
     
     // Cancel the stream subscription
     streamProcessor.cancelStream()
@@ -332,16 +322,10 @@ public final class ChatViewModel {
     streamingStartTime = nil
     
     // Mark the last message as cancelled
-    // This could be either a regular assistant message or a task container
     let messages = messageStore.getAllMessages()
     if let lastMessage = messages.last {
       messageStore.markMessageAsCancelled(id: lastMessage.id)
-      logger.info("Marked message as cancelled - ID: \(lastMessage.id), isTaskContainer: \(lastMessage.isTaskContainer)")
-    } else {
-      logger.warning("No message to mark as cancelled")
     }
-    
-    logger.info("✅ Cancel request completed")
   }
   
   /// Updates token usage from streaming response
@@ -587,7 +571,7 @@ public final class ChatViewModel {
   private func performSessionResumption(id: String, initialPrompt: String?, assistantId: UUID) async {
     // Ensure we're resuming the correct session
     if id != sessionManager.currentSessionId {
-      let log = "🔄 Switching to resume session '\(id)' (was: '\(sessionManager.currentSessionId ?? "nil")')"
+      let log = "Switching to resume session '\(id)'"
       logger.info("\(log)")
       // Update to match the requested session
       sessionManager.selectSession(id: id)
@@ -596,7 +580,8 @@ public final class ChatViewModel {
     // Only make API call if there's an actual prompt to send
     guard let prompt = initialPrompt, !prompt.isEmpty else {
       // Just switch to the session without making an API call
-      logger.debug("✅ Switched to session \(id) without sending a message")
+      let log = "Switched to session \(id) without sending a message"
+      logger.debug("\(log)")
       
       // Mark as not loading since we're not making an API call
       await MainActor.run {
@@ -653,10 +638,11 @@ public final class ChatViewModel {
   private func startNewConversation(prompt: String, messageId: UUID) async throws {
     // Log if we're starting fresh when there's already a session
     if let existingId = sessionManager.currentSessionId {
-      logger.warning("⚠️ Starting new conversation while session '\(existingId)' exists - this may indicate an issue")
+      let log = "Starting new conversation while session '\(existingId)' exists"
+      logger.warning("\(log)")
     }
     
-    logger.info("🚀 Starting new conversation")
+    logger.info("Starting new conversation")
     
     let options = createOptions()
     
@@ -670,8 +656,7 @@ public final class ChatViewModel {
   }
   
   private func continueConversation(sessionId: String, prompt: String, messageId: UUID) async throws {
-    // Log the session continuation
-    logger.info("📤 Continuing session '\(sessionId)' with message")
+    logger.debug("Continuing session '\(sessionId)'")
     
     let options = createOptions()
     
@@ -683,36 +668,12 @@ public final class ChatViewModel {
         options: options
       )
       
-      // Pass the expected session ID to handle mismatches
       await processResult(result, messageId: messageId)
     } catch {
       // Check if it's a session not found error
       let errorMessage = error.localizedDescription.lowercased()
       if errorMessage.contains("no conversation") || errorMessage.contains("not found") {
-        logger.warning("Session \(sessionId) not found - likely a phantom session from cancellation")
-        
-        // Try to revert to previous session
-        if let previousSession = sessionManager.revertToPreviousSession() {
-          logger.info("🔄 Retrying with previous session: \(previousSession)")
-          
-          // Retry with the previous session
-          do {
-            let retryResult = try await claudeClient.resumeConversation(
-              sessionId: previousSession,
-              prompt: prompt,
-              outputFormat: .streamJson,
-              options: options
-            )
-            await processResult(retryResult, messageId: messageId)
-            logger.info("✅ Successfully continued with previous session")
-            return
-          } catch {
-            logger.error("Previous session also failed: \(error.localizedDescription)")
-            // Fall through to start new conversation
-          }
-        }
-        
-        logger.info("Starting new conversation (no valid session to resume)")
+        logger.info("Session not found, starting new conversation")
         try await startNewConversation(prompt: prompt, messageId: messageId)
       } else {
         throw error
@@ -729,7 +690,8 @@ public final class ChatViewModel {
     // Always ensure the approval tool is in the allowed list
     let approvalToolName = "mcp__approval_server__approval_prompt"
     if !allowedTools.contains(approvalToolName) {
-      print("[ChatViewModel] Adding approval tool to allowed tools: \(approvalToolName)")
+      let log = "Adding approval tool to allowed tools: \(approvalToolName)"
+      logger.debug("\(log)")
       allowedTools.append(approvalToolName)
     }
     
@@ -746,19 +708,21 @@ public final class ChatViewModel {
     let mcpHelper = ApprovalMCPHelper(permissionService: customPermissionService)
     
     if !globalPreferences.mcpConfigPath.isEmpty {
-      print("[MCP] Setting mcpConfigPath in options: \(globalPreferences.mcpConfigPath)")
+      let log = "Setting mcpConfigPath in options: \(globalPreferences.mcpConfigPath)"
+      logger.debug("\(log)")
       options.mcpConfigPath = globalPreferences.mcpConfigPath
       
       // Also configure approval tool integration
       mcpHelper.configureOptions(&options)
     } else {
-      print("[MCP] No mcpConfigPath found in settings, configuring approval tool only")
+      logger.debug("No mcpConfigPath found in settings, configuring approval tool only")
       // Configure just the approval tool
       mcpHelper.configureOptions(&options)
     }
     
-    print("[CustomPermission] Custom permission service integration configured")
-    print("[ChatViewModel] Final allowed tools: \(options.allowedTools ?? [])")
+    logger.debug("Custom permission service integration configured")
+    let finalToolsLog = "Final allowed tools: \(options.allowedTools ?? [])"
+    logger.debug("\(finalToolsLog)")
     return options
   }
   
@@ -810,65 +774,8 @@ public final class ChatViewModel {
   
   
   func handleError(_ error: Error) {
-    logger.error("handleError called with: \(error.localizedDescription)")
+    logger.error("Error: \(error.localizedDescription)")
     
-    // Check if this is a "No conversation found" error that needs session fallback
-    let errorMessage = error.localizedDescription.lowercased()
-    if errorMessage.contains("no conversation") || errorMessage.contains("not found") {
-      logger.warning("Session not found error detected in stream - attempting fallback")
-      
-      // Try to revert to previous session and retry
-      if let previousSession = sessionManager.revertToPreviousSession() {
-        logger.info("🔄 Attempting to recover with previous session: \(previousSession)")
-        
-        // Get the last user message to retry
-        let messages = messageStore.getAllMessages()
-        if let lastUserMessage = messages.last(where: { $0.role == .user }) {
-          logger.info("Retrying last user message with previous session")
-          
-          // Clean up the failed assistant message
-          if let currentMessageId = currentMessageId {
-            messageStore.removeMessage(id: currentMessageId)
-          }
-          
-          // Reset state
-          self.error = nil
-          self.isLoading = true
-          
-          // Retry with the previous session
-          Task {
-            do {
-              let options = createOptions()
-              let result = try await claudeClient.resumeConversation(
-                sessionId: previousSession,
-                prompt: lastUserMessage.content,
-                outputFormat: .streamJson,
-                options: options
-              )
-              await processResult(result, messageId: currentMessageId ?? UUID())
-              logger.info("✅ Successfully recovered with previous session")
-            } catch {
-              logger.error("Recovery with previous session failed: \(error.localizedDescription)")
-              // Don't call handleError again to avoid infinite loop
-              // Just set the error state
-              await MainActor.run {
-                self.error = error
-                self.isLoading = false
-                self.streamingStartTime = nil
-                if let currentMessageId = self.currentMessageId {
-                  self.messageStore.removeMessage(id: currentMessageId)
-                }
-              }
-            }
-          }
-          return
-        }
-      }
-      
-      logger.info("No previous session available - user will need to retry")
-    }
-    
-    // Standard error handling
     self.error = error
     self.isLoading = false
     self.streamingStartTime = nil
