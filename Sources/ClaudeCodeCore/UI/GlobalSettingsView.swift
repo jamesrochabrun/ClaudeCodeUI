@@ -8,6 +8,12 @@
 import SwiftUI
 
 struct GlobalSettingsView: View {
+  let uiConfiguration: UIConfiguration
+  
+  init(uiConfiguration: UIConfiguration = .default) {
+    self.uiConfiguration = uiConfiguration
+  }
+  
   // MARK: - Constants
   private enum Layout {
     static let windowWidth: CGFloat = 700
@@ -114,7 +120,8 @@ struct GlobalSettingsView: View {
     MCPConfigurationView(
       isPresented: $showingMCPConfig,
       mcpConfigStorage: globalPreferences,
-      globalPreferences: globalPreferences
+      globalPreferences: globalPreferences,
+      uiConfiguration: uiConfiguration
     )
   }
   

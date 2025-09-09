@@ -53,14 +53,14 @@ public struct ClaudeCodeAppConfiguration {
   public init(
     appName: String,
     showSettingsInNavBar: Bool,
-    showRiskLabel: Bool = true
+    showRiskData: Bool = true
   ) {
     self.init(
       claudeCodeConfiguration: .default,
       uiConfiguration: UIConfiguration(
         appName: appName,
         showSettingsInNavBar: showSettingsInNavBar,
-        showRiskLabel: showRiskLabel
+        showRiskData: showRiskData
       )
     )
   }
@@ -83,7 +83,7 @@ public struct ClaudeCodeAppConfiguration {
     appName: String,
     workingDirectory: String? = nil,
     showSettingsInNavBar: Bool,
-    showRiskLabel: Bool = true
+    showRiskData: Bool = true
   ) {
     var config = ClaudeCodeConfiguration.default
     config.workingDirectory = workingDirectory
@@ -92,7 +92,7 @@ public struct ClaudeCodeAppConfiguration {
       uiConfiguration: UIConfiguration(
         appName: appName,
         showSettingsInNavBar: showSettingsInNavBar,
-        showRiskLabel: showRiskLabel
+        showRiskData: showRiskData
       )
     )
   }

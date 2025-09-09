@@ -10,13 +10,13 @@ public struct ApprovalToast: View {
 
   public init(
     request: ApprovalRequest,
-    showRiskLabel: Bool = true,
+    showRiskData: Bool = true,
     queueCount: Int = 0,
     onApprove: @escaping () -> Void,
     onDeny: @escaping () -> Void
   ) {
     self.request = request
-    self.showRiskLabel = showRiskLabel
+    self.showRiskData = showRiskData
     self.queueCount = queueCount
     self.onApprove = onApprove
     self.onDeny = onDeny
@@ -52,7 +52,7 @@ public struct ApprovalToast: View {
   // MARK: Internal
 
   let request: ApprovalRequest
-  let showRiskLabel: Bool
+  let showRiskData: Bool
   let queueCount: Int
   let onApprove: () -> Void
   let onDeny: () -> Void
@@ -92,7 +92,7 @@ public struct ApprovalToast: View {
 
         Spacer()
 
-        if showRiskLabel {
+        if showRiskData {
           Text(request.context?.riskLevel.displayName ?? "Unknown")
             .font(.system(size: 11))
             .padding(.horizontal, 6)

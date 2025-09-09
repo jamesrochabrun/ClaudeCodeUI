@@ -13,6 +13,7 @@ struct MCPConfigurationView: View {
   @Binding var isPresented: Bool
   let mcpConfigStorage: MCPConfigStorage
   let globalPreferences: GlobalPreferencesStorage?
+  let uiConfiguration: UIConfiguration
   @State private var configManager = MCPConfigurationManager()
   // Removed selectedServer and showingAddServer as editing is now done via JSON editor
   @State private var showingJSONEditor = false
@@ -182,12 +183,14 @@ struct MCPConfigurationView: View {
             ))
             .help("Automatically approve all tool requests without showing permission prompts")
             
-            Toggle("Auto-approve low-risk operations", isOn: Binding(
-              get: { preferences.autoApproveLowRisk },
-              set: { preferences.autoApproveLowRisk = $0 }
-            ))
-            .help("Automatically approve operations classified as low-risk (e.g., reading files)")
-            .disabled(preferences.autoApproveToolCalls) // Disable if auto-approve all is on
+            if uiConfiguration.showRiskData {
+              Toggle("Auto-approve low-risk operations", isOn: Binding(
+                get: { preferences.autoApproveLowRisk },
+                set: { preferences.autoApproveLowRisk = $0 }
+              ))
+              .help("Automatically approve operations classified as low-risk (e.g., reading files)")
+              .disabled(preferences.autoApproveToolCalls) // Disable if auto-approve all is on
+            }
           }
           
           Divider()
@@ -411,6 +414,7 @@ struct QuickAddServerRow: View {
   return MCPConfigurationView(
     isPresented: .constant(true),
     mcpConfigStorage: PreviewMCPStorage(),
-    globalPreferences: nil
+    globalPreferences: nil,
+    uiConfiguration: .default
   )
 }
