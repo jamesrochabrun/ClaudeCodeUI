@@ -18,12 +18,16 @@ public struct UIConfiguration {
   /// Whether to show the risk label in approval toasts
   public let showRiskLabel: Bool
   
+  /// Whether to show the token count in the loading indicator
+  public let showTokenCount: Bool
+  
   /// Default configuration for ClaudeCodeUI app
   public static var `default`: UIConfiguration {
     UIConfiguration(
       appName: "Claude Code UI",
       showSettingsInNavBar: true,
-      showRiskLabel: true
+      showRiskLabel: true,
+      showTokenCount: true
     )
   }
   
@@ -32,7 +36,8 @@ public struct UIConfiguration {
     UIConfiguration(
       appName: "Claude Code",
       showSettingsInNavBar: false,
-      showRiskLabel: true
+      showRiskLabel: true,
+      showTokenCount: true
     )
   }
   
@@ -40,10 +45,12 @@ public struct UIConfiguration {
   public init(
     appName: String,
     showSettingsInNavBar: Bool = false,
-    showRiskLabel: Bool = true
+    showRiskLabel: Bool = true,
+    showTokenCount: Bool = true
   ) {
     self.appName = appName
     self.showSettingsInNavBar = showSettingsInNavBar
     self.showRiskLabel = showRiskLabel
+    self.showTokenCount = showTokenCount
   }
 }

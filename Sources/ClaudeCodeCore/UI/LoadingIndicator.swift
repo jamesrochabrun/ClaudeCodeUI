@@ -13,6 +13,7 @@ struct LoadingIndicator: View {
   let outputTokens: Int
   let costUSD: Double
   let showPrice: Bool
+  let showTokenCount: Bool
   
   @State private var elapsedTime: TimeInterval = 0
   @State private var dots = ""
@@ -20,11 +21,12 @@ struct LoadingIndicator: View {
   private let timer = Timer.publish(every: 0.1, on: .main, in: .common).autoconnect()
   private let dotsTimer = Timer.publish(every: 0.5, on: .main, in: .common).autoconnect()
   
-  init(startTime: Date, inputTokens: Int = 0, outputTokens: Int = 0, costUSD: Double = 0.0, showPrice: Bool? = nil) {
+  init(startTime: Date, inputTokens: Int = 0, outputTokens: Int = 0, costUSD: Double = 0.0, showPrice: Bool? = nil, showTokenCount: Bool = true) {
     self.startTime = startTime
     self.inputTokens = inputTokens
     self.outputTokens = outputTokens
     self.costUSD = costUSD
+    self.showTokenCount = showTokenCount
     
     // Show price only in debug builds by default
     #if DEBUG
@@ -49,7 +51,7 @@ struct LoadingIndicator: View {
   private var statusText: String {
     var text = "Streaming\(dots) (\(formattedTime)"
     
-    if hasTokenData {
+    if showTokenCount && hasTokenData {
       text += " · \(totalTokens) tokens"
     }
     
@@ -104,6 +106,15 @@ struct LoadingIndicator: View {
       outputTokens: 400,
       costUSD: 0.0150,
       showPrice: false
+    )
+    
+    // With token count hidden
+    LoadingIndicator(
+      startTime: Date().addingTimeInterval(-8),
+      inputTokens: 750,
+      outputTokens: 600,
+      costUSD: 0.0180,
+      showTokenCount: false
     )
   }
   .padding()
