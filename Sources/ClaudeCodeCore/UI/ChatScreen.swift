@@ -212,7 +212,7 @@ public struct ChatScreen: View {
         if let request = permissionService.currentToastRequest {
         ApprovalToast(
           request: request,
-          showRiskLabel: uiConfiguration.showRiskLabel,
+          showRiskData: uiConfiguration.showRiskData,
           queueCount: permissionService.approvalQueue.count,
           onApprove: {
             permissionService.approveCurrentToast()
@@ -308,7 +308,7 @@ public struct ChatScreen: View {
         permissionsService: permissionsService
       )
     case .global:
-      GlobalSettingsView()
+      GlobalSettingsView(uiConfiguration: uiConfiguration)
     }
   }
   

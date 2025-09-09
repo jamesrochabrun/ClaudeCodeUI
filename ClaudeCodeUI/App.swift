@@ -29,7 +29,7 @@ struct ClaudeCodeUIAppWrapper: App {
           uiConfiguration: UIConfiguration(
             appName: "Claude Code UI",
             showSettingsInNavBar: true,
-            showRiskLabel: false)
+            showRiskData: false)
         )
         .environment(globalPreferences)
       } else {
