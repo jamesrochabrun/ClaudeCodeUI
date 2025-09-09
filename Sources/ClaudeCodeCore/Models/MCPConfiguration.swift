@@ -94,25 +94,10 @@ extension MCPServerConfig {
       args: ["-y", "xcodebuildmcp@latest"]
     ),
     MCPServerConfig(
-      name: "filesystem",
-      command: "npx",
-      args: ["-y", "@modelcontextprotocol/server-filesystem", "/"]
-    ),
-    MCPServerConfig(
       name: "github",
       command: "npx",
       args: ["-y", "@modelcontextprotocol/server-github"],
       env: ["GITHUB_TOKEN": "your-github-token"]
-    ),
-    MCPServerConfig(
-      name: "Framelink Figma MCP",
-      command: "npx",
-      args: ["-y", "figma-developer-mcp", "--figma-api-key=YOUR-KEY", "--stdio"]
-    ),
-    MCPServerConfig(
-      name: "Figma",
-      command: "npx",
-      args: ["-y", "mcp-remote", "http://127.0.0.1:3845/sse", "--transport", "sse"]
     )
   ]
 }
