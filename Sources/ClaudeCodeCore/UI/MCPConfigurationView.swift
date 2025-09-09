@@ -14,8 +14,8 @@ struct MCPConfigurationView: View {
   let mcpConfigStorage: MCPConfigStorage
   let globalPreferences: GlobalPreferencesStorage?
   @State private var configManager = MCPConfigurationManager()
-  @State private var selectedServer: MCPServerConfig?
-  @State private var showingAddServer = false
+  // Removed selectedServer and showingAddServer as editing is now done via JSON editor
+  @State private var showingJSONEditor = false
   
   // MARK: - Body
   var body: some View {
@@ -49,23 +49,17 @@ struct MCPConfigurationView: View {
           .fontWeight(.semibold)
         }
       }
-      .sheet(isPresented: $showingAddServer) {
-        MCPServerEditView(
-          server: MCPServerConfig(name: "", command: "npx", args: []),
-          isNew: true
-        ) { server in
-          configManager.addServer(server)
+      .sheet(isPresented: $showingJSONEditor) {
+        MCPConfigEditorView(
+          isPresented: $showingJSONEditor,
+          configManager: configManager
+        )
+        .onDisappear {
+          // Reload configuration when editor closes
+          configManager.loadConfiguration()
         }
       }
-      .sheet(item: $selectedServer) { server in
-        MCPServerEditView(server: server, isNew: false) { updatedServer in
-          configManager.updateServer(updatedServer)
-          selectedServer = nil
-        }
-        .onAppear {
-          print("[MCP] Edit sheet appeared for server: \(server.name)")
-        }
-      }
+      // Editing is now done through the JSON editor
     }
     .frame(width: 600, height: 550)
   }
@@ -79,9 +73,10 @@ struct MCPConfigurationView: View {
         configuredServersView
       }
       
-      Button(action: { showingAddServer = true }) {
-        Label("Add Server", systemImage: "plus.circle.fill")
+      Button(action: { showingJSONEditor = true }) {
+        Label("Edit Configuration File", systemImage: "doc.text.badge.plus")
       }
+      .help("Open the JSON configuration file for direct editing")
     }
   }
   
@@ -99,15 +94,8 @@ struct MCPConfigurationView: View {
   private var configuredServersView: some View {
     ForEach(Array(configManager.configuration.mcpServers.keys), id: \.self) { serverName in
       if let server = configManager.configuration.mcpServers[serverName] {
-        MCPServerRow(server: server) {
-          print("[MCP] Edit button tapped for server: \(server.name)")
-          print("[MCP] Server details - command: \(server.command), args: \(server.args)")
-          selectedServer = server
-        }
+        MCPServerRow(server: server)
         .contextMenu {
-          Button("Edit") {
-            selectedServer = server
-          }
           Button("Delete", role: .destructive) {
             configManager.removeServer(named: server.name)
           }
@@ -160,6 +148,11 @@ struct MCPConfigurationView: View {
   
   private var configurationActionsView: some View {
     HStack {
+      Button("Edit JSON") {
+        showingJSONEditor = true
+      }
+      .help("Edit the configuration file directly as JSON")
+      
       Button("Use This Configuration") {
         copyToHomeAndUse()
       }
@@ -347,7 +340,6 @@ struct MCPConfigurationView: View {
 // MARK: - Supporting Views
 struct MCPServerRow: View {
   let server: MCPServerConfig
-  let onEdit: () -> Void
   
   var body: some View {
     HStack {
@@ -372,11 +364,6 @@ struct MCPServerRow: View {
         }
       }
       Spacer()
-      Button(action: onEdit) {
-        Image(systemName: "pencil.circle")
-          .foregroundColor(.accentColor)
-      }
-      .buttonStyle(.plain)
     }
     .padding(.vertical, 4)
   }
