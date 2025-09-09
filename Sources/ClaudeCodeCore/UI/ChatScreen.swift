@@ -193,7 +193,8 @@ public struct ChatScreen: View {
         startTime: startTime,
         inputTokens: viewModel.currentInputTokens,
         outputTokens: viewModel.currentOutputTokens,
-        costUSD: viewModel.currentCostUSD
+        costUSD: viewModel.currentCostUSD,
+        showTokenCount: uiConfiguration.showTokenCount
       )
       .padding(.horizontal)
       .padding(.bottom, 8)
