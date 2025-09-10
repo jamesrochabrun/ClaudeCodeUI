@@ -256,10 +256,14 @@ actor ApprovalServer {
         let userInfo = ["request": requestData]
         
         let notificationCenter = DistributedNotificationCenter.default()
+        // IMPORTANT: Use deliverImmediately: true to ensure the notification is sent
+        // immediately regardless of the ClaudeCodeUI app's state (background/foreground).
+        // This prevents approval requests from being queued until the app becomes active.
         notificationCenter.post(
             name: NSNotification.Name("ClaudeCodeUIApprovalRequest"),
             object: nil,
-            userInfo: userInfo
+            userInfo: userInfo,
+            deliverImmediately: true
         )
         
         logger.info("Sent IPC approval request for \(request.toolUseId)")
