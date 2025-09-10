@@ -3,6 +3,7 @@ import Combine
 import CCCustomPermissionService
 import CCCustomPermissionServiceInterface
 import os.log
+import AppKit
 
 /// Bridge service that handles IPC communication between MCP server and main ClaudeCodeUI app
 /// Allows the standalone MCP server to trigger approval dialogs in the main app UI
@@ -28,11 +29,15 @@ public final class ApprovalBridge: ObservableObject {
     
     /// Set up distributed notification listeners for IPC
     private func setupNotificationListeners() {
+        // IMPORTANT: Use .deliverImmediately to ensure notifications are received even when
+        // the ClaudeCodeUI app is in the background or not the active app. Without this,
+        // ICP approval requests would be suspended until the user manually activates the app.
         notificationCenter.addObserver(
             self,
             selector: #selector(handleApprovalRequest(_:)),
             name: NSNotification.Name(Self.approvalRequestNotification),
-            object: nil
+            object: nil,
+            suspensionBehavior: .deliverImmediately
         )
         
         logger.info("ApprovalBridge listening for approval requests")
@@ -71,6 +76,20 @@ public final class ApprovalBridge: ObservableObject {
     @MainActor
     private func processApprovalRequest(_ ipcRequest: IPCRequest) async {
         do {
+            // IMPORTANT: Activate the app to ensure toast visibility when triggered via notifications.
+            // When ICP requests come via DistributedNotificationCenter from background processes,
+            // the app may not be active/focused, so the toast alerts won't be visible to the user.
+            // This activation strategy mirrors the cmd+i shortcut behavior in KeyboardShortcutManager.
+            NSRunningApplication.current.activate()
+            
+            // Ensure window comes to front after a brief delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                // Find and activate the key window to ensure proper focus
+                if let keyWindow = NSApplication.shared.keyWindow ?? NSApplication.shared.windows.first {
+                    keyWindow.makeKeyAndOrderFront(nil)
+                }
+            }
+            
             // Create ApprovalRequest from IPC request
             let approvalRequest = ApprovalRequest(
                 toolName: ipcRequest.toolName,
