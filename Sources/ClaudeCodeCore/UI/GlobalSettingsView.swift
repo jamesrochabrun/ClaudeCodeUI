@@ -250,14 +250,14 @@ struct GlobalSettingsView: View {
   private var allowedToolsRow: some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack {
-        Text("Allowed Tools")
+        Text("Auto-Approved Tools")
         Spacer()
-        Button("Edit Tools") {
+        Button("Configure Auto-Approval") {
           showingToolsEditor = true
         }
         .buttonStyle(.bordered)
       }
-      Text("\(globalPreferences.allowedTools.count) tools selected")
+      Text("\(globalPreferences.allowedTools.count) tools auto-approved (no permission prompts)")
         .font(.caption)
         .foregroundColor(.secondary)
     }
@@ -282,29 +282,14 @@ struct GlobalSettingsView: View {
         showingMCPConfig = true
       }
       .buttonStyle(.borderedProminent)
-      
-      if !globalPreferences.mcpConfigPath.isEmpty {
-        Button("Clear") {
-          globalPreferences.mcpConfigPath = ""
-        }
-        .buttonStyle(.bordered)
-      }
     }
   }
   
   private var mcpConfigurationStatus: some View {
-    Group {
-      if globalPreferences.mcpConfigPath.isEmpty {
-        Text("No configuration selected")
-          .foregroundColor(.secondary)
-          .frame(maxWidth: .infinity, alignment: .leading)
-      } else {
-        Text(URL(fileURLWithPath: globalPreferences.mcpConfigPath).lastPathComponent)
-          .lineLimit(1)
-          .truncationMode(.middle)
-          .frame(maxWidth: .infinity, alignment: .leading)
-      }
-    }
+    Text("~/.config/claude/mcp-config.json")
+      .font(.system(.body, design: .monospaced))
+      .foregroundColor(.secondary)
+      .frame(maxWidth: .infinity, alignment: .leading)
   }
   
   private func promptTextEditor(text: Binding<String>) -> some View {

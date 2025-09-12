@@ -18,6 +18,23 @@ struct ToolsSelectionView: View {
   var body: some View {
     NavigationStack {
       VStack(spacing: 0) {
+        // Informational header
+        VStack(alignment: .leading, spacing: 8) {
+          Text("Configure Tool Auto-Approval")
+            .font(.headline)
+          Text("Selected tools will be auto-approved and won't require permission prompts.")
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+          Text("Unselected tools will still work but will ask for permission each time.")
+            .font(.subheadline)
+            .foregroundColor(.secondary)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(NSColor.controlBackgroundColor))
+        
+        Divider()
+        
         List {
           // Iterate through each server and its tools
           ForEach(Array(availableToolsByServer.keys.sorted()), id: \.self) { serverName in
@@ -85,7 +102,7 @@ struct ToolsSelectionView: View {
         }
         .padding()
       }
-      .navigationTitle("Select Tools")
+      .navigationTitle("Auto-Approved Tools")
       .frame(width: 500, height: 600)
     }
   }

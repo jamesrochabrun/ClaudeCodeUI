@@ -15,8 +15,11 @@ final class MCPConfigurationManager {
   
   private let configFileName = "mcp-config.json"
   private var configFileURL: URL? {
-    FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
-      .appendingPathComponent("ClaudeCodeUI")
+    // Use Claude Code's default configuration location
+    let homeURL = FileManager.default.homeDirectoryForCurrentUser
+    return homeURL
+      .appendingPathComponent(".config")
+      .appendingPathComponent("claude")
       .appendingPathComponent(configFileName)
   }
   

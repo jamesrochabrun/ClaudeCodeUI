@@ -92,12 +92,6 @@ extension MCPServerConfig {
       name: "XcodeBuildMCP",
       command: "npx",
       args: ["-y", "xcodebuildmcp@latest"]
-    ),
-    MCPServerConfig(
-      name: "github",
-      command: "npx",
-      args: ["-y", "@modelcontextprotocol/server-github"],
-      env: ["GITHUB_TOKEN": "your-github-token"]
     )
   ]
 }

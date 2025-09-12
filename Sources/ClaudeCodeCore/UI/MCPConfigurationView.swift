@@ -17,6 +17,7 @@ struct MCPConfigurationView: View {
   @State private var configManager = MCPConfigurationManager()
   // Removed selectedServer and showingAddServer as editing is now done via JSON editor
   @State private var showingJSONEditor = false
+  @State private var oldConfiguration: MCPConfiguration = MCPConfiguration()
   
   // MARK: - Body
   var body: some View {
@@ -55,7 +56,27 @@ struct MCPConfigurationView: View {
           isPresented: $showingJSONEditor,
           configManager: configManager
         )
+        .onAppear {
+          // Capture the configuration before editing
+          oldConfiguration = configManager.configuration
+        }
         .onDisappear {
+          // Compare old and new configuration
+          let oldServers = Set(oldConfiguration.mcpServers.keys)
+          let newServers = Set(configManager.configuration.mcpServers.keys)
+          let removedServers = oldServers.subtracting(newServers)
+          
+          // Clean up removed servers
+          for server in removedServers {
+            MCPToolsDiscoveryService.shared.removeToolsForServer(server)
+            // Also remove from global preferences if available
+            if let preferences = globalPreferences {
+              preferences.selectedMCPTools.removeValue(forKey: server)
+              // Remove from stored server tools as well
+              preferences.mcpServerTools.removeValue(forKey: server)
+            }
+          }
+          
           // Reload configuration when editor closes
           configManager.loadConfiguration()
         }
@@ -74,7 +95,11 @@ struct MCPConfigurationView: View {
         configuredServersView
       }
       
-      Button(action: { showingJSONEditor = true }) {
+      Button(action: { 
+        // Capture current configuration before editing
+        oldConfiguration = configManager.configuration
+        showingJSONEditor = true 
+      }) {
         Label("Edit Configuration File", systemImage: "doc.text.badge.plus")
       }
       .help("Open the JSON configuration file for direct editing")
@@ -150,14 +175,11 @@ struct MCPConfigurationView: View {
   private var configurationActionsView: some View {
     HStack {
       Button("Edit JSON") {
+        // Capture current configuration before editing
+        oldConfiguration = configManager.configuration
         showingJSONEditor = true
       }
       .help("Edit the configuration file directly as JSON")
-      
-      Button("Use This Configuration") {
-        copyToHomeAndUse()
-      }
-      .disabled(configManager.configuration.mcpServers.isEmpty)
       
       Button("Select File...") {
         selectMcpConfigFile()
@@ -166,9 +188,9 @@ struct MCPConfigurationView: View {
   }
   
   private var configurationWarningView: some View {
-    Text("Note: Due to a bug with spaces in paths, the config will be copied to ~/.config/claude/mcp-config.json")
+    Text("Configuration is stored at ~/.config/claude/mcp-config.json")
       .font(.caption)
-      .foregroundColor(.orange)
+      .foregroundColor(.secondary)
   }
   
   private var customPermissionSection: some View {
@@ -278,43 +300,15 @@ struct MCPConfigurationView: View {
       print("[MCP] Quick Add: Adding server \(server.name)")
       configManager.addServer(server)
     }
-    // Automatically use the configuration after any change
-    if let path = configManager.getConfigurationPath() {
-      print("[MCP] Auto-setting config path after Quick Add: \(path)")
-      mcpConfigStorage.setMcpConfigPath(path)
-    }
+    // Set the config path to Claude's default location
+    let homeURL = FileManager.default.homeDirectoryForCurrentUser
+    let configPath = homeURL
+      .appendingPathComponent(".config/claude/mcp-config.json")
+      .path
+    mcpConfigStorage.setMcpConfigPath(configPath)
+    print("[MCP] Configuration path set to: \(configPath)")
   }
   
-  private func copyToHomeAndUse() {
-    let homeURL = FileManager.default.homeDirectoryForCurrentUser
-    let configDir = homeURL.appendingPathComponent(".config/claude")
-    let targetURL = configDir.appendingPathComponent("mcp-config.json")
-    
-    do {
-      // Create .config/claude directory if it doesn't exist
-      try FileManager.default.createDirectory(at: configDir, withIntermediateDirectories: true)
-      
-      // Export configuration to the new location
-      try configManager.exportConfiguration(to: targetURL)
-      
-      // Update settings to use the new path
-      mcpConfigStorage.setMcpConfigPath(targetURL.path)
-      
-      print("[MCP] Configuration copied to: \(targetURL.path)")
-      
-      // Close the sheet
-      isPresented = false
-    } catch {
-      print("[MCP] Failed to copy configuration: \(error)")
-      // Show error alert
-      let alert = NSAlert()
-      alert.messageText = "Copy Failed"
-      alert.informativeText = "Failed to copy configuration: \(error.localizedDescription)"
-      alert.alertStyle = .warning
-      alert.addButton(withTitle: "OK")
-      alert.runModal()
-    }
-  }
   
   private func selectMcpConfigFile() {
     let panel = NSOpenPanel()

@@ -198,9 +198,16 @@ struct MCPConfigEditorView: View {
       // Reload configuration in manager
       configManager.loadConfiguration()
       
+      // Set the config path to Claude's default location (since we're now always using it)
+      let homeURL = FileManager.default.homeDirectoryForCurrentUser
+      let configPath = homeURL
+        .appendingPathComponent(".config/claude/mcp-config.json")
+        .path
+      UserDefaults.standard.set(configPath, forKey: "global.mcpConfigPath")
+      
       hasChanges = false
       
-      // Close the editor
+      // Close the editor after successful save
       isPresented = false
     } catch let error as NSError {
       // Provide more specific error messages for JSON parsing errors

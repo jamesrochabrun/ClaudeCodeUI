@@ -119,7 +119,19 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     self.systemPrompt = userDefaults.string(forKey: Keys.systemPrompt) ?? ""
     self.appendSystemPrompt = userDefaults.string(forKey: Keys.appendSystemPrompt) ?? ""
     self.allowedTools = userDefaults.stringArray(forKey: Keys.allowedTools) ?? ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MultiEdit", "Write", "NotebookRead", "NotebookEdit", "WebSearch", "Task", "mcp__approval_server__approval_prompt"]
-    self.mcpConfigPath = userDefaults.string(forKey: Keys.mcpConfigPath) ?? ""
+    // Default to Claude's standard config location if not set
+    if let savedPath = userDefaults.string(forKey: Keys.mcpConfigPath), !savedPath.isEmpty {
+      self.mcpConfigPath = savedPath
+    } else {
+      // Use Claude's default location
+      let homeURL = FileManager.default.homeDirectoryForCurrentUser
+      let defaultPath = homeURL
+        .appendingPathComponent(".config/claude/mcp-config.json")
+        .path
+      self.mcpConfigPath = defaultPath
+      // Save it so it persists
+      userDefaults.set(defaultPath, forKey: Keys.mcpConfigPath)
+    }
     
     // Load custom permission settings or use defaults
     self.autoApproveLowRisk = userDefaults.object(forKey: Keys.autoApproveLowRisk) as? Bool ?? false
@@ -145,7 +157,11 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     systemPrompt = ""
     appendSystemPrompt = ""
     allowedTools = ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MultiEdit", "Write", "NotebookRead", "NotebookEdit", "WebSearch", "Task", "mcp__approval_server__approval_prompt"]
-    mcpConfigPath = ""
+    // Reset to Claude's default location
+    let homeURL = FileManager.default.homeDirectoryForCurrentUser
+    mcpConfigPath = homeURL
+      .appendingPathComponent(".config/claude/mcp-config.json")
+      .path
     
     // Reset permission settings
     autoApproveLowRisk = false
