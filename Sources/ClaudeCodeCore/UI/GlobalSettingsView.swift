@@ -22,7 +22,7 @@ struct GlobalSettingsView: View {
     static let tabPaddingVertical: CGFloat = 10
     static let segmentedPickerWidth: CGFloat = 200
     static let maxTurnsFieldWidth: CGFloat = 80
-    static let textEditorHeight: CGFloat = 60
+    static let textEditorHeight: CGFloat = 100
   }
   
   private enum Tab: Int, CaseIterable {
@@ -141,7 +141,9 @@ struct GlobalSettingsView: View {
   private var claudeCodeConfigurationSection: some View {
     Section("ClaudeCode Configuration") {
       maxTurnsRow
-      systemPromptRow
+      if uiConfiguration.showSystemPromptFields {
+        systemPromptRow
+      }
       appendSystemPromptRow
       allowedToolsRow
       mcpConfigurationRow
