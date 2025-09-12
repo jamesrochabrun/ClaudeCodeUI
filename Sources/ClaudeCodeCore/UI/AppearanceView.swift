@@ -32,7 +32,6 @@ struct AppearanceView: View {
   }
   
   // MARK: - Properties
-  @Environment(\.dismiss) private var dismiss
   @Bindable var appearanceSettings: AppearanceSettings
   
   // MARK: - Body
@@ -40,8 +39,6 @@ struct AppearanceView: View {
     NavigationStack {
       VStack(spacing: 0) {
         formContent
-        Divider()
-        bottomToolbar
       }
       .navigationTitle("Appearance Settings")
     }
@@ -172,22 +169,6 @@ struct AppearanceView: View {
       in: Layout.fontSizeRange,
       step: Layout.fontSizeStep
     )
-  }
-  
-  private var bottomToolbar: some View {
-    HStack {
-      Spacer()
-      doneButton
-    }
-    .padding()
-  }
-  
-  private var doneButton: some View {
-    Button("Done") {
-      dismiss()
-    }
-    .buttonStyle(.borderedProminent)
-    .keyboardShortcut(.defaultAction)
   }
   
   // MARK: - Computed Properties

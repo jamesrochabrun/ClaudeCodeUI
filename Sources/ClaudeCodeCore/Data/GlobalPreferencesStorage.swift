@@ -23,12 +23,13 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     static let mcpConfigPath = "global.mcpConfigPath"
     
     // Custom permission settings
-    static let autoApproveToolCalls = "global.autoApproveToolCalls"
     static let autoApproveLowRisk = "global.autoApproveLowRisk"
     static let showDetailedPermissionInfo = "global.showDetailedPermissionInfo"
     static let permissionRequestTimeout = "global.permissionRequestTimeout"
     static let permissionTimeoutEnabled = "global.permissionTimeoutEnabled"
     static let maxConcurrentPermissionRequests = "global.maxConcurrentPermissionRequests"
+    static let mcpServerTools = "global.mcpServerTools"
+    static let selectedMCPTools = "global.selectedMCPTools"
   }
   
   public var maxTurns: Int {
@@ -63,12 +64,6 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
   
   // MARK: - Custom Permission Settings
   
-  public var autoApproveToolCalls: Bool {
-    didSet {
-      userDefaults.set(autoApproveToolCalls, forKey: Keys.autoApproveToolCalls)
-    }
-  }
-  
   public var autoApproveLowRisk: Bool {
     didSet {
       userDefaults.set(autoApproveLowRisk, forKey: Keys.autoApproveLowRisk)
@@ -99,6 +94,24 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     }
   }
   
+  // MARK: - MCP Tools Discovery
+  
+  /// Discovered MCP tools by server name
+  public var mcpServerTools: [String: [String]] {
+    didSet {
+      userDefaults.set(mcpServerTools, forKey: Keys.mcpServerTools)
+    }
+  }
+  
+  /// Selected MCP tools by server name
+  public var selectedMCPTools: [String: Set<String>] {
+    didSet {
+      // Convert Set to Array for UserDefaults storage
+      let dictForStorage = selectedMCPTools.mapValues { Array($0) }
+      userDefaults.set(dictForStorage, forKey: Keys.selectedMCPTools)
+    }
+  }
+  
   // MARK: - Initialization
   public init() {
     // Load saved values or use defaults
@@ -109,12 +122,21 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     self.mcpConfigPath = userDefaults.string(forKey: Keys.mcpConfigPath) ?? ""
     
     // Load custom permission settings or use defaults
-    self.autoApproveToolCalls = userDefaults.object(forKey: Keys.autoApproveToolCalls) as? Bool ?? false
     self.autoApproveLowRisk = userDefaults.object(forKey: Keys.autoApproveLowRisk) as? Bool ?? false
     self.showDetailedPermissionInfo = userDefaults.object(forKey: Keys.showDetailedPermissionInfo) as? Bool ?? true
     self.permissionRequestTimeout = userDefaults.object(forKey: Keys.permissionRequestTimeout) as? TimeInterval ?? 240.0 // 4 minutes
     self.permissionTimeoutEnabled = userDefaults.object(forKey: Keys.permissionTimeoutEnabled) as? Bool ?? false // Default to no timeout
     self.maxConcurrentPermissionRequests = userDefaults.object(forKey: Keys.maxConcurrentPermissionRequests) as? Int ?? 5
+    
+    // Load MCP tools discovery data
+    self.mcpServerTools = userDefaults.dictionary(forKey: Keys.mcpServerTools) as? [String: [String]] ?? [:]
+    
+    // Load selected MCP tools and convert Arrays back to Sets
+    if let savedDict = userDefaults.dictionary(forKey: Keys.selectedMCPTools) as? [String: [String]] {
+      self.selectedMCPTools = savedDict.mapValues { Set($0) }
+    } else {
+      self.selectedMCPTools = [:]
+    }
   }
   
   // MARK: - Methods
@@ -126,12 +148,13 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     mcpConfigPath = ""
     
     // Reset permission settings
-    autoApproveToolCalls = false
     autoApproveLowRisk = false
     showDetailedPermissionInfo = true
     permissionRequestTimeout = 240.0
     permissionTimeoutEnabled = false
     maxConcurrentPermissionRequests = 5
+    mcpServerTools = [:]
+    selectedMCPTools = [:]
   }
   
   // MARK: - Custom Permission Configuration

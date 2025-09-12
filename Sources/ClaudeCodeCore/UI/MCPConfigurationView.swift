@@ -177,19 +177,12 @@ struct MCPConfigurationView: View {
         VStack(alignment: .leading, spacing: 12) {
           // Auto-approve settings
           VStack(alignment: .leading, spacing: 8) {
-            Toggle("Auto-approve all tool calls", isOn: Binding(
-              get: { preferences.autoApproveToolCalls },
-              set: { preferences.autoApproveToolCalls = $0 }
-            ))
-            .help("Automatically approve all tool requests without showing permission prompts")
-            
             if uiConfiguration.showRiskData {
               Toggle("Auto-approve low-risk operations", isOn: Binding(
                 get: { preferences.autoApproveLowRisk },
                 set: { preferences.autoApproveLowRisk = $0 }
               ))
               .help("Automatically approve operations classified as low-risk (e.g., reading files)")
-              .disabled(preferences.autoApproveToolCalls) // Disable if auto-approve all is on
             }
           }
           
