@@ -96,6 +96,7 @@ extension ChatScreen {
           path: effectiveWorkingDirectory,
           showSettingsButton: shouldShowSettingsButton,
           appName: uiConfiguration.appName,
+          toolTip: uiConfiguration.workingDirectoryToolTip,
           onSettingsTapped: {
             settingsTypeToShow = .session
             showingSettings = true

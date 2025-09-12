@@ -13,6 +13,7 @@ struct WelcomeRow: View {
   let path: String?
   let showSettingsButton: Bool
   let appName: String
+  let toolTip: String?
   let onSettingsTapped: () -> Void
   
   // Custom color
@@ -20,11 +21,13 @@ struct WelcomeRow: View {
     path: String?,
     showSettingsButton: Bool = false,
     appName: String = "Claude Code UI",
+    toolTip: String? = nil,
     onSettingsTapped: @escaping () -> Void = {}
   ) {
     self.path = path
     self.showSettingsButton = showSettingsButton
     self.appName = appName
+    self.toolTip = toolTip
     self.onSettingsTapped = onSettingsTapped
   }
   
@@ -42,6 +45,12 @@ struct WelcomeRow: View {
             Text("No working directory selected")
               .font(.system(.caption, design: .monospaced))
               .foregroundColor(.orange)
+            
+            if let toolTip = toolTip {
+              Text(toolTip)
+                .font(.system(.caption, design: .monospaced))
+                .foregroundColor(.secondary)
+            }
             
             Button(action: onSettingsTapped) {
               HStack(spacing: 4) {
@@ -90,6 +99,14 @@ struct WelcomeRow: View {
   VStack {
     WelcomeRow(path: "cwd: /Users/jamesrochabrun/Desktop/git/ClaudeCodeUI", appName: "Claude Code UI")
     WelcomeRow(path: nil, showSettingsButton: true, appName: "My App") {
+      print("Settings tapped")
+    }
+    WelcomeRow(
+      path: nil,
+      showSettingsButton: true,
+      appName: "My App",
+      toolTip: "Tip: Select a folder to enable AI assistance"
+    ) {
       print("Settings tapped")
     }
   }

@@ -17,6 +17,7 @@ final class StreamProcessor {
   private let logger = Logger(subsystem: "com.ClaudeCodeUI.ClaudeChat", category: "StreamProcessor")
   private let messageStore: MessageStore
   private let sessionManager: SessionManager
+  private let globalPreferences: GlobalPreferencesStorage?
   private let onSessionChange: ((String) -> Void)?
   private var cancellables = Set<AnyCancellable>()
   private let formatter = DynamicContentFormatter()
@@ -44,9 +45,10 @@ final class StreamProcessor {
     var isInTaskExecution = false    // Track if we're currently in a Task execution
   }
   
-  init(messageStore: MessageStore, sessionManager: SessionManager, onSessionChange: ((String) -> Void)? = nil) {
+  init(messageStore: MessageStore, sessionManager: SessionManager, globalPreferences: GlobalPreferencesStorage? = nil, onSessionChange: ((String) -> Void)? = nil) {
     self.messageStore = messageStore
     self.sessionManager = sessionManager
+    self.globalPreferences = globalPreferences
     self.onSessionChange = onSessionChange
   }
   
@@ -199,6 +201,26 @@ final class StreamProcessor {
   ///   - initMessage: The initialization message containing Claude's session ID
   ///   - firstMessageInSession: Optional first message text for new sessions
   private func handleInitSystem(_ initMessage: InitSystemMessage, firstMessageInSession: String?) {
+    // Parse and store discovered tools if available
+    let tools = initMessage.tools
+    if !tools.isEmpty {
+      let mcpServers = initMessage.mcpServers.map { (name: $0.name, status: $0.status) }
+      MCPToolsDiscoveryService.shared.parseToolsFromInitMessage(tools: tools, mcpServers: mcpServers)
+      
+      // Update global preferences with discovered tools
+      if let preferences = globalPreferences {
+        let allTools = MCPToolsDiscoveryService.shared.getAllAvailableTools()
+        // Store the discovered MCP tools in preferences
+        var mcpTools: [String: [String]] = [:]
+        for (server, serverTools) in allTools where server != "Claude Code" {
+          mcpTools[server] = serverTools
+        }
+        preferences.mcpServerTools = mcpTools
+      }
+      
+      logger.info("Discovered tools from init message: \(tools.count) tools")
+    }
+    
     // Check if Claude is giving us a different session ID than what we have
     if sessionManager.currentSessionId != initMessage.sessionId {
       if sessionManager.currentSessionId == nil {

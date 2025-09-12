@@ -21,13 +21,21 @@ public struct UIConfiguration {
   /// Whether to show the token count in the loading indicator
   public let showTokenCount: Bool
   
+  /// Optional tooltip text to display when no working directory is selected
+  public let workingDirectoryToolTip: String?
+  
+  /// Whether to show the system prompt fields in settings
+  public let showSystemPromptFields: Bool
+  
   /// Default configuration for ClaudeCodeUI app
   public static var `default`: UIConfiguration {
     UIConfiguration(
       appName: "Claude Code UI",
       showSettingsInNavBar: true,
       showRiskData: true,
-      showTokenCount: true
+      showTokenCount: true,
+      workingDirectoryToolTip: nil,
+      showSystemPromptFields: false
     )
   }
   
@@ -37,7 +45,9 @@ public struct UIConfiguration {
       appName: "Claude Code",
       showSettingsInNavBar: false,
       showRiskData: true,
-      showTokenCount: true
+      showTokenCount: true,
+      workingDirectoryToolTip: nil,
+      showSystemPromptFields: false
     )
   }
   
@@ -46,11 +56,15 @@ public struct UIConfiguration {
     appName: String,
     showSettingsInNavBar: Bool = false,
     showRiskData: Bool = true,
-    showTokenCount: Bool = true
+    showTokenCount: Bool = true,
+    workingDirectoryToolTip: String? = nil,
+    showSystemPromptFields: Bool = false
   ) {
     self.appName = appName
     self.showSettingsInNavBar = showSettingsInNavBar
     self.showRiskData = showRiskData
     self.showTokenCount = showTokenCount
+    self.workingDirectoryToolTip = workingDirectoryToolTip
+    self.showSystemPromptFields = showSystemPromptFields
   }
 }

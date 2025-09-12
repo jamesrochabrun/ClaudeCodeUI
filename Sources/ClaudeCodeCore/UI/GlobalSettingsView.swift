@@ -22,7 +22,7 @@ struct GlobalSettingsView: View {
     static let tabPaddingVertical: CGFloat = 10
     static let segmentedPickerWidth: CGFloat = 200
     static let maxTurnsFieldWidth: CGFloat = 80
-    static let textEditorHeight: CGFloat = 60
+    static let textEditorHeight: CGFloat = 100
   }
   
   private enum Tab: Int, CaseIterable {
@@ -45,8 +45,7 @@ struct GlobalSettingsView: View {
   @State private var showingToolsEditor = false
   @State private var showingMCPConfig = false
   @State private var selectedTools: Set<String> = []
-  
-  private let availableTools = ["Bash", "LS", "Read", "WebFetch", "Batch", "TodoRead/Write", "Glob", "Grep", "Edit", "MultiEdit", "Write", "NotebookRead", "NotebookEdit", "WebSearch", "Task"]
+  @State private var selectedMCPTools: [String: Set<String>] = [:]
   
   // MARK: - Body
   var body: some View {
@@ -71,7 +70,10 @@ struct GlobalSettingsView: View {
       mcpConfigurationSheet
     }
     .onAppear {
-      selectedTools = Set(globalPreferences.allowedTools)
+      // Initialize selected tools from allowed tools
+      let claudeTools = ClaudeCodeTool.allCases.map { $0.rawValue }
+      selectedTools = Set(globalPreferences.allowedTools.filter { claudeTools.contains($0) })
+      selectedMCPTools = globalPreferences.selectedMCPTools
     }
   }
   
@@ -109,11 +111,66 @@ struct GlobalSettingsView: View {
   private var toolsSelectionSheet: some View {
     ToolsSelectionView(
       selectedTools: Binding(
-        get: { Set(globalPreferences.allowedTools) },
-        set: { globalPreferences.allowedTools = Array($0) }
+        get: { 
+          // Filter Claude Code tools from allowedTools (exclude MCP tools)
+          return Set(globalPreferences.allowedTools.filter { !$0.hasPrefix("mcp__") })
+        },
+        set: { newTools in
+          // Combine Claude Code tools with selected MCP tools (properly formatted)
+          var allTools = Array(newTools)
+          
+          // Add MCP tools with proper formatting: mcp__<server>__<tool>
+          for (server, tools) in globalPreferences.selectedMCPTools {
+            for tool in tools {
+              let formattedTool = "mcp__\(server)__\(tool)"
+              allTools.append(formattedTool)
+            }
+          }
+          globalPreferences.allowedTools = allTools
+        }
       ),
-      availableTools: availableTools
+      selectedMCPTools: Binding(
+        get: { globalPreferences.selectedMCPTools },
+        set: { newMCPTools in
+          globalPreferences.selectedMCPTools = newMCPTools
+          
+          // Also update allowedTools with the new MCP tools
+          // Get current Claude Code tools (exclude MCP tools)
+          var allTools = globalPreferences.allowedTools.filter { !$0.hasPrefix("mcp__") }
+          
+          // Add MCP tools with proper formatting: mcp__<server>__<tool>
+          for (server, tools) in newMCPTools {
+            for tool in tools {
+              let formattedTool = "mcp__\(server)__\(tool)"
+              allTools.append(formattedTool)
+            }
+          }
+          globalPreferences.allowedTools = allTools
+        }
+      ),
+      availableToolsByServer: getAvailableToolsByServer()
     )
+  }
+  
+  private func getAvailableToolsByServer() -> [String: [String]] {
+    // Get all discovered tools from MCPToolsDiscoveryService
+    let discoveredTools = MCPToolsDiscoveryService.shared.getAllAvailableTools()
+    
+    if !discoveredTools.isEmpty {
+      // Use discovered tools if available (from system init message)
+      return discoveredTools
+    } else {
+      // Fallback to hardcoded tools if no discovery has happened yet
+      var toolsByServer: [String: [String]] = [:]
+      toolsByServer["Claude Code"] = ClaudeCodeTool.allCases.map { $0.rawValue }
+      
+      // Add any stored MCP tools from preferences
+      for (server, tools) in globalPreferences.mcpServerTools {
+        toolsByServer[server] = tools
+      }
+      
+      return toolsByServer
+    }
   }
   
   private var mcpConfigurationSheet: some View {
@@ -141,7 +198,9 @@ struct GlobalSettingsView: View {
   private var claudeCodeConfigurationSection: some View {
     Section("ClaudeCode Configuration") {
       maxTurnsRow
-      systemPromptRow
+      if uiConfiguration.showSystemPromptFields {
+        systemPromptRow
+      }
       appendSystemPromptRow
       allowedToolsRow
       mcpConfigurationRow

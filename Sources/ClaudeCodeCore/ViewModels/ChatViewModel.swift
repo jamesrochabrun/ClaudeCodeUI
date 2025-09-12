@@ -150,6 +150,7 @@ public final class ChatViewModel {
     self.streamProcessor = StreamProcessor(
       messageStore: messageStore,
       sessionManager: sessionManager,
+      globalPreferences: globalPreferences,
       onSessionChange: onSessionChange
     )
     
