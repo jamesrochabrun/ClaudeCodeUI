@@ -29,7 +29,8 @@ struct ClaudeCodeUIAppWrapper: App {
           uiConfiguration: UIConfiguration(
             appName: "Claude Code UI",
             showSettingsInNavBar: true,
-            showRiskData: false)
+            showRiskData: false,
+            workingDirectoryToolTip: "Tip: Select a folder to enable AI assistance")
         )
         .environment(globalPreferences)
       } else {
