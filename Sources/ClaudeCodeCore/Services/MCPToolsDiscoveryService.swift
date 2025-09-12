@@ -98,6 +98,13 @@ public final class MCPToolsDiscoveryService {
     logger.info("Cleared all discovered MCP tools")
   }
   
+  /// Remove tools for a specific server
+  public func removeToolsForServer(_ serverName: String) {
+    if mcpServerTools.removeValue(forKey: serverName) != nil {
+      logger.info("Removed tools for server: \(serverName)")
+    }
+  }
+  
   /// Check if tools have been discovered
   public var hasDiscoveredTools: Bool {
     !mcpServerTools.isEmpty

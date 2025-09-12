@@ -282,29 +282,14 @@ struct GlobalSettingsView: View {
         showingMCPConfig = true
       }
       .buttonStyle(.borderedProminent)
-      
-      if !globalPreferences.mcpConfigPath.isEmpty {
-        Button("Clear") {
-          globalPreferences.mcpConfigPath = ""
-        }
-        .buttonStyle(.bordered)
-      }
     }
   }
   
   private var mcpConfigurationStatus: some View {
-    Group {
-      if globalPreferences.mcpConfigPath.isEmpty {
-        Text("No configuration selected")
-          .foregroundColor(.secondary)
-          .frame(maxWidth: .infinity, alignment: .leading)
-      } else {
-        Text(URL(fileURLWithPath: globalPreferences.mcpConfigPath).lastPathComponent)
-          .lineLimit(1)
-          .truncationMode(.middle)
-          .frame(maxWidth: .infinity, alignment: .leading)
-      }
-    }
+    Text("~/.config/claude/mcp-config.json")
+      .font(.system(.body, design: .monospaced))
+      .foregroundColor(.secondary)
+      .frame(maxWidth: .infinity, alignment: .leading)
   }
   
   private func promptTextEditor(text: Binding<String>) -> some View {
