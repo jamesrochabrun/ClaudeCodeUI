@@ -250,14 +250,14 @@ struct GlobalSettingsView: View {
   private var allowedToolsRow: some View {
     VStack(alignment: .leading, spacing: 8) {
       HStack {
-        Text("Allowed Tools")
+        Text("Auto-Approved Tools")
         Spacer()
-        Button("Edit Tools") {
+        Button("Configure Auto-Approval") {
           showingToolsEditor = true
         }
         .buttonStyle(.bordered)
       }
-      Text("\(globalPreferences.allowedTools.count) tools selected")
+      Text("\(globalPreferences.allowedTools.count) tools auto-approved (no permission prompts)")
         .font(.caption)
         .foregroundColor(.secondary)
     }
