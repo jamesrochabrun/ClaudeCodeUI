@@ -3,42 +3,44 @@ import Foundation
 // MARK: - SimplifiedSessionManager
 
 public final class SimplifiedSessionManager: SimplifiedSessionManagerProtocol {
-  
+
   public init(
     claudeCodeStorage: SessionStorageProtocol,
-    appsRepoRootPath: String?,
+    globalPreferences: GlobalPreferencesStorage
   ) {
     self.claudeCodeStorage = claudeCodeStorage
-    self.appsRepoRootPath = appsRepoRootPath
+    self.globalPreferences = globalPreferences
   }
     
   @MainActor
-  public func startNewSession(chatViewModel: ChatViewModel) {
-    
-    // Clear any existing conversation but preserve working directory
+  public func startNewSession(chatViewModel: ChatViewModel, workingDirectory: String? = nil) {
+
+    // Clear any existing conversation
     chatViewModel.clearConversation()
-    
-    // Don't call chatViewModel.startNewSession() as it clears the project path
-    // Instead, just ensure the working directory is set correctly
-    if let projectPath = appsRepoRootPath {
-      chatViewModel.refreshProjectPath() // This will update from settings storage
-    } else {
-      // [SessionManager] ⚠️ Started new session without project path")
+
+    // Use provided directory, or fall back to global preference
+    let directoryToUse = workingDirectory ?? globalPreferences.defaultWorkingDirectory
+
+    if !directoryToUse.isEmpty {
+      chatViewModel.claudeClient.configuration.workingDirectory = directoryToUse
+      chatViewModel.projectPath = directoryToUse
+      chatViewModel.settingsStorage.setProjectPath(directoryToUse)
     }
+
+    // Note: Actual session saving happens when the first message is sent
+    // and Claude provides a session ID through the StreamProcessor
   }
   
   public func restoreSession(session: StoredSession, chatViewModel: ChatViewModel) async {
-    // Logger.info("[SessionManager] Attempting to restore session '\(session.id)' with \(session.messages.count) messages")
-    
-    // Use the working directory from the session storage or fallback to the default
-    let workingDirectory = appsRepoRootPath
-    
     await MainActor.run {
+      // Use the session's working directory, or fall back to global preference
+      let workingDirectory = session.workingDirectory ?? globalPreferences.defaultWorkingDirectory
+
       // Inject the session into the chat view model with the correct working directory
       chatViewModel.injectSession(
         sessionId: session.id,
         messages: session.messages,
-        workingDirectory: workingDirectory,
+        workingDirectory: workingDirectory.isEmpty ? nil : workingDirectory
       )
     }
   }
@@ -59,6 +61,6 @@ public final class SimplifiedSessionManager: SimplifiedSessionManagerProtocol {
   }
     
   private let claudeCodeStorage: SessionStorageProtocol
-  private let appsRepoRootPath: String?
+  private let globalPreferences: GlobalPreferencesStorage
   
 }

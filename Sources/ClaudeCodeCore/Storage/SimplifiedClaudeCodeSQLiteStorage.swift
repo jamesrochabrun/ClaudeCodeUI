@@ -6,12 +6,10 @@ import SQLite
 /// Simple SQLite storage for Claude Code sessions using SQLite.swift without macros
 /// Completely independent from Claude Code sessions
 public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
-  
-  public init(workingDirectory: String? = nil) {
-    defaultWorkingDirectory = workingDirectory
-  }
-  
-  public func saveSession(id: String, firstMessage: String) async throws {
+
+  public init() {}
+
+  public func saveSession(id: String, firstMessage: String, workingDirectory: String?) async throws {
     try await initializeDatabaseIfNeeded()
     
     let insert = sessionsTable.insert(
@@ -19,7 +17,7 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       createdAtColumn <- Date(),
       firstUserMessageColumn <- firstMessage,
       lastAccessedAtColumn <- Date(),
-      workingDirectoryColumn <- defaultWorkingDirectory,
+      workingDirectoryColumn <- workingDirectory
     )
     
     try database.run(insert)
@@ -42,6 +40,7 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
         firstUserMessage: sessionRow[firstUserMessageColumn],
         lastAccessedAt: sessionRow[lastAccessedAtColumn],
         messages: messages,
+        workingDirectory: sessionRow[workingDirectoryColumn]
       )
       
       storedSessions.append(storedSession)
@@ -65,6 +64,7 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       firstUserMessage: sessionRow[firstUserMessageColumn],
       lastAccessedAt: sessionRow[lastAccessedAtColumn],
       messages: messages,
+      workingDirectory: sessionRow[workingDirectoryColumn]
     )
     return storedSession
   }
@@ -153,7 +153,6 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
     try database.run(updateSession)
   }
   
-  private let defaultWorkingDirectory: String?
   private var database: Connection!
   private var isInitialized = false
   

@@ -6,16 +6,21 @@ import SwiftUI
 struct SessionsListView: View {
   let availableSessions: [StoredSession]
   let currentSessionId: String?
-  let appsRepoRootPath: String?
-  let onStartNewSession: () -> Void
+  let globalPreferences: GlobalPreferencesStorage?
+  let onStartNewSession: (String?) -> Void
   let onRestoreSession: (StoredSession) -> Void
   let onDeleteSession: (StoredSession) -> Void
+
+  @State private var showDirectoryPicker = false
+  @State private var selectedDirectory: String?
 
   var body: some View {
     List {
       NewSessionRow(
-        projectName: appsRepoRootPath?.split(separator: "/").last.map(String.init) ?? "current project",
-        onTap: onStartNewSession,
+        globalPreferences: globalPreferences,
+        onTap: { directory in
+          onStartNewSession(directory)
+        }
       )
 
       if !availableSessions.isEmpty {

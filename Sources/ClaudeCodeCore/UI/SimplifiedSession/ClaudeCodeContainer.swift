@@ -9,17 +9,16 @@ public struct ClaudeCodeContainer: View {
   // MARK: Lifecycle
   
   public init(
-    appsRepoRootPath: String?,
     claudeCodeConfiguration: ClaudeCodeConfiguration,
     uiConfiguration: UIConfiguration)
   {
-    self.appsRepoRootPath = appsRepoRootPath
     self.claudeCodeConfiguration = claudeCodeConfiguration
     self.uiConfiguration = uiConfiguration
-    customStorage = SimplifiedClaudeCodeSQLiteStorage(workingDirectory: appsRepoRootPath)
+    customStorage = SimplifiedClaudeCodeSQLiteStorage()
+    // SessionManager will be initialized in initializeClaudeCodeUI with proper globalPreferences
     sessionManager = SimplifiedSessionManager(
       claudeCodeStorage: customStorage,
-      appsRepoRootPath: appsRepoRootPath,
+      globalPreferences: GlobalPreferencesStorage() // Temporary, will be replaced
     )
   }
   
@@ -52,8 +51,7 @@ public struct ClaudeCodeContainer: View {
   }
   
   // MARK: Internal
-  
-  let appsRepoRootPath: String?
+
   let customStorage: SessionStorageProtocol
   let claudeCodeConfiguration: ClaudeCodeConfiguration
   let uiConfiguration: UIConfiguration
@@ -77,19 +75,21 @@ public struct ClaudeCodeContainer: View {
   
   private func initializeClaudeCodeUI() async {
     let globalPrefs = GlobalPreferencesStorage()
-    
+
+    // Now create the proper session manager with global preferences
+    sessionManager = SimplifiedSessionManager(
+      claudeCodeStorage: customStorage,
+      globalPreferences: globalPrefs
+    )
+
     let deps = ClaudeCodeCore.DependencyContainer(
       globalPreferences: globalPrefs,
       customSessionStorage: customStorage,
     )
-    
+
     let config = claudeCodeConfiguration
-    
+
     let claudeClient = ClaudeCodeClient(configuration: config)
-    
-    if let projectPath = appsRepoRootPath {
-      deps.settingsStorage.setProjectPath(projectPath)
-    }
     
     let viewModel = ClaudeCodeCore.ChatViewModel(
       claudeClient: claudeClient,
@@ -144,7 +144,7 @@ public struct ClaudeCodeContainer: View {
       sessionLoadError: sessionLoadError,
       availableSessions: availableSessions,
       currentSessionId: currentSessionId,
-      appsRepoRootPath: appsRepoRootPath,
+      globalPreferences: globalPreferences,
       onCancel: {
         showSessionPicker = false
       },
@@ -153,8 +153,8 @@ public struct ClaudeCodeContainer: View {
           await loadAvailableSessions()
         }
       },
-      onStartNewSession: {
-        sessionManager.startNewSession(chatViewModel: chatViewModel)
+      onStartNewSession: { workingDirectory in
+        sessionManager.startNewSession(chatViewModel: chatViewModel, workingDirectory: workingDirectory)
         showSessionPicker = false
       },
       onRestoreSession: { session in

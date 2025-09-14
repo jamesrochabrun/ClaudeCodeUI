@@ -23,19 +23,19 @@ final class SessionManager {
     self.sessionStorage = sessionStorage
   }
   
-  func startNewSession(id: String, firstMessage: String) {
+  func startNewSession(id: String, firstMessage: String, workingDirectory: String? = nil) {
     // Log if we're replacing an existing session
     if let existingId = currentSessionId {
       // Replacing existing session with new one
     }
-    
+
     currentSessionId = id
     // New session started
-    
+
     // Save to storage
     Task {
       do {
-        try await sessionStorage.saveSession(id: id, firstMessage: firstMessage)
+        try await sessionStorage.saveSession(id: id, firstMessage: firstMessage, workingDirectory: workingDirectory)
         // Refresh sessions list
         await fetchSessions()
       } catch {

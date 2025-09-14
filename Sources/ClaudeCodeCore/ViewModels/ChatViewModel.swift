@@ -101,7 +101,7 @@ public final class ChatViewModel {
   public var error: Error?
   
   /// Current project path (observable)
-  public private(set) var projectPath: String = ""
+  public var projectPath: String = ""
   
   /// Streaming metrics
   public private(set) var streamingStartTime: Date?
@@ -151,7 +151,10 @@ public final class ChatViewModel {
       messageStore: messageStore,
       sessionManager: sessionManager,
       globalPreferences: globalPreferences,
-      onSessionChange: onSessionChange
+      onSessionChange: onSessionChange,
+      getCurrentWorkingDirectory: {
+        claudeClient.configuration.workingDirectory
+      }
     )
     
     // Only load sessions if we're managing them (e.g., when used with RootView)

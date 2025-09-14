@@ -34,7 +34,7 @@ public actor ClaudeNativeStorageAdapter: SessionStorageProtocol {
   
   // MARK: - SessionStorageProtocol Implementation
   
-  public func saveSession(id: String, firstMessage: String) async throws {
+  public func saveSession(id: String, firstMessage: String, workingDirectory: String?) async throws {
     // Native storage is read-only - Claude CLI creates sessions automatically
     // We just need to ensure the session exists in our cache
     await refreshCache()

@@ -21,6 +21,7 @@ final class StreamProcessor {
   private let onSessionChange: ((String) -> Void)?
   private var cancellables = Set<AnyCancellable>()
   private let formatter = DynamicContentFormatter()
+  private var getCurrentWorkingDirectory: (() -> String?)?
   
   // Track active continuation for proper cleanup
   private var activeContinuation: CheckedContinuation<Void, Never>?
@@ -45,11 +46,12 @@ final class StreamProcessor {
     var isInTaskExecution = false    // Track if we're currently in a Task execution
   }
   
-  init(messageStore: MessageStore, sessionManager: SessionManager, globalPreferences: GlobalPreferencesStorage? = nil, onSessionChange: ((String) -> Void)? = nil) {
+  init(messageStore: MessageStore, sessionManager: SessionManager, globalPreferences: GlobalPreferencesStorage? = nil, onSessionChange: ((String) -> Void)? = nil, getCurrentWorkingDirectory: (() -> String?)? = nil) {
     self.messageStore = messageStore
     self.sessionManager = sessionManager
     self.globalPreferences = globalPreferences
     self.onSessionChange = onSessionChange
+    self.getCurrentWorkingDirectory = getCurrentWorkingDirectory
   }
   
   /// Cancels the current stream processing
@@ -228,7 +230,8 @@ final class StreamProcessor {
         let firstMessage = firstMessageInSession ?? "New conversation"
         let log = "Starting new session with ID: \(initMessage.sessionId)"
         logger.info("\(log)")
-        sessionManager.startNewSession(id: initMessage.sessionId, firstMessage: firstMessage)
+        let workingDirectory = getCurrentWorkingDirectory?()
+        sessionManager.startNewSession(id: initMessage.sessionId, firstMessage: firstMessage, workingDirectory: workingDirectory)
         // Notify settings storage of session change
         onSessionChange?(initMessage.sessionId)
       } else {
@@ -453,7 +456,8 @@ final class StreamProcessor {
   private func handleResult(_ resultMessage: ResultMessage, firstMessageInSession: String?, onTokenUsageUpdate: ((Int, Int) -> Void)?, onCostUpdate: ((Double) -> Void)?) {
     if sessionManager.currentSessionId == nil {
       let firstMessage = firstMessageInSession ?? "New conversation"
-      sessionManager.startNewSession(id: resultMessage.sessionId, firstMessage: firstMessage)
+      let workingDirectory = getCurrentWorkingDirectory?()
+      sessionManager.startNewSession(id: resultMessage.sessionId, firstMessage: firstMessage, workingDirectory: workingDirectory)
     }
     
     // Update token usage if available

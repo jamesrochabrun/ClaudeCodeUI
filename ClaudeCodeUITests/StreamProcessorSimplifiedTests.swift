@@ -141,7 +141,7 @@ final class StreamProcessorSimplifiedTests: XCTestCase {
     XCTAssertNil(sessionManager.currentSessionId)
     
     // When - Start a new session
-    sessionManager.startNewSession(id: "test-session-123", firstMessage: "Hello")
+    sessionManager.startNewSession(id: "test-session-123", firstMessage: "Hello", workingDirectory: nil)
     
     // Then
     XCTAssertEqual(sessionManager.currentSessionId, "test-session-123")

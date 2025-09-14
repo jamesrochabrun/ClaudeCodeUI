@@ -15,7 +15,9 @@ public struct StoredSession: Codable, Identifiable, Sendable {
   public var lastAccessedAt: Date
   /// Complete message history for this session
   public var messages: [ChatMessage]
-  
+  /// Working directory for this session
+  public let workingDirectory: String?
+
   /// Creates a new StoredSession instance.
   /// - Parameters:
   ///   - id: Unique identifier for the session
@@ -23,18 +25,21 @@ public struct StoredSession: Codable, Identifiable, Sendable {
   ///   - firstUserMessage: The first message from the user in this session
   ///   - lastAccessedAt: When the session was last accessed
   ///   - messages: Complete message history for this session
+  ///   - workingDirectory: Working directory for this session
   public init(
     id: String,
     createdAt: Date,
     firstUserMessage: String,
     lastAccessedAt: Date,
-    messages: [ChatMessage] = []
+    messages: [ChatMessage] = [],
+    workingDirectory: String? = nil
   ) {
     self.id = id
     self.createdAt = createdAt
     self.firstUserMessage = firstUserMessage
     self.lastAccessedAt = lastAccessedAt
     self.messages = messages
+    self.workingDirectory = workingDirectory
   }
   
   /// Computed title based on first user message
@@ -55,7 +60,7 @@ public struct StoredSession: Codable, Identifiable, Sendable {
 /// Protocol for session storage management
 public protocol SessionStorageProtocol {
   /// Saves a new session
-  func saveSession(id: String, firstMessage: String) async throws
+  func saveSession(id: String, firstMessage: String, workingDirectory: String?) async throws
   
   /// Retrieves all stored sessions
   func getAllSessions() async throws -> [StoredSession]
@@ -85,7 +90,7 @@ public actor NoOpSessionStorage: SessionStorageProtocol {
   
   public init() {}
   
-  public func saveSession(id: String, firstMessage: String) async throws {
+  public func saveSession(id: String, firstMessage: String, workingDirectory: String?) async throws {
     // No-op: Don't save anything
   }
   
@@ -131,9 +136,9 @@ public actor UserDefaultsSessionStorage: SessionStorageProtocol {
     self.userDefaults = userDefaults
   }
   
-  public func saveSession(id: String, firstMessage: String) async throws {
+  public func saveSession(id: String, firstMessage: String, workingDirectory: String?) async throws {
     var sessions = try await getAllSessionsInternal()
-    
+
     // Check if session already exists
     if sessions.contains(where: { $0.id == id }) {
       // Update last accessed time for existing session
@@ -143,13 +148,14 @@ public actor UserDefaultsSessionStorage: SessionStorageProtocol {
       }
       return
     }
-    
+
     let newSession = StoredSession(
       id: id,
       createdAt: Date(),
       firstUserMessage: firstMessage,
       lastAccessedAt: Date(),
-      messages: []  // Start with empty messages
+      messages: [],  // Start with empty messages
+      workingDirectory: workingDirectory
     )
     
     sessions.append(newSession)
@@ -217,7 +223,8 @@ public actor UserDefaultsSessionStorage: SessionStorageProtocol {
       createdAt: updatedSession.createdAt,
       firstUserMessage: updatedSession.firstUserMessage,
       lastAccessedAt: Date(),
-      messages: updatedSession.messages
+      messages: updatedSession.messages,
+      workingDirectory: updatedSession.workingDirectory
     )
     
     // Replace the old session with the new one
