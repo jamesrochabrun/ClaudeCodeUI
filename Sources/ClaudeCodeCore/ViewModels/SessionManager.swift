@@ -26,11 +26,13 @@ final class SessionManager {
   func startNewSession(id: String, firstMessage: String, workingDirectory: String? = nil) {
     // Log if we're replacing an existing session
     if let existingId = currentSessionId {
-      // Replacing existing session with new one
+      print("[zizou] SessionManager.startNewSession - Replacing existing session \(existingId) with new session \(id)")
+    } else {
+      print("[zizou] SessionManager.startNewSession - Starting fresh session \(id)")
     }
 
     currentSessionId = id
-    // New session started
+    print("[zizou] SessionManager.startNewSession - currentSessionId set to: \(id), firstMessage: \(firstMessage), workingDirectory: \(workingDirectory ?? "nil")")
 
     // Save to storage
     Task {
@@ -45,7 +47,9 @@ final class SessionManager {
   }
   
   func clearSession() {
+    let previousId = currentSessionId
     currentSessionId = nil
+    print("[zizou] SessionManager.clearSession - Cleared session. Previous: \(previousId ?? "nil")")
   }
   
   var hasActiveSession: Bool {
@@ -57,9 +61,11 @@ final class SessionManager {
     // Sessions might not be loaded yet when resuming
     let previousId = currentSessionId
     currentSessionId = id
-    
+
     if previousId != id {
-      // Session switched
+      print("[zizou] SessionManager.selectSession - Switched from session \(previousId ?? "nil") to \(id)")
+    } else {
+      print("[zizou] SessionManager.selectSession - Selected same session: \(id)")
     }
   }
   
@@ -78,17 +84,21 @@ final class SessionManager {
   func updateCurrentSession(id: String) {
     let previousId = currentSessionId
     currentSessionId = id
-    // Session ID updated to match Claude's
-    
+    print("[zizou] SessionManager.updateCurrentSession - Updated session ID from \(previousId ?? "nil") to \(id) (Claude's ID)")
+
     // Persist the new session ID to storage
     if let oldId = previousId {
+      print("[zizou] SessionManager.updateCurrentSession - Calling updateSessionId in storage: oldId=\(oldId), newId=\(id)")
       Task {
         do {
           try await sessionStorage.updateSessionId(oldId: oldId, newId: id)
+          print("[zizou] SessionManager.updateCurrentSession - Successfully updated session ID in storage")
         } catch {
-          // Failed to update session ID in storage
+          print("[zizou] SessionManager.updateCurrentSession - ERROR: Failed to update session ID in storage: \(error)")
         }
       }
+    } else {
+      print("[zizou] SessionManager.updateCurrentSession - No previous ID to update")
     }
   }
   

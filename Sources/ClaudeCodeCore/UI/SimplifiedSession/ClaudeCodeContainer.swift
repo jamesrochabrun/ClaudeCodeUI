@@ -128,10 +128,13 @@ public struct ClaudeCodeContainer: View {
       uiConfig: uiConfiguration,
       onShowSessionPicker: {
         Task {
+          print("[zizou] ClaudeCodeContainer - onShowSessionPicker triggered. availableSessions.count: \(availableSessions.count)")
           if availableSessions.isEmpty {
+            print("[zizou] ClaudeCodeContainer - Sessions empty, loading...")
             await loadAvailableSessions()
           }
           showSessionPicker = true
+          print("[zizou] ClaudeCodeContainer - showSessionPicker set to true")
         }
       },
     )
@@ -154,14 +157,17 @@ public struct ClaudeCodeContainer: View {
         }
       },
       onStartNewSession: { workingDirectory in
+        print("[zizou] ClaudeCodeContainer - onStartNewSession with workingDirectory: \(workingDirectory ?? "nil")")
         sessionManager.startNewSession(chatViewModel: chatViewModel, workingDirectory: workingDirectory)
         showSessionPicker = false
       },
       onRestoreSession: { session in
         Task {
+          print("[zizou] ClaudeCodeContainer - onRestoreSession for session: \(session.id)")
           await sessionManager.restoreSession(session: session, chatViewModel: chatViewModel)
           await MainActor.run {
             showSessionPicker = false
+            print("[zizou] ClaudeCodeContainer - Session restored, picker closed")
           }
         }
       },
@@ -189,32 +195,50 @@ public struct ClaudeCodeContainer: View {
   }
   
   private func loadAvailableSessions() async {
+    print("[zizou] ClaudeCodeContainer.loadAvailableSessions - Starting to load sessions")
     await MainActor.run {
       isLoadingSessions = true
       sessionLoadError = nil
     }
-    
+
     do {
       var sessions = try await sessionManager.loadAvailableSessions()
-      
-      if
-        let currentId = await MainActor.run { currentSessionId },
-      !sessions.contains(where: { $0.id == currentId })
-      {
-        let currentSession = StoredSession(
-          id: currentId,
-          createdAt: Date(),
-          firstUserMessage: "Current Session",
-          lastAccessedAt: Date(),
-          messages: []
-        )
-        
-        sessions.insert(currentSession, at: 0)
+      print("[zizou] ClaudeCodeContainer.loadAvailableSessions - Loaded \(sessions.count) sessions from manager")
+
+      // Check if current session exists and update its message count from in-memory store
+      if let currentId = await MainActor.run { currentSessionId } {
+        if let index = sessions.firstIndex(where: { $0.id == currentId }) {
+          // Update the message count for current session from MessageStore
+          if let viewModel = await MainActor.run { chatViewModel } {
+            let currentMessages = await MainActor.run { viewModel.getCurrentMessages() }
+            var updatedSession = sessions[index]
+            updatedSession.messages = currentMessages
+            sessions[index] = updatedSession
+            print("[zizou] ClaudeCodeContainer.loadAvailableSessions - Updated current session \(currentId) with \(currentMessages.count) in-memory messages")
+          }
+        } else {
+          // Current session not in database yet, create placeholder
+          if let viewModel = await MainActor.run { chatViewModel } {
+            let currentMessages = await MainActor.run { viewModel.getCurrentMessages() }
+            let firstMessage = currentMessages.first?.content ?? "Current Session"
+            let currentSession = StoredSession(
+              id: currentId,
+              createdAt: Date(),
+              firstUserMessage: firstMessage,
+              lastAccessedAt: Date(),
+              messages: currentMessages,
+              workingDirectory: await MainActor.run { viewModel.projectPath }
+            )
+            sessions.insert(currentSession, at: 0)
+            print("[zizou] ClaudeCodeContainer.loadAvailableSessions - Added current session \(currentId) with \(currentMessages.count) messages")
+          }
+        }
       }
-      
+
       await MainActor.run {
         availableSessions = sessions
         isLoadingSessions = false
+        print("[zizou] ClaudeCodeContainer.loadAvailableSessions - Set availableSessions to \(sessions.count) sessions")
       }
     } catch {
       await MainActor.run {
