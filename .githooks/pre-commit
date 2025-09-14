@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Git pre-commit hook to prevent committing sensitive data
+# This runs automatically before every commit
+
+# Run the security check script
+if [ -f "Scripts/security_check.sh" ]; then
+  bash Scripts/security_check.sh
+  exit $?
+elif [ -f "scripts/security_check.sh" ]; then
+  bash scripts/security_check.sh
+  exit $?
+else
+  echo "Warning: security_check.sh not found"
+  echo "Proceeding with commit..."
+fi
