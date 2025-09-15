@@ -11,10 +11,17 @@ import SwiftUI
 // The actual app entry point is in the executable target
 public struct ClaudeCodeUIApp: App {
   @State private var globalPreferences = GlobalPreferencesStorage()
+  @State private var dependencyContainer: DependencyContainer?
   @Environment(\.openWindow) private var openWindow
   @Environment(\.colorScheme) private var colorScheme
-  
-  public init() {}
+
+  public init() {
+    // Initialize dependency container for global settings
+    _dependencyContainer = State(initialValue: DependencyContainer(
+      globalPreferences: globalPreferences,
+      useNoOpStorage: true
+    ))
+  }
   
   public var body: some Scene {
     WindowGroup(id: "main") {
@@ -43,8 +50,16 @@ public struct ClaudeCodeUIApp: App {
     
     // Global Settings Window
     Window("Global Settings", id: "global-settings") {
-      GlobalSettingsView()
+      if let container = dependencyContainer {
+        GlobalSettingsView(
+          xcodeObservationViewModel: container.xcodeObservationViewModel,
+          permissionsService: container.permissionsService
+        )
         .environment(globalPreferences)
+      } else {
+        GlobalSettingsView()
+          .environment(globalPreferences)
+      }
     }
     .windowResizability(.contentSize)
     

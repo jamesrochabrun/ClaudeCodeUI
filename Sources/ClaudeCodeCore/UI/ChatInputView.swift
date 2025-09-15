@@ -226,11 +226,7 @@ extension ChatInputView {
   
   /// Settings sheet
   private var settingsSheet: some View {
-    SettingsView(
-      chatViewModel: viewModel,
-      xcodeObservationViewModel: xcodeObservationViewModel,
-      permissionsService: permissionsService
-    )
+    SettingsView(chatViewModel: viewModel)
     .frame(width: 700, height: 550)
   }
   
