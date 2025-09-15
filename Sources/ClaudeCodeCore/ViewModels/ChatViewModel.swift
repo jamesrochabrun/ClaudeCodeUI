@@ -178,6 +178,11 @@ public final class ChatViewModel {
   public func refreshProjectPath() {
     projectPath = settingsStorage.projectPath
   }
+
+  /// Updates the Claude command when global preferences change
+  public func updateClaudeCommand(from globalPreferences: GlobalPreferencesStorage) {
+    claudeClient.configuration.command = globalPreferences.claudeCommand
+  }
   
   // MARK: - Public Methods
   

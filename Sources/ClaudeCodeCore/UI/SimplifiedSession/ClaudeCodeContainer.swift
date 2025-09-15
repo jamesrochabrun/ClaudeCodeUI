@@ -90,7 +90,9 @@ public struct ClaudeCodeContainer: View {
       customSessionStorage: customStorage,
     )
 
-    let config = claudeCodeConfiguration
+    var config = claudeCodeConfiguration
+    // Override the command with the one from global preferences
+    config.command = globalPrefs.claudeCommand
 
     let claudeClient = ClaudeCodeClient(configuration: config)
     

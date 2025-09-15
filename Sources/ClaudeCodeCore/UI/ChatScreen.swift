@@ -307,7 +307,8 @@ public struct ChatScreen: View {
       GlobalSettingsView(
         uiConfiguration: uiConfiguration,
         xcodeObservationViewModel: xcodeObservationViewModel,
-        permissionsService: permissionsService
+        permissionsService: permissionsService,
+        chatViewModel: viewModel
       )
     }
   }
