@@ -22,6 +22,7 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     static let allowedTools = "global.allowedTools"
     static let mcpConfigPath = "global.mcpConfigPath"
     static let defaultWorkingDirectory = "global.defaultWorkingDirectory"
+    static let claudeCommand = "global.claudeCommand"
 
     // Custom permission settings
     static let autoApproveLowRisk = "global.autoApproveLowRisk"
@@ -66,6 +67,12 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
   public var defaultWorkingDirectory: String {
     didSet {
       userDefaults.set(defaultWorkingDirectory, forKey: Keys.defaultWorkingDirectory)
+    }
+  }
+
+  public var claudeCommand: String {
+    didSet {
+      userDefaults.set(claudeCommand, forKey: Keys.claudeCommand)
     }
   }
 
@@ -142,7 +149,10 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
 
     // Load default working directory or use empty string
     self.defaultWorkingDirectory = userDefaults.string(forKey: Keys.defaultWorkingDirectory) ?? ""
-    
+
+    // Load Claude command or use default
+    self.claudeCommand = userDefaults.string(forKey: Keys.claudeCommand) ?? "claude"
+
     // Load custom permission settings or use defaults
     self.autoApproveLowRisk = userDefaults.object(forKey: Keys.autoApproveLowRisk) as? Bool ?? false
     self.showDetailedPermissionInfo = userDefaults.object(forKey: Keys.showDetailedPermissionInfo) as? Bool ?? true
@@ -173,7 +183,8 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       .appendingPathComponent(".config/claude/mcp-config.json")
       .path
     defaultWorkingDirectory = ""
-    
+    claudeCommand = "claude"
+
     // Reset permission settings
     autoApproveLowRisk = false
     showDetailedPermissionInfo = true

@@ -13,15 +13,18 @@ struct GlobalSettingsView: View {
   let uiConfiguration: UIConfiguration
   let xcodeObservationViewModel: XcodeObservationViewModel?
   let permissionsService: PermissionsService?
+  let chatViewModel: ChatViewModel?
 
   init(
     uiConfiguration: UIConfiguration = .default,
     xcodeObservationViewModel: XcodeObservationViewModel? = nil,
-    permissionsService: PermissionsService? = nil
+    permissionsService: PermissionsService? = nil,
+    chatViewModel: ChatViewModel? = nil
   ) {
     self.uiConfiguration = uiConfiguration
     self.xcodeObservationViewModel = xcodeObservationViewModel
     self.permissionsService = permissionsService
+    self.chatViewModel = chatViewModel
   }
   
   // MARK: - Constants
@@ -70,6 +73,10 @@ struct GlobalSettingsView: View {
     .toolbar {
       ToolbarItem(placement: .confirmationAction) {
         Button("Done") {
+          // Update the Claude command in the view model if it exists
+          if let viewModel = chatViewModel {
+            viewModel.updateClaudeCommand(from: globalPreferences)
+          }
           dismiss()
         }
       }
@@ -212,6 +219,7 @@ struct GlobalSettingsView: View {
   private var claudeCodeConfigurationSection: some View {
     Section("ClaudeCode Configuration") {
       defaultWorkingDirectoryRow
+      claudeCommandRow
       maxTurnsRow
       if uiConfiguration.showSystemPromptFields {
         systemPromptRow
@@ -293,6 +301,29 @@ struct GlobalSettingsView: View {
         }
       }
       Text("New sessions will use this directory by default")
+        .font(.caption)
+        .foregroundColor(.secondary)
+    }
+  }
+
+  @ViewBuilder
+  private var claudeCommandRow: some View {
+    @Bindable var preferences = globalPreferences
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Claude Command")
+      HStack {
+        TextField("Command", text: $preferences.claudeCommand)
+          .textFieldStyle(.roundedBorder)
+          .font(.system(.body, design: .monospaced))
+
+        if preferences.claudeCommand != "claude" {
+          Button("Reset") {
+            preferences.claudeCommand = "claude"
+          }
+          .foregroundColor(.orange)
+        }
+      }
+      Text("The command to execute Claude Code (default: 'claude')")
         .font(.caption)
         .foregroundColor(.secondary)
     }
