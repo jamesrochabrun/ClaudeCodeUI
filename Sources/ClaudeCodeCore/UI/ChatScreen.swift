@@ -302,13 +302,13 @@ public struct ChatScreen: View {
   private var settingsSheet: some View {
     switch settingsTypeToShow {
     case .session:
-      SettingsView(
-        chatViewModel: viewModel,
+      SettingsView(chatViewModel: viewModel)
+    case .global:
+      GlobalSettingsView(
+        uiConfiguration: uiConfiguration,
         xcodeObservationViewModel: xcodeObservationViewModel,
         permissionsService: permissionsService
       )
-    case .global:
-      GlobalSettingsView(uiConfiguration: uiConfiguration)
     }
   }
   

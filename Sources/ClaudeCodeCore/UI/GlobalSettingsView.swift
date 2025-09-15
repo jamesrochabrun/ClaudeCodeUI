@@ -7,12 +7,21 @@
 
 import SwiftUI
 import AppKit
+import CCPermissionsServiceInterface
 
 struct GlobalSettingsView: View {
   let uiConfiguration: UIConfiguration
-  
-  init(uiConfiguration: UIConfiguration = .default) {
+  let xcodeObservationViewModel: XcodeObservationViewModel?
+  let permissionsService: PermissionsService?
+
+  init(
+    uiConfiguration: UIConfiguration = .default,
+    xcodeObservationViewModel: XcodeObservationViewModel? = nil,
+    permissionsService: PermissionsService? = nil
+  ) {
     self.uiConfiguration = uiConfiguration
+    self.xcodeObservationViewModel = xcodeObservationViewModel
+    self.permissionsService = permissionsService
   }
   
   // MARK: - Constants
@@ -47,6 +56,7 @@ struct GlobalSettingsView: View {
   @State private var showingMCPConfig = false
   @State private var selectedTools: Set<String> = []
   @State private var selectedMCPTools: [String: Set<String>] = [:]
+  @State private var isRequestingPermission: Bool = false
   
   // MARK: - Body
   var body: some View {
@@ -188,6 +198,9 @@ struct GlobalSettingsView: View {
     @Bindable var preferences = globalPreferences
     return VStack(spacing: 0) {
       Form {
+        if xcodeObservationViewModel != nil && permissionsService != nil {
+          xcodeIntegrationSection
+        }
         claudeCodeConfigurationSection
         resetSection
       }
@@ -206,6 +219,43 @@ struct GlobalSettingsView: View {
       appendSystemPromptRow
       allowedToolsRow
       mcpConfigurationRow
+    }
+  }
+
+  private var xcodeIntegrationSection: some View {
+    Section("Xcode Integration") {
+      VStack(alignment: .leading, spacing: 12) {
+        Text("Accessibility Permission")
+          .font(.headline)
+
+        HStack {
+          VStack(alignment: .leading, spacing: 4) {
+            Text(xcodeObservationViewModel?.hasAccessibilityPermission ?? false ? "Permission Granted" : "Permission Required")
+              .foregroundColor(xcodeObservationViewModel?.hasAccessibilityPermission ?? false ? .primary : .secondary)
+
+            Text("Grant accessibility permission to observe Xcode and capture code selections")
+              .font(.caption)
+              .foregroundColor(.secondary)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+
+          if !(xcodeObservationViewModel?.hasAccessibilityPermission ?? false) {
+            Button("Grant Permission") {
+              requestAccessibilityPermission()
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(isRequestingPermission || permissionsService == nil)
+          } else {
+            Image(systemName: "checkmark.circle.fill")
+              .foregroundColor(.green)
+          }
+        }
+
+        Text("Use ⌘I to capture code selections from Xcode")
+          .font(.caption)
+          .foregroundColor(.secondary)
+      }
+      .padding(.vertical, 8)
     }
   }
   
@@ -345,6 +395,23 @@ struct GlobalSettingsView: View {
         RoundedRectangle(cornerRadius: 4)
           .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
       )
+  }
+
+  private func requestAccessibilityPermission() {
+    guard let permissionsService = permissionsService else { return }
+
+    isRequestingPermission = true
+
+    Task {
+      permissionsService.requestAccessibilityPermission()
+
+      // Wait a moment for the system to update
+      try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+
+      await MainActor.run {
+        isRequestingPermission = false
+      }
+    }
   }
 }
 
