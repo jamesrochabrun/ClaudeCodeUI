@@ -129,10 +129,9 @@ public struct ClaudeCodeContainer: View {
       onShowSessionPicker: {
         Task {
           print("[zizou] ClaudeCodeContainer - onShowSessionPicker triggered. availableSessions.count: \(availableSessions.count)")
-          if availableSessions.isEmpty {
-            print("[zizou] ClaudeCodeContainer - Sessions empty, loading...")
-            await loadAvailableSessions()
-          }
+          // Always load fresh sessions when showing picker to ensure accurate message counts
+          print("[zizou] ClaudeCodeContainer - Loading fresh sessions for picker...")
+          await loadAvailableSessions()
           showSessionPicker = true
           print("[zizou] ClaudeCodeContainer - showSessionPicker set to true")
         }
@@ -160,11 +159,21 @@ public struct ClaudeCodeContainer: View {
         print("[zizou] ClaudeCodeContainer - onStartNewSession with workingDirectory: \(workingDirectory ?? "nil")")
         sessionManager.startNewSession(chatViewModel: chatViewModel, workingDirectory: workingDirectory)
         showSessionPicker = false
+        // Reload sessions after starting new session to keep list updated
+        Task {
+          print("[zizou] ClaudeCodeContainer - Reloading sessions after starting new session")
+          await loadAvailableSessions()
+        }
       },
       onRestoreSession: { session in
         Task {
           print("[zizou] ClaudeCodeContainer - onRestoreSession for session: \(session.id)")
           await sessionManager.restoreSession(session: session, chatViewModel: chatViewModel)
+
+          // Reload sessions to get fresh data after restoration
+          print("[zizou] ClaudeCodeContainer - Reloading sessions after restoration to refresh message counts")
+          await loadAvailableSessions()
+
           await MainActor.run {
             showSessionPicker = false
             print("[zizou] ClaudeCodeContainer - Session restored, picker closed")
