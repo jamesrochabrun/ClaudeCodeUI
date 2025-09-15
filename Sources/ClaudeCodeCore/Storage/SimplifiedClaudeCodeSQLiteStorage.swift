@@ -7,6 +7,8 @@ import SQLite
 /// Completely independent from Claude Code sessions
 public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
 
+  private var migrationManager: SimplifiedClaudeCodeSQLiteMigrationManager?
+
   public init() {}
 
   public func saveSession(id: String, firstMessage: String, workingDirectory: String?) async throws {
@@ -223,7 +225,7 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
   
   private func initializeDatabaseIfNeeded() async throws {
     guard !isInitialized else { return }
-    
+
     // Create database in Application Support directory
     let fileManager = FileManager.default
     let appSupportDir = try fileManager.url(
@@ -232,27 +234,44 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       appropriateFor: nil,
       create: true,
     )
-    
+
     // Create application-specific directory within Application Support
     // Structure: ~/Library/Application Support/ClaudeCodeUI/
     let appDir = appSupportDir.appendingPathComponent("ClaudeCodeUI", isDirectory: true)
     try fileManager.createDirectory(at: appDir, withIntermediateDirectories: true)
-    
+
     // Create SQLite database file path
     // Final path: ~/Library/Application Support/ClaudeCodeUI/claude_code_sessions.sqlite
     let dbPath = appDir.appendingPathComponent("claude_code_sessions.sqlite").path
-    
+
     // Initialize SQLite connection using SQLite.swift
     // This creates the database file if it doesn't exist
     database = try Connection(dbPath)
-    
+
     // Enable foreign key constraints (disabled by default in SQLite)
     try database.execute("PRAGMA foreign_keys = ON")
-    
-    // Create tables
+
+    // Initialize migration manager
+    migrationManager = SimplifiedClaudeCodeSQLiteMigrationManager(
+      database: database,
+      databasePath: dbPath
+    )
+
+    // Run any pending migrations
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage - Checking for database migrations")
+    try await migrationManager?.runMigrationsIfNeeded()
+
+    // Validate database integrity
+    try await migrationManager?.validateDatabase()
+
+    // Create tables (if they don't exist)
     try await createTables()
-    
+
+    // Clean up old backups
+    try await migrationManager?.cleanupOldBackups()
+
     isInitialized = true
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage - Database initialized successfully")
   }
   
   private func createTables() async throws {
