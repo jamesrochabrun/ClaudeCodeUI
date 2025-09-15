@@ -106,7 +106,8 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
     print("[zizou] SimplifiedClaudeCodeSQLiteStorage.updateSessionMessages - Deleted \(deletedCount) existing messages for session \(id)")
 
     // Insert new messages
-    for message in messages {
+    for (index, message) in messages.enumerated() {
+      print("[zizou] SimplifiedClaudeCodeSQLiteStorage.updateSessionMessages - Inserting message [\(index)]: id=\(message.id), role=\(message.role), type=\(message.messageType), toolName=\(message.toolName ?? "nil")")
       let insertMessage = messagesTable.insert(
         messageIdColumn <- message.id.uuidString,
         messageSessionIdColumn <- id,
@@ -294,18 +295,28 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
   }
   
   private func getMessagesForSession(sessionId: String) async throws -> [ChatMessage] {
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage.getMessagesForSession - Loading messages for session \(sessionId)")
     var messages = [ChatMessage]()
-    
+
     let query = messagesTable
       .filter(messageSessionIdColumn == sessionId)
       .order(messageTimestampColumn.asc)
-    
+
+    var rowCount = 0
     for messageRow in try database.prepare(query) {
+      rowCount += 1
+      let roleString = messageRow[messageRoleColumn]
+      let typeString = messageRow[messageTypeColumn]
+      let idString = messageRow[messageIdColumn]
+
+      print("[zizou] SimplifiedClaudeCodeSQLiteStorage.getMessagesForSession - Row \(rowCount): id=\(idString), role=\(roleString), type=\(typeString)")
+
       guard
-        let role = MessageRole(rawValue: messageRow[messageRoleColumn]),
-        let messageType = MessageType(rawValue: messageRow[messageTypeColumn]),
-        let messageId = UUID(uuidString: messageRow[messageIdColumn])
+        let role = MessageRole(rawValue: roleString),
+        let messageType = MessageType(rawValue: typeString),
+        let messageId = UUID(uuidString: idString)
       else {
+        print("[zizou] SimplifiedClaudeCodeSQLiteStorage.getMessagesForSession - SKIPPING Row \(rowCount): Failed to parse - role=\(roleString), type=\(typeString), id=\(idString)")
         continue
       }
       
@@ -335,8 +346,10 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       )
       
       messages.append(message)
+      print("[zizou] SimplifiedClaudeCodeSQLiteStorage.getMessagesForSession - Loaded message [\(rowCount-1)]: id=\(message.id), role=\(message.role), type=\(message.messageType), toolName=\(message.toolName ?? "nil")")
     }
-    
+
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage.getMessagesForSession - Total loaded: \(messages.count) messages for session \(sessionId)")
     return messages
   }
 }

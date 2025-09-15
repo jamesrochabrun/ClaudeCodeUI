@@ -35,19 +35,35 @@ public final class SimplifiedSessionManager: SimplifiedSessionManagerProtocol {
   }
   
   public func restoreSession(session: StoredSession, chatViewModel: ChatViewModel) async {
-    print("[zizou] SimplifiedSessionManager.restoreSession - Restoring session \(session.id) with \(session.messages.count) messages")
+    print("[zizou] SimplifiedSessionManager.restoreSession - Restoring session \(session.id) with \(session.messages.count) messages (from cache)")
+
+    // Fetch fresh session data from storage to get all messages
+    let freshSession: StoredSession
+    do {
+      if let loadedSession = try await claudeCodeStorage.getSession(id: session.id) {
+        freshSession = loadedSession
+        print("[zizou] SimplifiedSessionManager.restoreSession - Loaded fresh session from storage with \(freshSession.messages.count) messages")
+      } else {
+        print("[zizou] SimplifiedSessionManager.restoreSession - Could not load fresh session, using cached version")
+        freshSession = session
+      }
+    } catch {
+      print("[zizou] SimplifiedSessionManager.restoreSession - Error loading fresh session: \(error), using cached version")
+      freshSession = session
+    }
+
     await MainActor.run {
       // Use the session's working directory, or fall back to global preference
-      let workingDirectory = session.workingDirectory ?? globalPreferences.defaultWorkingDirectory
+      let workingDirectory = freshSession.workingDirectory ?? globalPreferences.defaultWorkingDirectory
       print("[zizou] SimplifiedSessionManager.restoreSession - Using workingDirectory: \(workingDirectory.isEmpty ? "<empty>" : workingDirectory)")
 
       // Inject the session into the chat view model with the correct working directory
       chatViewModel.injectSession(
-        sessionId: session.id,
-        messages: session.messages,
+        sessionId: freshSession.id,
+        messages: freshSession.messages,
         workingDirectory: workingDirectory.isEmpty ? nil : workingDirectory
       )
-      print("[zizou] SimplifiedSessionManager.restoreSession - Session injection complete")
+      print("[zizou] SimplifiedSessionManager.restoreSession - Session injection complete with \(freshSession.messages.count) messages")
     }
   }
   
