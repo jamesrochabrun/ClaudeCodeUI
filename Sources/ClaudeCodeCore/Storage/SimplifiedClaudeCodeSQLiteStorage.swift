@@ -6,28 +6,29 @@ import SQLite
 /// Simple SQLite storage for Claude Code sessions using SQLite.swift without macros
 /// Completely independent from Claude Code sessions
 public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
-  
-  public init(workingDirectory: String? = nil) {
-    defaultWorkingDirectory = workingDirectory
-  }
-  
-  public func saveSession(id: String, firstMessage: String) async throws {
+
+  public init() {}
+
+  public func saveSession(id: String, firstMessage: String, workingDirectory: String?) async throws {
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage.saveSession - Saving session id: \(id), firstMessage: \(firstMessage), workingDirectory: \(workingDirectory ?? "nil")")
     try await initializeDatabaseIfNeeded()
-    
+
     let insert = sessionsTable.insert(
       sessionIdColumn <- id,
       createdAtColumn <- Date(),
       firstUserMessageColumn <- firstMessage,
       lastAccessedAtColumn <- Date(),
-      workingDirectoryColumn <- defaultWorkingDirectory,
+      workingDirectoryColumn <- workingDirectory
     )
-    
+
     try database.run(insert)
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage.saveSession - Successfully saved session \(id)")
   }
   
   public func getAllSessions() async throws -> [StoredSession] {
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage.getAllSessions - Loading all sessions")
     try await initializeDatabaseIfNeeded()
-    
+
     var storedSessions = [StoredSession]()
     
     for sessionRow in try database.prepare(sessionsTable.order(lastAccessedAtColumn.desc)) {
@@ -42,10 +43,12 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
         firstUserMessage: sessionRow[firstUserMessageColumn],
         lastAccessedAt: sessionRow[lastAccessedAtColumn],
         messages: messages,
+        workingDirectory: sessionRow[workingDirectoryColumn]
       )
       
       storedSessions.append(storedSession)
     }
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage.getAllSessions - Loaded \(storedSessions.count) sessions")
     return storedSessions
   }
   
@@ -65,6 +68,7 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       firstUserMessage: sessionRow[firstUserMessageColumn],
       lastAccessedAt: sessionRow[lastAccessedAtColumn],
       messages: messages,
+      workingDirectory: sessionRow[workingDirectoryColumn]
     )
     return storedSession
   }
@@ -93,14 +97,17 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
   }
   
   public func updateSessionMessages(id: String, messages: [ChatMessage]) async throws {
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage.updateSessionMessages - Updating messages for session \(id), count: \(messages.count)")
     try await initializeDatabaseIfNeeded()
-    
+
     // Delete existing messages for this session (foreign key constraints will cascade to attachments)
     let deleteMessages = messagesTable.filter(messageSessionIdColumn == id)
-    try database.run(deleteMessages.delete())
-    
+    let deletedCount = try database.run(deleteMessages.delete())
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage.updateSessionMessages - Deleted \(deletedCount) existing messages for session \(id)")
+
     // Insert new messages
-    for message in messages {
+    for (index, message) in messages.enumerated() {
+      print("[zizou] SimplifiedClaudeCodeSQLiteStorage.updateSessionMessages - Inserting message [\(index)]: id=\(message.id), role=\(message.role), type=\(message.messageType), toolName=\(message.toolName ?? "nil")")
       let insertMessage = messagesTable.insert(
         messageIdColumn <- message.id.uuidString,
         messageSessionIdColumn <- id,
@@ -134,26 +141,49 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
         }
       }
     }
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage.updateSessionMessages - Successfully inserted \(messages.count) messages for session \(id)")
   }
   
   public func updateSessionId(oldId: String, newId: String) async throws {
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage.updateSessionId - Updating session ID from \(oldId) to \(newId)")
     try await initializeDatabaseIfNeeded()
-    
-    // Update message session IDs FIRST (to avoid foreign key constraint violation)
+
+    // First, check if the new session already exists (phantom session case)
+    let existingNewSession = try database.pluck(sessionsTable.filter(sessionIdColumn == newId))
+    if existingNewSession != nil {
+      print("[zizou] SimplifiedClaudeCodeSQLiteStorage.updateSessionId - New session \(newId) already exists, skipping update to avoid conflicts")
+      return
+    }
+
+    // Get the old session details
+    guard let oldSessionRow = try database.pluck(sessionsTable.filter(sessionIdColumn == oldId)) else {
+      print("[zizou] SimplifiedClaudeCodeSQLiteStorage.updateSessionId - Old session \(oldId) not found, cannot update")
+      return
+    }
+
+    // Create new session record FIRST with data from old session
+    let insertNewSession = sessionsTable.insert(
+      sessionIdColumn <- newId,
+      createdAtColumn <- oldSessionRow[createdAtColumn],
+      firstUserMessageColumn <- oldSessionRow[firstUserMessageColumn],
+      lastAccessedAtColumn <- Date(),
+      workingDirectoryColumn <- oldSessionRow[workingDirectoryColumn]
+    )
+    try database.run(insertNewSession)
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage.updateSessionId - Created new session record with ID \(newId)")
+
+    // Now update message session IDs (foreign key constraint satisfied)
     let messages = messagesTable.filter(messageSessionIdColumn == oldId)
     let updateMessages = messages.update(messageSessionIdColumn <- newId)
-    try database.run(updateMessages)
-    
-    // Then update session ID
-    let session = sessionsTable.filter(sessionIdColumn == oldId)
-    let updateSession = session.update(
-      sessionIdColumn <- newId,
-      lastAccessedAtColumn <- Date(),
-    )
-    try database.run(updateSession)
+    let messagesUpdated = try database.run(updateMessages)
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage.updateSessionId - Updated \(messagesUpdated) messages from oldId to newId")
+
+    // Finally, delete the old session record
+    let deleteOldSession = sessionsTable.filter(sessionIdColumn == oldId)
+    try database.run(deleteOldSession.delete())
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage.updateSessionId - Deleted old session record \(oldId). Complete.")
   }
   
-  private let defaultWorkingDirectory: String?
   private var database: Connection!
   private var isInitialized = false
   
@@ -265,18 +295,28 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
   }
   
   private func getMessagesForSession(sessionId: String) async throws -> [ChatMessage] {
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage.getMessagesForSession - Loading messages for session \(sessionId)")
     var messages = [ChatMessage]()
-    
+
     let query = messagesTable
       .filter(messageSessionIdColumn == sessionId)
       .order(messageTimestampColumn.asc)
-    
+
+    var rowCount = 0
     for messageRow in try database.prepare(query) {
+      rowCount += 1
+      let roleString = messageRow[messageRoleColumn]
+      let typeString = messageRow[messageTypeColumn]
+      let idString = messageRow[messageIdColumn]
+
+      print("[zizou] SimplifiedClaudeCodeSQLiteStorage.getMessagesForSession - Row \(rowCount): id=\(idString), role=\(roleString), type=\(typeString)")
+
       guard
-        let role = MessageRole(rawValue: messageRow[messageRoleColumn]),
-        let messageType = MessageType(rawValue: messageRow[messageTypeColumn]),
-        let messageId = UUID(uuidString: messageRow[messageIdColumn])
+        let role = MessageRole(rawValue: roleString),
+        let messageType = MessageType(rawValue: typeString),
+        let messageId = UUID(uuidString: idString)
       else {
+        print("[zizou] SimplifiedClaudeCodeSQLiteStorage.getMessagesForSession - SKIPPING Row \(rowCount): Failed to parse - role=\(roleString), type=\(typeString), id=\(idString)")
         continue
       }
       
@@ -306,8 +346,10 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       )
       
       messages.append(message)
+      print("[zizou] SimplifiedClaudeCodeSQLiteStorage.getMessagesForSession - Loaded message [\(rowCount-1)]: id=\(message.id), role=\(message.role), type=\(message.messageType), toolName=\(message.toolName ?? "nil")")
     }
-    
+
+    print("[zizou] SimplifiedClaudeCodeSQLiteStorage.getMessagesForSession - Total loaded: \(messages.count) messages for session \(sessionId)")
     return messages
   }
 }

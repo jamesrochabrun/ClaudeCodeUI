@@ -9,17 +9,16 @@ public struct ClaudeCodeContainer: View {
   // MARK: Lifecycle
   
   public init(
-    appsRepoRootPath: String?,
     claudeCodeConfiguration: ClaudeCodeConfiguration,
     uiConfiguration: UIConfiguration)
   {
-    self.appsRepoRootPath = appsRepoRootPath
     self.claudeCodeConfiguration = claudeCodeConfiguration
     self.uiConfiguration = uiConfiguration
-    customStorage = SimplifiedClaudeCodeSQLiteStorage(workingDirectory: appsRepoRootPath)
+    customStorage = SimplifiedClaudeCodeSQLiteStorage()
+    // SessionManager will be initialized in initializeClaudeCodeUI with proper globalPreferences
     sessionManager = SimplifiedSessionManager(
       claudeCodeStorage: customStorage,
-      appsRepoRootPath: appsRepoRootPath,
+      globalPreferences: GlobalPreferencesStorage() // Temporary, will be replaced
     )
   }
   
@@ -52,8 +51,7 @@ public struct ClaudeCodeContainer: View {
   }
   
   // MARK: Internal
-  
-  let appsRepoRootPath: String?
+
   let customStorage: SessionStorageProtocol
   let claudeCodeConfiguration: ClaudeCodeConfiguration
   let uiConfiguration: UIConfiguration
@@ -77,19 +75,21 @@ public struct ClaudeCodeContainer: View {
   
   private func initializeClaudeCodeUI() async {
     let globalPrefs = GlobalPreferencesStorage()
-    
+
+    // Now create the proper session manager with global preferences
+    sessionManager = SimplifiedSessionManager(
+      claudeCodeStorage: customStorage,
+      globalPreferences: globalPrefs
+    )
+
     let deps = ClaudeCodeCore.DependencyContainer(
       globalPreferences: globalPrefs,
       customSessionStorage: customStorage,
     )
-    
+
     let config = claudeCodeConfiguration
-    
+
     let claudeClient = ClaudeCodeClient(configuration: config)
-    
-    if let projectPath = appsRepoRootPath {
-      deps.settingsStorage.setProjectPath(projectPath)
-    }
     
     let viewModel = ClaudeCodeCore.ChatViewModel(
       claudeClient: claudeClient,
@@ -128,10 +128,12 @@ public struct ClaudeCodeContainer: View {
       uiConfig: uiConfiguration,
       onShowSessionPicker: {
         Task {
-          if availableSessions.isEmpty {
-            await loadAvailableSessions()
-          }
+          print("[zizou] ClaudeCodeContainer - onShowSessionPicker triggered. availableSessions.count: \(availableSessions.count)")
+          // Always load fresh sessions when showing picker to ensure accurate message counts
+          print("[zizou] ClaudeCodeContainer - Loading fresh sessions for picker...")
+          await loadAvailableSessions()
           showSessionPicker = true
+          print("[zizou] ClaudeCodeContainer - showSessionPicker set to true")
         }
       },
     )
@@ -144,7 +146,7 @@ public struct ClaudeCodeContainer: View {
       sessionLoadError: sessionLoadError,
       availableSessions: availableSessions,
       currentSessionId: currentSessionId,
-      appsRepoRootPath: appsRepoRootPath,
+      globalPreferences: globalPreferences,
       onCancel: {
         showSessionPicker = false
       },
@@ -153,15 +155,28 @@ public struct ClaudeCodeContainer: View {
           await loadAvailableSessions()
         }
       },
-      onStartNewSession: {
-        sessionManager.startNewSession(chatViewModel: chatViewModel)
+      onStartNewSession: { workingDirectory in
+        print("[zizou] ClaudeCodeContainer - onStartNewSession with workingDirectory: \(workingDirectory ?? "nil")")
+        sessionManager.startNewSession(chatViewModel: chatViewModel, workingDirectory: workingDirectory)
         showSessionPicker = false
+        // Reload sessions after starting new session to keep list updated
+        Task {
+          print("[zizou] ClaudeCodeContainer - Reloading sessions after starting new session")
+          await loadAvailableSessions()
+        }
       },
       onRestoreSession: { session in
         Task {
+          print("[zizou] ClaudeCodeContainer - onRestoreSession for session: \(session.id)")
           await sessionManager.restoreSession(session: session, chatViewModel: chatViewModel)
+
+          // Reload sessions to get fresh data after restoration
+          print("[zizou] ClaudeCodeContainer - Reloading sessions after restoration to refresh message counts")
+          await loadAvailableSessions()
+
           await MainActor.run {
             showSessionPicker = false
+            print("[zizou] ClaudeCodeContainer - Session restored, picker closed")
           }
         }
       },
@@ -189,32 +204,50 @@ public struct ClaudeCodeContainer: View {
   }
   
   private func loadAvailableSessions() async {
+    print("[zizou] ClaudeCodeContainer.loadAvailableSessions - Starting to load sessions")
     await MainActor.run {
       isLoadingSessions = true
       sessionLoadError = nil
     }
-    
+
     do {
       var sessions = try await sessionManager.loadAvailableSessions()
-      
-      if
-        let currentId = await MainActor.run { currentSessionId },
-      !sessions.contains(where: { $0.id == currentId })
-      {
-        let currentSession = StoredSession(
-          id: currentId,
-          createdAt: Date(),
-          firstUserMessage: "Current Session",
-          lastAccessedAt: Date(),
-          messages: []
-        )
-        
-        sessions.insert(currentSession, at: 0)
+      print("[zizou] ClaudeCodeContainer.loadAvailableSessions - Loaded \(sessions.count) sessions from manager")
+
+      // Check if current session exists and update its message count from in-memory store
+      if let currentId = await MainActor.run { currentSessionId } {
+        if let index = sessions.firstIndex(where: { $0.id == currentId }) {
+          // Update the message count for current session from MessageStore
+          if let viewModel = await MainActor.run { chatViewModel } {
+            let currentMessages = await MainActor.run { viewModel.getCurrentMessages() }
+            var updatedSession = sessions[index]
+            updatedSession.messages = currentMessages
+            sessions[index] = updatedSession
+            print("[zizou] ClaudeCodeContainer.loadAvailableSessions - Updated current session \(currentId) with \(currentMessages.count) in-memory messages")
+          }
+        } else {
+          // Current session not in database yet, create placeholder
+          if let viewModel = await MainActor.run { chatViewModel } {
+            let currentMessages = await MainActor.run { viewModel.getCurrentMessages() }
+            let firstMessage = currentMessages.first?.content ?? "Current Session"
+            let currentSession = StoredSession(
+              id: currentId,
+              createdAt: Date(),
+              firstUserMessage: firstMessage,
+              lastAccessedAt: Date(),
+              messages: currentMessages,
+              workingDirectory: await MainActor.run { viewModel.projectPath }
+            )
+            sessions.insert(currentSession, at: 0)
+            print("[zizou] ClaudeCodeContainer.loadAvailableSessions - Added current session \(currentId) with \(currentMessages.count) messages")
+          }
+        }
       }
-      
+
       await MainActor.run {
         availableSessions = sessions
         isLoadingSessions = false
+        print("[zizou] ClaudeCodeContainer.loadAvailableSessions - Set availableSessions to \(sessions.count) sessions")
       }
     } catch {
       await MainActor.run {

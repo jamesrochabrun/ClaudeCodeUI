@@ -21,6 +21,7 @@ final class StreamProcessor {
   private let onSessionChange: ((String) -> Void)?
   private var cancellables = Set<AnyCancellable>()
   private let formatter = DynamicContentFormatter()
+  private var getCurrentWorkingDirectory: (() -> String?)?
   
   // Track active continuation for proper cleanup
   private var activeContinuation: CheckedContinuation<Void, Never>?
@@ -45,11 +46,12 @@ final class StreamProcessor {
     var isInTaskExecution = false    // Track if we're currently in a Task execution
   }
   
-  init(messageStore: MessageStore, sessionManager: SessionManager, globalPreferences: GlobalPreferencesStorage? = nil, onSessionChange: ((String) -> Void)? = nil) {
+  init(messageStore: MessageStore, sessionManager: SessionManager, globalPreferences: GlobalPreferencesStorage? = nil, onSessionChange: ((String) -> Void)? = nil, getCurrentWorkingDirectory: (() -> String?)? = nil) {
     self.messageStore = messageStore
     self.sessionManager = sessionManager
     self.globalPreferences = globalPreferences
     self.onSessionChange = onSessionChange
+    self.getCurrentWorkingDirectory = getCurrentWorkingDirectory
   }
   
   /// Cancels the current stream processing
@@ -98,9 +100,12 @@ final class StreamProcessor {
             case .finished:
               // Commit the pending session ID now that stream completed successfully
               if let pending = self.pendingSessionId {
+                print("[zizou] StreamProcessor - Stream finished. Committing pending session ID: \(pending)")
                 self.sessionManager.updateCurrentSession(id: pending)
                 self.onSessionChange?(pending)
                 self.pendingSessionId = nil
+              } else {
+                print("[zizou] StreamProcessor - Stream finished. No pending session ID to commit")
               }
               
               // End any active task execution
@@ -226,21 +231,33 @@ final class StreamProcessor {
       if sessionManager.currentSessionId == nil {
         // This is a new conversation - can update immediately since there's no previous session
         let firstMessage = firstMessageInSession ?? "New conversation"
+        print("[zizou] StreamProcessor.handleInit - Starting NEW session with ID: \(initMessage.sessionId)")
         let log = "Starting new session with ID: \(initMessage.sessionId)"
         logger.info("\(log)")
-        sessionManager.startNewSession(id: initMessage.sessionId, firstMessage: firstMessage)
+        let workingDirectory = getCurrentWorkingDirectory?()
+        sessionManager.startNewSession(id: initMessage.sessionId, firstMessage: firstMessage, workingDirectory: workingDirectory)
         // Notify settings storage of session change
         onSessionChange?(initMessage.sessionId)
       } else {
         // Claude has created a new session ID in the chain
         // DON'T update immediately - wait for successful completion
         // Store as pending - will only commit if stream completes successfully
+        print("[zizou] StreamProcessor.handleInit - Claude returned different session ID. Current: \(sessionManager.currentSessionId ?? "nil"), New: \(initMessage.sessionId). Setting as pending...")
+
+        // Check if this is likely a restored session scenario
+        // In restored sessions, Claude doesn't know about our local session ID
+        let isLikelyRestoredSession = sessionManager.currentSessionId != nil
+        if isLikelyRestoredSession {
+          print("[zizou] StreamProcessor.handleInit - WARNING: This appears to be a restored session. Claude doesn't recognize our local ID.")
+        }
+
         pendingSessionId = initMessage.sessionId
         let log = "Session chain pending: '\(sessionManager.currentSessionId ?? "nil")' → '\(initMessage.sessionId)'"
         logger.debug("\(log)")
       }
     } else {
       // Session IDs match as expected
+      print("[zizou] StreamProcessor.handleInit - Session ID confirmed (match): \(initMessage.sessionId)")
       let log = "Session ID confirmed: \(initMessage.sessionId)"
       logger.debug("\(log)")
     }
@@ -314,6 +331,7 @@ final class StreamProcessor {
               content: state.contentBuffer,
               isComplete: false
             )
+            print("[zizou] StreamProcessor - Creating assistant message for text content")
             messageStore.addMessage(assistantMessage)
             state.assistantMessageCreated = true
           } else if contentChanged {
@@ -326,6 +344,7 @@ final class StreamProcessor {
         }
         
       case .toolUse(let toolUse):
+        print("[zizou] StreamProcessor - Handling toolUse: \(toolUse.name)")
         // Mark that we've processed a tool use
         state.hasProcessedToolUse = true
         
@@ -406,14 +425,17 @@ final class StreamProcessor {
           taskGroupId: state.currentTaskGroupId,
           isTaskContainer: isTaskTool
         )
+        print("[zizou] StreamProcessor - Creating tool message: type=\(toolMessage.messageType), toolName=\(toolMessage.toolName ?? "nil"), isTaskContainer=\(toolMessage.isTaskContainer)")
         messageStore.addMessage(toolMessage)
         
       case .toolResult(let toolResult):
+        print("[zizou] StreamProcessor - Handling toolResult")
         let resultMessage = MessageFactory.toolResultMessage(
           content: toolResult.content,
           isError: toolResult.isError == true,
           taskGroupId: state.currentTaskGroupId
         )
+        print("[zizou] StreamProcessor - Creating tool result message")
         messageStore.addMessage(resultMessage)
         
       case .thinking(let thinking):
@@ -452,8 +474,12 @@ final class StreamProcessor {
   
   private func handleResult(_ resultMessage: ResultMessage, firstMessageInSession: String?, onTokenUsageUpdate: ((Int, Int) -> Void)?, onCostUpdate: ((Double) -> Void)?) {
     if sessionManager.currentSessionId == nil {
+      print("[zizou] StreamProcessor.handleResult - No current session, starting new with ID: \(resultMessage.sessionId)")
       let firstMessage = firstMessageInSession ?? "New conversation"
-      sessionManager.startNewSession(id: resultMessage.sessionId, firstMessage: firstMessage)
+      let workingDirectory = getCurrentWorkingDirectory?()
+      sessionManager.startNewSession(id: resultMessage.sessionId, firstMessage: firstMessage, workingDirectory: workingDirectory)
+    } else {
+      print("[zizou] StreamProcessor.handleResult - Result received for session: \(resultMessage.sessionId), current: \(sessionManager.currentSessionId ?? "nil")")
     }
     
     // Update token usage if available

@@ -16,9 +16,9 @@ struct SessionPickerContent: View {
   let sessionLoadError: Error?
   let availableSessions: [StoredSession]
   let currentSessionId: String?
-  let appsRepoRootPath: String?
+  let globalPreferences: GlobalPreferencesStorage?
   let onTryAgain: () -> Void
-  let onStartNewSession: () -> Void
+  let onStartNewSession: (String?) -> Void
   let onRestoreSession: (StoredSession) -> Void
   let onDeleteSession: (StoredSession) -> Void
   
@@ -34,7 +34,7 @@ struct SessionPickerContent: View {
       SessionsListView(
         availableSessions: availableSessions,
         currentSessionId: currentSessionId,
-        appsRepoRootPath: appsRepoRootPath,
+        globalPreferences: globalPreferences,
         onStartNewSession: onStartNewSession,
         onRestoreSession: onRestoreSession,
         onDeleteSession: onDeleteSession,

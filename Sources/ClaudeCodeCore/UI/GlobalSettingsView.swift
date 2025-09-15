@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct GlobalSettingsView: View {
   let uiConfiguration: UIConfiguration
@@ -197,6 +198,7 @@ struct GlobalSettingsView: View {
   // MARK: - Configuration Sections
   private var claudeCodeConfigurationSection: some View {
     Section("ClaudeCode Configuration") {
+      defaultWorkingDirectoryRow
       maxTurnsRow
       if uiConfiguration.showSystemPromptFields {
         systemPromptRow
@@ -217,6 +219,35 @@ struct GlobalSettingsView: View {
   }
   
   // MARK: - Configuration Rows
+  @ViewBuilder
+  private var defaultWorkingDirectoryRow: some View {
+    @Bindable var preferences = globalPreferences
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Default Working Directory")
+      HStack {
+        Text(preferences.defaultWorkingDirectory.isEmpty ? "No default directory set" : preferences.defaultWorkingDirectory)
+          .lineLimit(1)
+          .truncationMode(.middle)
+          .foregroundColor(preferences.defaultWorkingDirectory.isEmpty ? .secondary : .primary)
+          .frame(maxWidth: .infinity, alignment: .leading)
+
+        Button("Select") {
+          selectDefaultWorkingDirectory()
+        }
+
+        if !preferences.defaultWorkingDirectory.isEmpty {
+          Button("Clear") {
+            preferences.defaultWorkingDirectory = ""
+          }
+          .foregroundColor(.red)
+        }
+      }
+      Text("New sessions will use this directory by default")
+        .font(.caption)
+        .foregroundColor(.secondary)
+    }
+  }
+
   @ViewBuilder
   private var maxTurnsRow: some View {
     @Bindable var preferences = globalPreferences
@@ -273,6 +304,20 @@ struct GlobalSettingsView: View {
     }
   }
   
+  // MARK: - Helper Methods
+  private func selectDefaultWorkingDirectory() {
+    let openPanel = NSOpenPanel()
+    openPanel.canChooseFiles = false
+    openPanel.canChooseDirectories = true
+    openPanel.allowsMultipleSelection = false
+    openPanel.message = "Select Default Working Directory"
+    openPanel.prompt = "Select"
+
+    if openPanel.runModal() == .OK, let url = openPanel.url {
+      globalPreferences.defaultWorkingDirectory = url.path
+    }
+  }
+
   // MARK: - Helper Views
   private var mcpConfigurationControls: some View {
     HStack {

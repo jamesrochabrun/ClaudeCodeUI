@@ -21,7 +21,8 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     static let appendSystemPrompt = "global.appendSystemPrompt"
     static let allowedTools = "global.allowedTools"
     static let mcpConfigPath = "global.mcpConfigPath"
-    
+    static let defaultWorkingDirectory = "global.defaultWorkingDirectory"
+
     // Custom permission settings
     static let autoApproveLowRisk = "global.autoApproveLowRisk"
     static let showDetailedPermissionInfo = "global.showDetailedPermissionInfo"
@@ -61,7 +62,13 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       userDefaults.set(mcpConfigPath, forKey: Keys.mcpConfigPath)
     }
   }
-  
+
+  public var defaultWorkingDirectory: String {
+    didSet {
+      userDefaults.set(defaultWorkingDirectory, forKey: Keys.defaultWorkingDirectory)
+    }
+  }
+
   // MARK: - Custom Permission Settings
   
   public var autoApproveLowRisk: Bool {
@@ -132,6 +139,9 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       // Save it so it persists
       userDefaults.set(defaultPath, forKey: Keys.mcpConfigPath)
     }
+
+    // Load default working directory or use empty string
+    self.defaultWorkingDirectory = userDefaults.string(forKey: Keys.defaultWorkingDirectory) ?? ""
     
     // Load custom permission settings or use defaults
     self.autoApproveLowRisk = userDefaults.object(forKey: Keys.autoApproveLowRisk) as? Bool ?? false
@@ -162,6 +172,7 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     mcpConfigPath = homeURL
       .appendingPathComponent(".config/claude/mcp-config.json")
       .path
+    defaultWorkingDirectory = ""
     
     // Reset permission settings
     autoApproveLowRisk = false

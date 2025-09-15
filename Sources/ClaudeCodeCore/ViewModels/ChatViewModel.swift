@@ -93,6 +93,11 @@ public final class ChatViewModel {
   var activeSessionId: String? {
     streamProcessor.activeSessionId
   }
+
+  /// Returns all messages currently in memory
+  public func getCurrentMessages() -> [ChatMessage] {
+    messageStore.getAllMessages()
+  }
   
   /// Loading state
   public private(set) var isLoading: Bool = false
@@ -101,7 +106,7 @@ public final class ChatViewModel {
   public var error: Error?
   
   /// Current project path (observable)
-  public private(set) var projectPath: String = ""
+  public var projectPath: String = ""
   
   /// Streaming metrics
   public private(set) var streamingStartTime: Date?
@@ -151,7 +156,10 @@ public final class ChatViewModel {
       messageStore: messageStore,
       sessionManager: sessionManager,
       globalPreferences: globalPreferences,
-      onSessionChange: onSessionChange
+      onSessionChange: onSessionChange,
+      getCurrentWorkingDirectory: {
+        claudeClient.configuration.workingDirectory
+      }
     )
     
     // Only load sessions if we're managing them (e.g., when used with RootView)
@@ -182,12 +190,15 @@ public final class ChatViewModel {
   ///   - attachments: Optional file attachments (images, PDFs, etc.)
   public func sendMessage(_ text: String, context: String? = nil, hiddenContext: String? = nil, codeSelections: [TextSelection]? = nil, attachments: [FileAttachment]? = nil) {
     guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-    
+
+    print("[zizou] ChatViewModel.sendMessage - Sending message. Current session: \(currentSessionId ?? "nil"), hasSessionStarted: \(hasSessionStarted)")
+
     // Reset cancellation flag for new message
     isCancelled = false
-    
+
     // Store first message if this is a new session
     if sessionManager.currentSessionId == nil {
+      print("[zizou] ChatViewModel.sendMessage - No current session, storing as firstMessageInSession")
       firstMessageInSession = text
     }
     
@@ -265,22 +276,26 @@ public final class ChatViewModel {
   
   /// Clears the conversation history and starts a new session
   public func clearConversation() {
+    print("[zizou] ChatViewModel.clearConversation - Clearing conversation. Current session: \(currentSessionId ?? "nil"), messages: \(messageStore.getAllMessages().count)")
     messageStore.clear()
     sessionManager.clearSession()
     currentMessageId = nil
     error = nil
     firstMessageInSession = nil
     hasSessionStarted = false
+    print("[zizou] ChatViewModel.clearConversation - Conversation cleared")
   }
   
   /// Starts a new session without affecting the current session
   public func startNewSession() {
+    print("[zizou] ChatViewModel.startNewSession - Starting new session. Current: \(currentSessionId ?? "nil")")
     // Save current session messages before starting new
     Task {
       await saveCurrentSessionMessages()
-      
+
       // After saving, clear the UI to prepare for new session
       await MainActor.run {
+        print("[zizou] ChatViewModel.startNewSession - Clearing UI for new session")
         // Clear only the local state to prepare for a new session
         self.messageStore.clear()
         self.currentMessageId = nil
@@ -305,16 +320,26 @@ public final class ChatViewModel {
   /// Saves the current session's messages to storage
   private func saveCurrentSessionMessages() async {
     // Only save if we're managing sessions
-    guard shouldManageSessions, let sessionId = currentSessionId else { return }
-    
+    guard shouldManageSessions, let sessionId = currentSessionId else {
+      print("[zizou] ChatViewModel.saveCurrentSessionMessages - Skipped. shouldManageSessions=\(shouldManageSessions), sessionId=\(currentSessionId ?? "nil")")
+      return
+    }
+
     let messages = messageStore.getAllMessages()
+    print("[zizou] ChatViewModel.saveCurrentSessionMessages - Saving \(messages.count) messages for session \(sessionId)")
+    // Log message types
+    for (index, msg) in messages.enumerated() {
+      print("[zizou] ChatViewModel.saveCurrentSessionMessages - Message[\(index)]: role=\(msg.role), type=\(msg.messageType), toolName=\(msg.toolName ?? "nil")")
+    }
     do {
       try await sessionStorage.updateSessionMessages(id: sessionId, messages: messages)
+      print("[zizou] ChatViewModel.saveCurrentSessionMessages - Successfully saved \(messages.count) messages")
       if isDebugEnabled {
         let log = "Saved \(messages.count) messages for current session \(sessionId)"
         logger.debug("\(log)")
       }
     } catch {
+      print("[zizou] ChatViewModel.saveCurrentSessionMessages - ERROR: Failed to save messages: \(error)")
       logger.error("Failed to save messages for session \(sessionId): \(error)")
     }
   }
@@ -453,20 +478,23 @@ public final class ChatViewModel {
   /// - Note: The messages are displayed in UI, but Claude CLI won't have the context
   ///         unless it already knows about this sessionId
   public func injectSession(sessionId: String, messages: [ChatMessage], workingDirectory: String? = nil) {
+    print("[zizou] ChatViewModel.injectSession - Injecting session \(sessionId) with \(messages.count) messages, workingDirectory: \(workingDirectory ?? "nil")")
     // Set up the session
     sessionManager.selectSession(id: sessionId)
     onSessionChange?(sessionId)
-    
+
     // Set working directory if provided
     if let dir = workingDirectory {
+      print("[zizou] ChatViewModel.injectSession - Setting working directory to: \(dir)")
       claudeClient.configuration.workingDirectory = dir
       projectPath = dir
       settingsStorage.setProjectPath(dir)
     }
-    
+
     // Load the messages into the UI
     messageStore.loadMessages(messages)
-    
+    print("[zizou] ChatViewModel.injectSession - Loaded \(messages.count) messages into MessageStore")
+
     // Mark as active session
     hasSessionStarted = true
     error = nil

@@ -31,7 +31,6 @@ struct ClaudeCodeUIAppWrapper: App {
   var body: some Scene {
     WindowGroup {
       ClaudeCodeContainer(
-        appsRepoRootPath: nil,
         claudeCodeConfiguration: config,
         uiConfiguration: UIConfiguration(
         appName: "Claude Code UI",

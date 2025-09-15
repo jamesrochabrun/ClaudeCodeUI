@@ -16,7 +16,7 @@ class MockSessionStorage: SessionStorageProtocol {
   var sessions: [StoredSession] = []
   var errorToThrow: Error?
   
-  func saveSession(id: String, firstMessage: String) async throws {
+  func saveSession(id: String, firstMessage: String, workingDirectory: String?) async throws {
     if let error = errorToThrow { throw error }
     if sessions.contains(where: { $0.id == id }) {
       return
@@ -26,7 +26,8 @@ class MockSessionStorage: SessionStorageProtocol {
       createdAt: Date(),
       firstUserMessage: firstMessage,
       lastAccessedAt: Date(),
-      messages: []
+      messages: [],
+      workingDirectory: workingDirectory
     )
     sessions.append(session)
   }
@@ -79,7 +80,8 @@ class MockSessionStorage: SessionStorageProtocol {
         createdAt: session.createdAt,
         firstUserMessage: session.firstUserMessage,
         lastAccessedAt: Date(),
-        messages: session.messages
+        messages: session.messages,
+        workingDirectory: session.workingDirectory
       )
       sessions[index] = newSession
     }
