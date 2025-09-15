@@ -266,6 +266,98 @@ await sessionManager.restoreSession(
 let sessions = try await sessionManager.loadAvailableSessions()
 ```
 
+## Database Migrations
+
+> **For detailed migration instructions, see [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)**
+
+### Overview
+
+The migration system ensures smooth database schema updates without breaking existing user data. It uses SQLite's `PRAGMA user_version` to track schema versions and applies migrations sequentially. This system is specifically for the **simplified ClaudeCodeContainer implementation**.
+
+### Migration Architecture
+
+```
+SimplifiedClaudeCodeSQLiteMigrationManager
+├── Version tracking (PRAGMA user_version)
+├── Backup creation before migrations
+├── Transaction-based migration execution
+├── Rollback support (optional)
+└── Database integrity validation
+```
+
+### Current Schema Version
+
+- **Version 1**: Initial schema with sessions, messages, and attachments tables
+
+### How Migrations Work
+
+1. **Version Check**: On startup, compare database version with `CURRENT_SCHEMA_VERSION`
+2. **Backup**: Create database backup before applying migrations
+3. **Sequential Execution**: Run migrations in order within transactions
+4. **Version Update**: Update database version after successful migration
+5. **Validation**: Verify database integrity after migrations
+6. **Cleanup**: Remove old backup files (keeps last 3)
+
+### Writing New Migrations
+
+**See [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) for complete step-by-step instructions.**
+
+When adding new features that require schema changes:
+
+```swift
+struct MigrationV2_YourFeature: DatabaseMigration {
+  var version: Int { 2 }
+  var description: String { "Add feature X to database" }
+
+  func migrate(database: Connection) async throws {
+    // Add new columns with DEFAULT values for existing rows
+    try database.execute("""
+      ALTER TABLE sessions
+      ADD COLUMN new_field TEXT DEFAULT NULL
+    """)
+  }
+
+  func rollback(database: Connection) async throws {
+    // Optional: Define rollback if possible
+    try database.execute("""
+      ALTER TABLE sessions
+      DROP COLUMN new_field
+    """)
+  }
+}
+```
+
+### Migration Best Practices
+
+1. **Always use DEFAULT values** for new columns to handle existing rows
+2. **Make new fields nullable** when possible for backward compatibility
+3. **Test migrations** with production-like data before release
+4. **Keep migrations idempotent** - running twice should not cause errors
+5. **Document breaking changes** if backward compatibility isn't possible
+
+### Migration Error Handling
+
+The system handles various failure scenarios:
+
+- **Backup failure**: Stops migration, preserves current database
+- **Migration failure**: Attempts rollback if available, restores from backup
+- **Corruption detected**: Logs error, allows app to offer database reset
+- **Version mismatch**: Prevents downgrades, logs incompatible versions
+
+### Testing Migrations
+
+Run the migration tests to verify:
+```bash
+swift test --filter MigrationTests
+```
+
+Tests cover:
+- Fresh database initialization
+- Sequential migration execution
+- Backup creation and cleanup
+- Data preservation during migrations
+- Error handling and rollback
+
 ## Best Practices
 
 1. **Always use ClaudeCodeContainer** - This is the officially supported approach
@@ -273,7 +365,9 @@ let sessions = try await sessionManager.loadAvailableSessions()
 3. **Log extensively during development** - Use prefixed logs (e.g., "[zizou]") for debugging
 4. **Handle session ID changes gracefully** - They can change during streaming
 5. **Preserve all message types** - Including tool messages for complete conversation history
+6. **Test migrations thoroughly** - Before releasing updates that modify the schema
+7. **Increment CURRENT_SCHEMA_VERSION** - When adding new migrations
 
 ## Summary
 
-The simplified session management system provides a robust, SQLite-based solution for persisting Claude Code conversations. By maintaining the database as the single source of truth and properly handling message chaining through foreign key relationships, the system ensures reliable session storage and restoration while supporting complex conversation flows including tool usage.
+The simplified session management system provides a robust, SQLite-based solution for persisting Claude Code conversations. With the addition of the migration system, database schema can evolve safely without impacting existing users. By maintaining the database as the single source of truth and properly handling message chaining through foreign key relationships, the system ensures reliable session storage and restoration while supporting complex conversation flows including tool usage.
