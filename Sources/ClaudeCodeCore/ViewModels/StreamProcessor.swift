@@ -331,6 +331,7 @@ final class StreamProcessor {
               content: state.contentBuffer,
               isComplete: false
             )
+            print("[zizou] StreamProcessor - Creating assistant message for text content")
             messageStore.addMessage(assistantMessage)
             state.assistantMessageCreated = true
           } else if contentChanged {
@@ -343,6 +344,7 @@ final class StreamProcessor {
         }
         
       case .toolUse(let toolUse):
+        print("[zizou] StreamProcessor - Handling toolUse: \(toolUse.name)")
         // Mark that we've processed a tool use
         state.hasProcessedToolUse = true
         
@@ -423,14 +425,17 @@ final class StreamProcessor {
           taskGroupId: state.currentTaskGroupId,
           isTaskContainer: isTaskTool
         )
+        print("[zizou] StreamProcessor - Creating tool message: type=\(toolMessage.messageType), toolName=\(toolMessage.toolName ?? "nil"), isTaskContainer=\(toolMessage.isTaskContainer)")
         messageStore.addMessage(toolMessage)
         
       case .toolResult(let toolResult):
+        print("[zizou] StreamProcessor - Handling toolResult")
         let resultMessage = MessageFactory.toolResultMessage(
           content: toolResult.content,
           isError: toolResult.isError == true,
           taskGroupId: state.currentTaskGroupId
         )
+        print("[zizou] StreamProcessor - Creating tool result message")
         messageStore.addMessage(resultMessage)
         
       case .thinking(let thinking):

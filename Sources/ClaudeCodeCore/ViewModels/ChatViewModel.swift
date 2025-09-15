@@ -327,6 +327,10 @@ public final class ChatViewModel {
 
     let messages = messageStore.getAllMessages()
     print("[zizou] ChatViewModel.saveCurrentSessionMessages - Saving \(messages.count) messages for session \(sessionId)")
+    // Log message types
+    for (index, msg) in messages.enumerated() {
+      print("[zizou] ChatViewModel.saveCurrentSessionMessages - Message[\(index)]: role=\(msg.role), type=\(msg.messageType), toolName=\(msg.toolName ?? "nil")")
+    }
     do {
       try await sessionStorage.updateSessionMessages(id: sessionId, messages: messages)
       print("[zizou] ChatViewModel.saveCurrentSessionMessages - Successfully saved \(messages.count) messages")
