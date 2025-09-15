@@ -259,10 +259,23 @@ public struct ClaudeCodeContainer: View {
   
   private func deleteSession(_ session: StoredSession) async {
     do {
+      // Check if we're deleting the current session
+      if session.id == currentSessionId {
+        await MainActor.run {
+          currentSessionId = nil
+        }
+        // Also clear the chat interface if needed
+        if let viewModel = chatViewModel {
+          await MainActor.run {
+            viewModel.clearConversation()
+          }
+        }
+      }
+
       try await sessionManager.deleteSession(sessionId: session.id)
-      
+
       await loadAvailableSessions()
-      
+
       await MainActor.run {
         sessionToDelete = nil
       }
