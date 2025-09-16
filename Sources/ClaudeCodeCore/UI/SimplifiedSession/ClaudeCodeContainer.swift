@@ -77,6 +77,12 @@ public struct ClaudeCodeContainer: View {
 
     let globalPrefs = GlobalPreferencesStorage()
 
+    // If the injected configuration has a non-default command, update global preferences with it
+    // This respects the injected configuration while still allowing user to override later
+    if claudeCodeConfiguration.command != "claude" {
+      globalPrefs.claudeCommand = claudeCodeConfiguration.command
+    }
+
     // Now create the proper session manager with global preferences
     sessionManager = SimplifiedSessionManager(
       claudeCodeStorage: customStorage,
@@ -89,7 +95,8 @@ public struct ClaudeCodeContainer: View {
     )
 
     var config = claudeCodeConfiguration
-    // Override the command with the one from global preferences
+    // Use the command from global preferences (which may have been updated above)
+    // This ensures we respect both injected config AND user preferences
     config.command = globalPrefs.claudeCommand
 
     let claudeClient = ClaudeCodeClient(configuration: config)
