@@ -74,10 +74,14 @@ public struct ClaudeCodeContainer: View {
   @State private var sessionToDelete: StoredSession?
   
   private func initializeClaudeCodeUI() async {
-    // Configure logger with debug flag from configuration
-    ClaudeCodeLogger.shared.configure(enableDebugLogging: claudeCodeConfiguration.enableDebugLogging)
 
     let globalPrefs = GlobalPreferencesStorage()
+
+    // If the injected configuration has a non-default command, update global preferences with it
+    // This respects the injected configuration while still allowing user to override later
+    if claudeCodeConfiguration.command != "claude" {
+      globalPrefs.claudeCommand = claudeCodeConfiguration.command
+    }
 
     // Now create the proper session manager with global preferences
     sessionManager = SimplifiedSessionManager(
@@ -91,7 +95,8 @@ public struct ClaudeCodeContainer: View {
     )
 
     var config = claudeCodeConfiguration
-    // Override the command with the one from global preferences
+    // Use the command from global preferences (which may have been updated above)
+    // This ensures we respect both injected config AND user preferences
     config.command = globalPrefs.claudeCommand
 
     let claudeClient = ClaudeCodeClient(configuration: config)
@@ -133,12 +138,9 @@ public struct ClaudeCodeContainer: View {
       uiConfig: uiConfiguration,
       onShowSessionPicker: {
         Task {
-          ClaudeCodeLogger.shared.container("onShowSessionPicker triggered. availableSessions.count: \(availableSessions.count)")
           // Always load fresh sessions when showing picker to ensure accurate message counts
-          ClaudeCodeLogger.shared.container("Loading fresh sessions for picker...")
           await loadAvailableSessions()
           showSessionPicker = true
-          ClaudeCodeLogger.shared.container("showSessionPicker set to true")
         }
       },
     )
@@ -161,27 +163,22 @@ public struct ClaudeCodeContainer: View {
         }
       },
       onStartNewSession: { workingDirectory in
-        ClaudeCodeLogger.shared.container("onStartNewSession with workingDirectory: \(workingDirectory ?? "nil")")
         sessionManager.startNewSession(chatViewModel: chatViewModel, workingDirectory: workingDirectory)
         showSessionPicker = false
         // Reload sessions after starting new session to keep list updated
         Task {
-          ClaudeCodeLogger.shared.container("Reloading sessions after starting new session")
           await loadAvailableSessions()
         }
       },
       onRestoreSession: { session in
         Task {
-          ClaudeCodeLogger.shared.container("onRestoreSession for session: \(session.id)")
           await sessionManager.restoreSession(session: session, chatViewModel: chatViewModel)
 
           // Reload sessions to get fresh data after restoration
-          ClaudeCodeLogger.shared.container("Reloading sessions after restoration to refresh message counts")
           await loadAvailableSessions()
 
           await MainActor.run {
             showSessionPicker = false
-            ClaudeCodeLogger.shared.container("Session restored, picker closed")
           }
         }
       },
@@ -209,7 +206,6 @@ public struct ClaudeCodeContainer: View {
   }
   
   private func loadAvailableSessions() async {
-    ClaudeCodeLogger.shared.container("loadAvailableSessions - Starting to load sessions")
     await MainActor.run {
       isLoadingSessions = true
       sessionLoadError = nil
@@ -217,7 +213,6 @@ public struct ClaudeCodeContainer: View {
 
     do {
       var sessions = try await sessionManager.loadAvailableSessions()
-      ClaudeCodeLogger.shared.container("loadAvailableSessions - Loaded \(sessions.count) sessions from manager")
 
       // Check if current session exists and update its message count from in-memory store
       if let currentId = await MainActor.run { currentSessionId } {
@@ -228,7 +223,6 @@ public struct ClaudeCodeContainer: View {
             var updatedSession = sessions[index]
             updatedSession.messages = currentMessages
             sessions[index] = updatedSession
-            ClaudeCodeLogger.shared.container("loadAvailableSessions - Updated current session \(currentId) with \(currentMessages.count) in-memory messages")
           }
         } else {
           // Current session not in database yet, create placeholder
@@ -244,7 +238,6 @@ public struct ClaudeCodeContainer: View {
               workingDirectory: await MainActor.run { viewModel.projectPath }
             )
             sessions.insert(currentSession, at: 0)
-            ClaudeCodeLogger.shared.container("loadAvailableSessions - Added current session \(currentId) with \(currentMessages.count) messages")
           }
         }
       }
@@ -252,7 +245,6 @@ public struct ClaudeCodeContainer: View {
       await MainActor.run {
         availableSessions = sessions
         isLoadingSessions = false
-        ClaudeCodeLogger.shared.container("loadAvailableSessions - Set availableSessions to \(sessions.count) sessions")
       }
     } catch {
       await MainActor.run {

@@ -196,14 +196,11 @@ public final class ChatViewModel {
   public func sendMessage(_ text: String, context: String? = nil, hiddenContext: String? = nil, codeSelections: [TextSelection]? = nil, attachments: [FileAttachment]? = nil) {
     guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
-    ClaudeCodeLogger.shared.chat("sendMessage - Sending message. Current session: \(currentSessionId ?? "nil"), hasSessionStarted: \(hasSessionStarted)")
-
     // Reset cancellation flag for new message
     isCancelled = false
 
     // Store first message if this is a new session
     if sessionManager.currentSessionId == nil {
-      ClaudeCodeLogger.shared.chat("sendMessage - No current session, storing as firstMessageInSession")
       firstMessageInSession = text
     }
     
@@ -281,26 +278,22 @@ public final class ChatViewModel {
   
   /// Clears the conversation history and starts a new session
   public func clearConversation() {
-    ClaudeCodeLogger.shared.chat("clearConversation - Clearing conversation. Current session: \(currentSessionId ?? "nil"), messages: \(messageStore.getAllMessages().count)")
     messageStore.clear()
     sessionManager.clearSession()
     currentMessageId = nil
     error = nil
     firstMessageInSession = nil
     hasSessionStarted = false
-    ClaudeCodeLogger.shared.chat("clearConversation - Conversation cleared")
   }
   
   /// Starts a new session without affecting the current session
   public func startNewSession() {
-    ClaudeCodeLogger.shared.chat("startNewSession - Starting new session. Current: \(currentSessionId ?? "nil")")
     // Save current session messages before starting new
     Task {
       await saveCurrentSessionMessages()
 
       // After saving, clear the UI to prepare for new session
       await MainActor.run {
-        ClaudeCodeLogger.shared.chat("startNewSession - Clearing UI for new session")
         // Clear only the local state to prepare for a new session
         self.messageStore.clear()
         self.currentMessageId = nil
@@ -326,19 +319,12 @@ public final class ChatViewModel {
   private func saveCurrentSessionMessages() async {
     // Only save if we're managing sessions
     guard shouldManageSessions, let sessionId = currentSessionId else {
-      ClaudeCodeLogger.shared.chat("saveCurrentSessionMessages - Skipped. shouldManageSessions=\(shouldManageSessions), sessionId=\(currentSessionId ?? "nil")")
       return
     }
 
     let messages = messageStore.getAllMessages()
-    ClaudeCodeLogger.shared.chat("saveCurrentSessionMessages - Saving \(messages.count) messages for session \(sessionId)")
-    // Log message types
-    for (index, msg) in messages.enumerated() {
-      ClaudeCodeLogger.shared.chat("saveCurrentSessionMessages - Message[\(index)]: role=\(msg.role), type=\(msg.messageType), toolName=\(msg.toolName ?? "nil")")
-    }
     do {
       try await sessionStorage.updateSessionMessages(id: sessionId, messages: messages)
-      ClaudeCodeLogger.shared.chat("saveCurrentSessionMessages - Successfully saved \(messages.count) messages")
       if isDebugEnabled {
         let log = "Saved \(messages.count) messages for current session \(sessionId)"
         logger.debug("\(log)")
@@ -483,14 +469,12 @@ public final class ChatViewModel {
   /// - Note: The messages are displayed in UI, but Claude CLI won't have the context
   ///         unless it already knows about this sessionId
   public func injectSession(sessionId: String, messages: [ChatMessage], workingDirectory: String? = nil) {
-    ClaudeCodeLogger.shared.chat("injectSession - Injecting session \(sessionId) with \(messages.count) messages, workingDirectory: \(workingDirectory ?? "nil")")
     // Set up the session
     sessionManager.selectSession(id: sessionId)
     onSessionChange?(sessionId)
 
     // Set working directory if provided
     if let dir = workingDirectory {
-      ClaudeCodeLogger.shared.chat("injectSession - Setting working directory to: \(dir)")
       claudeClient.configuration.workingDirectory = dir
       projectPath = dir
       settingsStorage.setProjectPath(dir)
@@ -498,7 +482,6 @@ public final class ChatViewModel {
 
     // Load the messages into the UI
     messageStore.loadMessages(messages)
-    ClaudeCodeLogger.shared.chat("injectSession - Loaded \(messages.count) messages into MessageStore")
 
     // Mark as active session
     hasSessionStarted = true

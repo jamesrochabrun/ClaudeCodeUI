@@ -331,7 +331,6 @@ final class StreamProcessor {
               content: state.contentBuffer,
               isComplete: false
             )
-            ClaudeCodeLogger.shared.stream("Creating assistant message for text content")
             messageStore.addMessage(assistantMessage)
             state.assistantMessageCreated = true
           } else if contentChanged {

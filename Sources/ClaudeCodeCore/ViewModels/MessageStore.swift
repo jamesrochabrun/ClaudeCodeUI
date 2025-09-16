@@ -27,7 +27,6 @@ final class MessageStore {
   /// - Note: Messages are appended to maintain chronological order
   func addMessage(_ message: ChatMessage) {
     messages.append(message)
-    ClaudeCodeLogger.shared.messages("addMessage - Added message: id=\(message.id), role=\(message.role), type=\(message.messageType), toolName=\(message.toolName ?? "nil"). Total messages: \(messages.count)")
   }
   
   /// Updates an existing message's content and completion status
@@ -86,17 +85,12 @@ final class MessageStore {
   /// - Note: Used when loading session history
   func loadMessages(_ newMessages: [ChatMessage]) {
     messages = newMessages
-    ClaudeCodeLogger.shared.messages("loadMessages - Loaded \(newMessages.count) messages")
-    for (index, msg) in newMessages.enumerated() {
-      ClaudeCodeLogger.shared.messages("loadMessages - [\(index)]: role=\(msg.role), type=\(msg.messageType), toolName=\(msg.toolName ?? "nil")")
-    }
   }
   
   /// Returns a copy of all messages
   /// - Returns: Array of all current messages
   /// - Note: Used for saving session state
   func getAllMessages() -> [ChatMessage] {
-    ClaudeCodeLogger.shared.messages("getAllMessages - Returning \(messages.count) messages")
     return messages
   }
   
