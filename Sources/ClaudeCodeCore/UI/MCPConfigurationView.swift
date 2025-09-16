@@ -157,13 +157,23 @@ struct MCPConfigurationView: View {
       HStack {
         Text("Config File Location")
         Spacer()
+        if isUsingCustomPath() {
+          Label("Custom", systemImage: "folder.badge.gearshape")
+            .foregroundColor(.orange)
+            .font(.caption)
+        }
         if let path = configManager.getConfigurationPath() {
           Text(URL(fileURLWithPath: path).lastPathComponent)
             .foregroundColor(.secondary)
         }
       }
-      
-      if let path = configManager.getConfigurationPath() {
+
+      if let preferences = globalPreferences {
+        Text(preferences.mcpConfigPath)
+          .font(.caption)
+          .foregroundColor(isUsingCustomPath() ? .orange : .secondary)
+          .textSelection(.enabled)
+      } else if let path = configManager.getConfigurationPath() {
         Text(path)
           .font(.caption)
           .foregroundColor(.secondary)
@@ -180,9 +190,18 @@ struct MCPConfigurationView: View {
         showingJSONEditor = true
       }
       .help("Edit the configuration file directly as JSON")
-      
+
       Button("Select File...") {
         selectMcpConfigFile()
+      }
+
+      // Show reset button if path is customized
+      if isUsingCustomPath() {
+        Button("Reset") {
+          resetToDefaultPath()
+        }
+        .foregroundColor(.orange)
+        .help("Reset to default configuration path")
       }
     }
   }
@@ -309,7 +328,7 @@ struct MCPConfigurationView: View {
     print("[MCP] Configuration path set to: \(configPath)")
   }
   
-  
+
   private func selectMcpConfigFile() {
     let panel = NSOpenPanel()
     panel.title = "Select MCP Configuration File"
@@ -319,11 +338,31 @@ struct MCPConfigurationView: View {
     panel.canChooseFiles = true
     panel.canChooseDirectories = false
     panel.allowedContentTypes = [.json]
-    
+
     if panel.runModal() == .OK, let url = panel.url {
       mcpConfigStorage.setMcpConfigPath(url.path)
       isPresented = false
     }
+  }
+
+  private func getDefaultMcpPath() -> String {
+    let homeURL = FileManager.default.homeDirectoryForCurrentUser
+    return homeURL
+      .appendingPathComponent(".config/claude/mcp-config.json")
+      .path
+  }
+
+  private func isUsingCustomPath() -> Bool {
+    guard let preferences = globalPreferences else { return false }
+    let defaultPath = getDefaultMcpPath()
+    return preferences.mcpConfigPath != defaultPath && !preferences.mcpConfigPath.isEmpty
+  }
+
+  private func resetToDefaultPath() {
+    let defaultPath = getDefaultMcpPath()
+    mcpConfigStorage.setMcpConfigPath(defaultPath)
+    // Also update the config manager to reload from the default location
+    configManager.loadConfiguration()
   }
 }
 
