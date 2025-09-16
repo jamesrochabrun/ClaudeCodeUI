@@ -7,13 +7,15 @@ import SwiftUI
 public struct ClaudeCodeContainer: View {
   
   // MARK: Lifecycle
-  
+
   public init(
     claudeCodeConfiguration: ClaudeCodeConfiguration,
-    uiConfiguration: UIConfiguration)
+    uiConfiguration: UIConfiguration,
+    onUserMessageSent: ((String, [TextSelection]?, [FileAttachment]?) -> Void)? = nil)
   {
     self.claudeCodeConfiguration = claudeCodeConfiguration
     self.uiConfiguration = uiConfiguration
+    self.onUserMessageSent = onUserMessageSent
     customStorage = SimplifiedClaudeCodeSQLiteStorage()
     // SessionManager will be initialized in initializeClaudeCodeUI with proper globalPreferences
     sessionManager = SimplifiedSessionManager(
@@ -55,6 +57,7 @@ public struct ClaudeCodeContainer: View {
   let customStorage: SessionStorageProtocol
   let claudeCodeConfiguration: ClaudeCodeConfiguration
   let uiConfiguration: UIConfiguration
+  let onUserMessageSent: ((String, [TextSelection]?, [FileAttachment]?) -> Void)?
   
   // MARK: Private
   
@@ -113,6 +116,7 @@ public struct ClaudeCodeContainer: View {
           await loadAvailableSessions()
         }
       },
+      onUserMessageSent: onUserMessageSent
     )
     
     await MainActor.run {
