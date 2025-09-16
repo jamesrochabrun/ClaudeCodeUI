@@ -412,10 +412,12 @@ struct GlobalSettingsView: View {
   }
   
   private var mcpConfigurationStatus: some View {
-    Text("~/.config/claude/mcp-config.json")
+    Text(globalPreferences.mcpConfigPath)
       .font(.system(.body, design: .monospaced))
       .foregroundColor(.secondary)
       .frame(maxWidth: .infinity, alignment: .leading)
+      .lineLimit(1)
+      .truncationMode(.middle)
   }
   
   private func promptTextEditor(text: Binding<String>) -> some View {

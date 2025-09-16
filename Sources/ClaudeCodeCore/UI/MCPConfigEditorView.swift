@@ -12,6 +12,7 @@ struct MCPConfigEditorView: View {
   @Binding var isPresented: Bool
   let configManager: MCPConfigurationManager
   @State private var jsonText: String = ""
+  @State private var originalJsonText: String = ""
   @State private var showingError = false
   @State private var errorMessage = ""
   @State private var hasChanges = false
@@ -29,8 +30,8 @@ struct MCPConfigEditorView: View {
           TextEditor(text: $jsonText)
             .font(.system(.body, design: .monospaced))
             .padding(8)
-            .onChange(of: jsonText) { _, _ in
-              hasChanges = true
+            .onChange(of: jsonText) { _, newValue in
+              hasChanges = detectChanges(current: newValue, original: originalJsonText)
             }
         }
         .background(Color(NSColor.textBackgroundColor))
@@ -139,7 +140,9 @@ struct MCPConfigEditorView: View {
       let data = try Data(contentsOf: url)
       if let jsonObject = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
         let formattedData = try JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted, .sortedKeys])
-        jsonText = String(data: formattedData, encoding: .utf8) ?? "{}"
+        let text = String(data: formattedData, encoding: .utf8) ?? "{}"
+        jsonText = text
+        originalJsonText = text
         hasChanges = false
       }
     } catch {
@@ -160,6 +163,7 @@ struct MCPConfigEditorView: View {
     }
     """
     jsonText = template
+    originalJsonText = template
     hasChanges = false
   }
   
@@ -193,18 +197,19 @@ struct MCPConfigEditorView: View {
       // Update editor text with formatted version
       if let formattedString = String(data: formattedData, encoding: .utf8) {
         jsonText = formattedString
+        originalJsonText = formattedString  // Update original after save
       }
-      
+
       // Reload configuration in manager
       configManager.loadConfiguration()
-      
+
       // Set the config path to Claude's default location (since we're now always using it)
       let homeURL = FileManager.default.homeDirectoryForCurrentUser
       let configPath = homeURL
         .appendingPathComponent(".config/claude/mcp-config.json")
         .path
       UserDefaults.standard.set(configPath, forKey: "global.mcpConfigPath")
-      
+
       hasChanges = false
       
       // Close the editor after successful save
@@ -233,8 +238,10 @@ struct MCPConfigEditorView: View {
     do {
       let jsonObject = try JSONSerialization.jsonObject(with: data)
       let formattedData = try JSONSerialization.data(withJSONObject: jsonObject, options: [.prettyPrinted, .sortedKeys])
-      jsonText = String(data: formattedData, encoding: .utf8) ?? jsonText
-      hasChanges = true
+      let formattedText = String(data: formattedData, encoding: .utf8) ?? jsonText
+      jsonText = formattedText
+      // Check if formatting actually changed the content
+      hasChanges = detectChanges(current: formattedText, original: originalJsonText)
     } catch let error as NSError {
       // Provide more specific error messages
       if error.domain == NSCocoaErrorDomain {
@@ -262,9 +269,11 @@ struct MCPConfigEditorView: View {
       
       if alert.runModal() == .alertFirstButtonReturn {
         loadConfiguration()
+        hasChanges = false
       }
     } else {
       loadConfiguration()
+      hasChanges = false
     }
   }
   
@@ -309,5 +318,34 @@ struct MCPConfigEditorView: View {
   private func showError(_ message: String) {
     errorMessage = message
     showingError = true
+  }
+
+  private func detectChanges(current: String, original: String) -> Bool {
+    // First, quick string comparison
+    if current == original {
+      return false
+    }
+
+    // Try to parse both as JSON and compare semantically
+    guard let currentData = current.data(using: .utf8),
+          let originalData = original.data(using: .utf8) else {
+      // If we can't convert to data, fall back to string comparison
+      return current != original
+    }
+
+    do {
+      let currentJSON = try JSONSerialization.jsonObject(with: currentData)
+      let originalJSON = try JSONSerialization.jsonObject(with: originalData)
+
+      // Convert both to canonical form for comparison
+      let currentCanonical = try JSONSerialization.data(withJSONObject: currentJSON, options: [.sortedKeys])
+      let originalCanonical = try JSONSerialization.data(withJSONObject: originalJSON, options: [.sortedKeys])
+
+      return currentCanonical != originalCanonical
+    } catch {
+      // If JSON parsing fails (e.g., user is in the middle of typing),
+      // fall back to simple string comparison
+      return current != original
+    }
   }
 }
