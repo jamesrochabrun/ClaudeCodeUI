@@ -1,5 +1,6 @@
 import CCCustomPermissionServiceInterface
 import SwiftUI
+import Foundation
 
 // MARK: - ApprovalToast
 
@@ -13,13 +14,17 @@ public struct ApprovalToast: View {
     showRiskData: Bool = true,
     queueCount: Int = 0,
     onApprove: @escaping () -> Void,
-    onDeny: @escaping () -> Void
+    onDeny: @escaping () -> Void,
+    onDenyWithGuidance: @escaping (String) -> Void = { _ in },
+    onCancel: @escaping () -> Void = { }
   ) {
     self.request = request
     self.showRiskData = showRiskData
     self.queueCount = queueCount
     self.onApprove = onApprove
     self.onDeny = onDeny
+    self.onDenyWithGuidance = onDenyWithGuidance
+    self.onCancel = onCancel
   }
 
   // MARK: Public
@@ -56,11 +61,21 @@ public struct ApprovalToast: View {
   let queueCount: Int
   let onApprove: () -> Void
   let onDeny: () -> Void
+  let onDenyWithGuidance: (String) -> Void
+  let onCancel: () -> Void
 
   // MARK: Private
 
   @State private var showDetails = false
+  @State private var showGuidanceInput = false
+  @State private var denyGuidance = ""
   @FocusState private var isFocused: Bool
+  @FocusState private var isGuidanceFocused: Bool
+
+  private var isEditTool: Bool {
+    // Check if this is an Edit, MultiEdit, or Write tool
+    ["Edit", "MultiEdit", "Write"].contains(request.toolName)
+  }
 
   private var mainCompactView: some View {
     HStack(spacing: 12) {
@@ -112,10 +127,23 @@ public struct ApprovalToast: View {
   private var actionButtonsSection: some View {
     HStack(spacing: 8) {
       Button(action: {
-        onDeny()
+        if isEditTool {
+          // For edit tools, show guidance input
+          withAnimation(.easeInOut(duration: 0.2)) {
+            showGuidanceInput = true
+            showDetails = true
+          }
+          // Focus the guidance input field
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            isGuidanceFocused = true
+          }
+        } else {
+          // For other tools, deny immediately
+          onDeny()
+        }
       }) {
         HStack(spacing: 4) {
-          Text("Deny")
+          Text(isEditTool ? "Deny & Guide" : "Deny")
           Text("(esc)")
             .font(.system(size: 10))
             .foregroundColor(.secondary)
@@ -154,6 +182,11 @@ public struct ApprovalToast: View {
       if !request.input.isEmpty {
         parametersSection
       }
+
+      // Show guidance input for Edit tools when denying
+      if showGuidanceInput && isEditTool {
+        guidanceInputSection
+      }
     }
     .padding(.horizontal, 16)
     .padding(.bottom, 12)
@@ -181,6 +214,43 @@ public struct ApprovalToast: View {
         Text("... and \(request.input.count - 3) more")
           .font(.system(size: 10))
           .foregroundColor(Color.secondary)
+      }
+    }
+  }
+
+  private var guidanceInputSection: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Tell Claude what to do instead:")
+        .font(.system(size: 11, weight: .medium))
+        .foregroundColor(.secondary)
+
+      HStack {
+        TextField("e.g., Create a new file instead, or Use a different approach...", text: $denyGuidance)
+          .textFieldStyle(.roundedBorder)
+          .font(.system(size: 12))
+          .focused($isGuidanceFocused)
+          .onSubmit {
+            // Submit the denial with guidance
+            let guidance = denyGuidance.isEmpty ?
+              "User denied the request but provided no specific guidance" :
+              denyGuidance
+            onDenyWithGuidance(guidance)
+          }
+
+        Button("Cancel") {
+          onCancel()
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+
+        Button("Send") {
+          let guidance = denyGuidance.isEmpty ?
+            "User denied the request but provided no specific guidance" :
+            denyGuidance
+          onDenyWithGuidance(guidance)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.small)
       }
     }
   }
@@ -269,7 +339,8 @@ struct ApprovalToast_Previews: PreviewProvider {
             )
           ),
           onApprove: { },
-          onDeny: { }
+          onDeny: { },
+          onCancel: { }
         )
         .padding(.horizontal, 16)
         .padding(.bottom, 20)
@@ -300,13 +371,52 @@ struct ApprovalToast_Previews: PreviewProvider {
             )
           ),
           onApprove: { },
-          onDeny: { }
+          onDeny: { },
+          onCancel: { }
         )
         .padding(.horizontal, 16)
         .padding(.bottom, 20)
       }
     }
     .previewDisplayName("Critical Risk Toast")
+
+    ZStack {
+      Color.gray.opacity(0.1)
+        .ignoresSafeArea()
+
+      VStack {
+        Spacer()
+
+        ApprovalToast(
+          request: ApprovalRequest(
+            toolName: "Edit",
+            input: [
+              "file_path": .string("/Users/test/main.swift"),
+              "old_string": .string("func test()"),
+              "new_string": .string("func testNew()"),
+            ],
+            toolUseId: "edit-789",
+            context: ApprovalContext(
+              description: "Edit file to rename function",
+              riskLevel: .medium,
+              isSensitive: false,
+              affectedResources: ["/Users/test/main.swift"]
+            )
+          ),
+          onApprove: { },
+          onDeny: { },
+          onDenyWithGuidance: { guidance in
+            print("Guidance: \(guidance)")
+          },
+          onCancel: {
+            print("Cancelled - Stream will be interrupted")
+          }
+        )
+        .padding(.horizontal, 16)
+        .padding(.bottom, 20)
+      }
+    }
+    .previewDisplayName("Edit Tool with Deny & Guide")
   }
 }
 #endif

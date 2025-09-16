@@ -227,6 +227,23 @@ public struct ChatScreen: View {
             if let toolMessage = findCurrentToolMessage() {
               viewModel.messageExpansionStates[toolMessage.id] = false
             }
+          },
+          onDenyWithGuidance: { guidance in
+            permissionService.denyCurrentToastWithGuidance(guidance)
+            // Find and collapse the tool message that was just denied
+            if let toolMessage = findCurrentToolMessage() {
+              viewModel.messageExpansionStates[toolMessage.id] = false
+            }
+          },
+          onCancel: {
+            // Cancel the stream entirely - same as pressing escape
+            viewModel.cancelRequest()
+            // Also hide the toast
+            permissionService.denyCurrentToast()
+            // Find and collapse the tool message that was just cancelled
+            if let toolMessage = findCurrentToolMessage() {
+              viewModel.messageExpansionStates[toolMessage.id] = false
+            }
           }
         )
       }

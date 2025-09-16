@@ -101,7 +101,8 @@ struct MessageFactory {
     }
     
     // Check if this is a user denial rather than a system error
-    let isDenial = isError && contentString.contains("Denied by user")
+    // Detect both original "Denied by user" and enhanced "Request denied" messages
+    let isDenial = isError && (contentString.contains("Denied by user") || contentString.contains("Request denied"))
     let messageType: MessageType = isDenial ? .toolDenied : (isError ? .toolError : .toolResult)
     let role: MessageRole = isDenial ? .toolDenied : (isError ? .toolError : .toolResult)
     
