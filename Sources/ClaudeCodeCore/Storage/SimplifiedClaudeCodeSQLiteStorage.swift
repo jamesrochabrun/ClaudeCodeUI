@@ -12,7 +12,6 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
   public init() {}
 
   public func saveSession(id: String, firstMessage: String, workingDirectory: String?) async throws {
-    ClaudeCodeLogger.shared.sqlMessages("saveSession - Saving session id: \(id), firstMessage: \(firstMessage), workingDirectory: \(workingDirectory ?? "nil")")
     try await initializeDatabaseIfNeeded()
 
     let insert = sessionsTable.insert(
@@ -24,11 +23,9 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
     )
 
     try database.run(insert)
-    ClaudeCodeLogger.shared.sqlMessages("saveSession - Successfully saved session \(id)")
   }
   
   public func getAllSessions() async throws -> [StoredSession] {
-    ClaudeCodeLogger.shared.sqlMessages("getAllSessions - Loading all sessions")
     try await initializeDatabaseIfNeeded()
 
     var storedSessions = [StoredSession]()
@@ -50,7 +47,6 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       
       storedSessions.append(storedSession)
     }
-    ClaudeCodeLogger.shared.sqlMessages("getAllSessions - Loaded \(storedSessions.count) sessions")
     return storedSessions
   }
   
@@ -99,17 +95,14 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
   }
   
   public func updateSessionMessages(id: String, messages: [ChatMessage]) async throws {
-    ClaudeCodeLogger.shared.sqlMessages("updateSessionMessages - Updating messages for session \(id), count: \(messages.count)")
     try await initializeDatabaseIfNeeded()
 
     // Delete existing messages for this session (foreign key constraints will cascade to attachments)
     let deleteMessages = messagesTable.filter(messageSessionIdColumn == id)
     let deletedCount = try database.run(deleteMessages.delete())
-    ClaudeCodeLogger.shared.sqlMessages("updateSessionMessages - Deleted \(deletedCount) existing messages for session \(id)")
 
     // Insert new messages
     for (index, message) in messages.enumerated() {
-      ClaudeCodeLogger.shared.sqlMessages("updateSessionMessages - Inserting message [\(index)]: id=\(message.id), role=\(message.role), type=\(message.messageType), toolName=\(message.toolName ?? "nil")")
       let insertMessage = messagesTable.insert(
         messageIdColumn <- message.id.uuidString,
         messageSessionIdColumn <- id,
@@ -143,23 +136,19 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
         }
       }
     }
-    ClaudeCodeLogger.shared.sqlMessages("updateSessionMessages - Successfully inserted \(messages.count) messages for session \(id)")
   }
   
   public func updateSessionId(oldId: String, newId: String) async throws {
-    ClaudeCodeLogger.shared.sqlMessages("updateSessionId - Updating session ID from \(oldId) to \(newId)")
     try await initializeDatabaseIfNeeded()
 
     // First, check if the new session already exists (phantom session case)
     let existingNewSession = try database.pluck(sessionsTable.filter(sessionIdColumn == newId))
     if existingNewSession != nil {
-      ClaudeCodeLogger.shared.sqlMessages("updateSessionId - New session \(newId) already exists, skipping update to avoid conflicts")
       return
     }
 
     // Get the old session details
     guard let oldSessionRow = try database.pluck(sessionsTable.filter(sessionIdColumn == oldId)) else {
-      ClaudeCodeLogger.shared.sqlMessages("updateSessionId - Old session \(oldId) not found, cannot update")
       return
     }
 
@@ -172,18 +161,15 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       workingDirectoryColumn <- oldSessionRow[workingDirectoryColumn]
     )
     try database.run(insertNewSession)
-    ClaudeCodeLogger.shared.sqlMessages("updateSessionId - Created new session record with ID \(newId)")
 
     // Now update message session IDs (foreign key constraint satisfied)
     let messages = messagesTable.filter(messageSessionIdColumn == oldId)
     let updateMessages = messages.update(messageSessionIdColumn <- newId)
     let messagesUpdated = try database.run(updateMessages)
-    ClaudeCodeLogger.shared.sqlMessages("updateSessionId - Updated \(messagesUpdated) messages from oldId to newId")
 
     // Finally, delete the old session record
     let deleteOldSession = sessionsTable.filter(sessionIdColumn == oldId)
     try database.run(deleteOldSession.delete())
-    ClaudeCodeLogger.shared.sqlMessages("updateSessionId - Deleted old session record \(oldId). Complete.")
   }
   
   private var database: Connection!
@@ -258,7 +244,6 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
     )
 
     // Run any pending migrations
-    ClaudeCodeLogger.shared.sqlMessages("Checking for database migrations")
     try await migrationManager?.runMigrationsIfNeeded()
 
     // Validate database integrity
@@ -271,7 +256,6 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
     try await migrationManager?.cleanupOldBackups()
 
     isInitialized = true
-    ClaudeCodeLogger.shared.sqlMessages("Database initialized successfully")
   }
   
   private func createTables() async throws {
@@ -314,7 +298,6 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
   }
   
   private func getMessagesForSession(sessionId: String) async throws -> [ChatMessage] {
-    ClaudeCodeLogger.shared.sqlMessages("getMessagesForSession - Loading messages for session \(sessionId)")
     var messages = [ChatMessage]()
 
     let query = messagesTable
@@ -328,14 +311,11 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       let typeString = messageRow[messageTypeColumn]
       let idString = messageRow[messageIdColumn]
 
-      ClaudeCodeLogger.shared.sqlMessages("getMessagesForSession - Row \(rowCount): id=\(idString), role=\(roleString), type=\(typeString)")
-
       guard
         let role = MessageRole(rawValue: roleString),
         let messageType = MessageType(rawValue: typeString),
         let messageId = UUID(uuidString: idString)
       else {
-        ClaudeCodeLogger.shared.sqlMessages("getMessagesForSession - SKIPPING Row \(rowCount): Failed to parse - role=\(roleString), type=\(typeString), id=\(idString)")
         continue
       }
       
@@ -365,10 +345,8 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       )
       
       messages.append(message)
-      ClaudeCodeLogger.shared.sqlMessages("getMessagesForSession - Loaded message [\(rowCount-1)]: id=\(message.id), role=\(message.role), type=\(message.messageType), toolName=\(message.toolName ?? "nil")")
     }
 
-    ClaudeCodeLogger.shared.sqlMessages("getMessagesForSession - Total loaded: \(messages.count) messages for session \(sessionId)")
     return messages
   }
 }

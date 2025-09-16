@@ -24,15 +24,7 @@ final class SessionManager {
   }
   
   func startNewSession(id: String, firstMessage: String, workingDirectory: String? = nil) {
-    // Log if we're replacing an existing session
-    if let existingId = currentSessionId {
-      ClaudeCodeLogger.shared.session("SessionManager.startNewSession - Replacing existing session \(existingId) with new session \(id)")
-    } else {
-      ClaudeCodeLogger.shared.session("SessionManager.startNewSession - Starting fresh session \(id)")
-    }
-
     currentSessionId = id
-    ClaudeCodeLogger.shared.session("SessionManager.startNewSession - currentSessionId set to: \(id), firstMessage: \(firstMessage), workingDirectory: \(workingDirectory ?? "nil")")
 
     // Save to storage
     Task {
@@ -47,9 +39,7 @@ final class SessionManager {
   }
   
   func clearSession() {
-    let previousId = currentSessionId
     currentSessionId = nil
-    ClaudeCodeLogger.shared.session("SessionManager.clearSession - Cleared session. Previous: \(previousId ?? "nil")")
   }
   
   var hasActiveSession: Bool {
@@ -59,14 +49,7 @@ final class SessionManager {
   func selectSession(id: String) {
     // Don't check if session exists in array - trust the caller
     // Sessions might not be loaded yet when resuming
-    let previousId = currentSessionId
     currentSessionId = id
-
-    if previousId != id {
-      ClaudeCodeLogger.shared.session("SessionManager.selectSession - Switched from session \(previousId ?? "nil") to \(id)")
-    } else {
-      ClaudeCodeLogger.shared.session("SessionManager.selectSession - Selected same session: \(id)")
-    }
   }
   
   /// Updates the current session ID to match what Claude is using.
@@ -84,21 +67,16 @@ final class SessionManager {
   func updateCurrentSession(id: String) {
     let previousId = currentSessionId
     currentSessionId = id
-    ClaudeCodeLogger.shared.session("SessionManager.updateCurrentSession - Updated session ID from \(previousId ?? "nil") to \(id) (Claude's ID)")
 
     // Persist the new session ID to storage
     if let oldId = previousId {
-      ClaudeCodeLogger.shared.session("SessionManager.updateCurrentSession - Calling updateSessionId in storage: oldId=\(oldId), newId=\(id)")
       Task {
         do {
           try await sessionStorage.updateSessionId(oldId: oldId, newId: id)
-          ClaudeCodeLogger.shared.session("SessionManager.updateCurrentSession - Successfully updated session ID in storage")
         } catch {
           ClaudeCodeLogger.shared.session("SessionManager.updateCurrentSession - ERROR: Failed to update session ID in storage: \(error)")
         }
       }
-    } else {
-      ClaudeCodeLogger.shared.session("SessionManager.updateCurrentSession - No previous ID to update")
     }
   }
   
