@@ -39,6 +39,9 @@ public final class ChatViewModel {
   
   /// Optional callback invoked when session changes, used for external state synchronization
   private let onSessionChange: ((String) -> Void)?
+
+  /// Optional callback invoked when a user message is sent, used for external logging
+  private let onUserMessageSent: ((String, [TextSelection]?, [FileAttachment]?) -> Void)?
   
   /// Controls whether this view model should manage sessions (load, save, switch, etc.)
   /// Set to false when using ChatScreen directly without RootView to avoid unnecessary session operations
@@ -142,7 +145,8 @@ public final class ChatViewModel {
     globalPreferences: GlobalPreferencesStorage,
     customPermissionService: CustomPermissionService,
     shouldManageSessions: Bool = true,
-    onSessionChange: ((String) -> Void)? = nil)
+    onSessionChange: ((String) -> Void)? = nil,
+    onUserMessageSent: ((String, [TextSelection]?, [FileAttachment]?) -> Void)? = nil)
   {
     self.claudeClient = claudeClient
     self.sessionStorage = sessionStorage
@@ -151,6 +155,7 @@ public final class ChatViewModel {
     self.customPermissionService = customPermissionService
     self.shouldManageSessions = shouldManageSessions
     self.onSessionChange = onSessionChange
+    self.onUserMessageSent = onUserMessageSent
     self.sessionManager = SessionManager(sessionStorage: sessionStorage)
     self.streamProcessor = StreamProcessor(
       messageStore: messageStore,
@@ -239,7 +244,10 @@ public final class ChatViewModel {
     // Add user message with code selections and attachments for UI display
     let userMessage = MessageFactory.userMessage(content: displayContent, codeSelections: codeSelections, attachments: attachments)
     messageStore.addMessage(userMessage)
-    
+
+    // Invoke the callback for user message logging
+    onUserMessageSent?(displayContent, codeSelections, attachments)
+
     // Clear any previous errors
     error = nil
     
