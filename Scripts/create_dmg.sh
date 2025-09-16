@@ -5,6 +5,12 @@
 
 set -e
 
+# Load signing configuration
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+if [ -f "$SCRIPT_DIR/signing_config.sh" ]; then
+  source "$SCRIPT_DIR/signing_config.sh"
+fi
+
 # Configuration
 APP_NAME="ClaudeCodeUI"
 APP_PATH="build/export/$APP_NAME.app"
@@ -12,7 +18,7 @@ DMG_NAME="$APP_NAME"
 DMG_DIR="build/dmg"
 DMG_TEMP="$DMG_DIR/temp"
 DMG_FINAL="$DMG_DIR/$DMG_NAME.dmg"
-VOLUME_NAME="$APP_NAME Installer"
+VOLUME_NAME="$APP_NAME"
 BACKGROUND_IMG="scripts/dmg_background.png"
 
 # Colors for output
@@ -96,10 +102,25 @@ hdiutil convert "$DMG_DIR/temp.dmg" \
   -imagekey zlib-level=9 \
   -o "$DMG_FINAL"
 
-# Clean up
-echo -e "${YELLOW}Cleaning up...${NC}"
+# Clean up temp DMG
 rm -f "$DMG_DIR/temp.dmg"
 rm -rf "$DMG_TEMP"
+
+# Sign the DMG
+echo -e "${YELLOW}Signing DMG...${NC}"
+if [ -n "$TEAM_ID" ]; then
+  codesign --force --sign "Developer ID Application: James Rochabrun (${TEAM_ID})" \
+    --timestamp \
+    "$DMG_FINAL"
+
+  if [ $? -eq 0 ]; then
+    echo -e "${GREEN}✅ DMG signed successfully${NC}"
+  else
+    echo -e "${RED}Warning: DMG signing failed${NC}"
+  fi
+else
+  echo -e "${YELLOW}Skipping DMG signing (no TEAM_ID configured)${NC}"
+fi
 
 # Display DMG info
 echo -e "${GREEN}✅ DMG created successfully${NC}"
@@ -109,5 +130,11 @@ echo -e "${YELLOW}Size: $(du -h "$DMG_FINAL" | cut -f1)${NC}"
 # Verify DMG
 echo -e "\n${YELLOW}Verifying DMG...${NC}"
 hdiutil verify "$DMG_FINAL"
+
+# Check signing
+if [ -n "$TEAM_ID" ]; then
+  echo -e "\n${YELLOW}Checking DMG signature...${NC}"
+  codesign -dv "$DMG_FINAL" 2>&1 || true
+fi
 
 echo -e "${GREEN}DMG is ready for distribution!${NC}"
