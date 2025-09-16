@@ -174,6 +174,10 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
   public func denyCurrentToast() {
     currentToastCallbacks?.deny()
   }
+
+  public func denyCurrentToastWithGuidance(_ guidance: String) {
+    currentToastCallbacks?.denyWithGuidance(guidance)
+  }
   
   // MARK: Private
   
@@ -181,7 +185,7 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
   private var pendingRequests: [String: PendingRequest] = [:]
   private var mcpHandlers: [String: (ApprovalRequest) async throws -> ApprovalResponse] = [:]
   
-  private var currentToastCallbacks: (approve: () -> Void, deny: () -> Void)?
+  private var currentToastCallbacks: (approve: () -> Void, deny: () -> Void, denyWithGuidance: (String) -> Void)?
   
   // MARK: - Private Methods
   
@@ -223,6 +227,13 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
       deny: { [weak self] in
         Task {
           await self?.handleDenial(for: request.toolUseId, reason: "Denied by user")
+        }
+      },
+      denyWithGuidance: { [weak self] guidance in
+        Task {
+          // For Edit tools, provide more detailed feedback
+          let reason = "Request denied. User guidance: \(guidance)"
+          await self?.handleDenial(for: request.toolUseId, reason: reason)
         }
       }
     )
