@@ -1,10 +1,14 @@
-# ClaudeCodeUI
+# ClaudeCodeUI Beta
 
 A native macOS application and Swift Package providing a graphical user interface for Claude Code SDK, enabling seamless AI-powered coding assistance with a beautiful, intuitive interface.
 
-https://github.com/user-attachments/assets/12a3a1ff-1ba5-41b2-b6af-897e53b18331
+[Download Here](https://github.com/jamesrochabrun/ClaudeCodeUI/releases/download/v1.3.9/ClaudeCodeUI_v1.3.9.dmg)
 
-## 🎉 Now Available as a Swift Package!
+⚠️ Important: This is not an official Anthropic product.
+
+https://github.com/user-attachments/assets/d4a1c15f-252e-49b0-88bd-fec92a4c451b
+
+## 🎉 Now is also Available as a Swift Package!
 
 ClaudeCodeUI has been completely restructured to work as both a standalone macOS application AND a reusable Swift Package. This means you can:
 - **Use the macOS app directly** - Download and run the full application
@@ -34,9 +38,8 @@ The `ClaudeCodeCore` package includes everything:
 ### Option 1: Use as a macOS Application
 
 #### For End Users (Simplest)
-1. Download the latest release from the [Releases page](https://github.com/jamesrochabrun/ClaudeCodeUI/releases)
-2. Move ClaudeCodeUI.app to your Applications folder
-3. Launch the app
+
+[Download Here](https://github.com/jamesrochabrun/ClaudeCodeUI/releases/download/v1.3.9/ClaudeCodeUI_v1.3.9.dmg)
 
 #### For Developers (Build from Source)
 1. Clone the repository:
