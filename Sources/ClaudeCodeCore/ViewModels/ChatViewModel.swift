@@ -791,17 +791,30 @@ public final class ChatViewModel {
     
     // Start with the allowed tools from preferences
     var allowedTools = globalPreferences.allowedTools
-    
-    // Always ensure the approval tool is in the allowed list
+
+    // Only add approval tool if the approval server exists in MCP config
     let approvalToolName = "mcp__approval_server__approval_prompt"
-    if !allowedTools.contains(approvalToolName) {
-      if isDebugEnabled {
-        let log = "Adding approval tool to allowed tools: \(approvalToolName)"
-        logger.debug("\(log)")
+
+    // Check if we have the approval server configured
+    if !globalPreferences.mcpConfigPath.isEmpty {
+      // Load MCP config to check if approval_server is configured
+      let configManager = MCPConfigurationManager()
+      if configManager.configuration.mcpServers["approval_server"] != nil {
+        // Approval server is configured, add the tool if not already present
+        if !allowedTools.contains(approvalToolName) {
+          if isDebugEnabled {
+            let log = "Adding approval tool to allowed tools: \(approvalToolName)"
+            logger.debug("\(log)")
+          }
+          allowedTools.append(approvalToolName)
+        }
+      } else {
+        if isDebugEnabled {
+          logger.debug("Approval server not configured in MCP - skipping approval tool")
+        }
       }
-      allowedTools.append(approvalToolName)
     }
-    
+
     options.allowedTools = allowedTools
     options.maxTurns = globalPreferences.maxTurns
     if !globalPreferences.systemPrompt.isEmpty {

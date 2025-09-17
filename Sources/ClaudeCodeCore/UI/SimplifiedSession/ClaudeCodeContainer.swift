@@ -80,6 +80,12 @@ public struct ClaudeCodeContainer: View {
 
     let globalPrefs = GlobalPreferencesStorage()
 
+    // Update MCP configuration to ensure approval server path is correct
+    await MainActor.run {
+      let mcpConfigManager = MCPConfigurationManager()
+      mcpConfigManager.updateApprovalServerPath()
+    }
+
     // If the injected configuration has a non-default command, update global preferences with it
     // This respects the injected configuration while still allowing user to override later
     if claudeCodeConfiguration.command != "claude" {

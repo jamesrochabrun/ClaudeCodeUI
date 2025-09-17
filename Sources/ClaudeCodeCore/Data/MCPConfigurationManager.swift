@@ -96,15 +96,52 @@ final class MCPConfigurationManager {
     saveConfiguration()
   }
   
+  // MARK: - Approval Server Management
+
+  /// Updates the approval server path in the MCP configuration
+  /// This ensures the config always points to the bundled binary
+  func updateApprovalServerPath() {
+    // Check if ApprovalMCPServer exists in the app bundle
+    guard let bundlePath = Bundle.main.path(forResource: "ApprovalMCPServer", ofType: nil),
+          FileManager.default.fileExists(atPath: bundlePath) else {
+      print("[MCP] ApprovalMCPServer not found in bundle - removing from config")
+      // Remove approval_server if binary doesn't exist
+      if configuration.mcpServers["approval_server"] != nil {
+        configuration.mcpServers.removeValue(forKey: "approval_server")
+        saveConfiguration()
+      }
+      return
+    }
+
+    print("[MCP] Found ApprovalMCPServer at: \(bundlePath)")
+
+    // Check if approval_server already exists and has correct path
+    if let existingServer = configuration.mcpServers["approval_server"],
+       existingServer.command == bundlePath {
+      print("[MCP] Approval server already configured with correct path")
+      return
+    }
+
+    // Update or add the approval_server configuration
+    let approvalServer = MCPServerConfig(
+      name: "approval_server",
+      command: bundlePath,
+      args: []
+    )
+    configuration.mcpServers["approval_server"] = approvalServer
+    print("[MCP] Updated approval_server path in configuration")
+    saveConfiguration()
+  }
+
   // MARK: - Export/Import
-  
+
   func exportConfiguration(to url: URL) throws {
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     let data = try encoder.encode(configuration)
     try data.write(to: url)
   }
-  
+
   func importConfiguration(from url: URL) throws {
     let data = try Data(contentsOf: url)
     configuration = try JSONDecoder().decode(MCPConfiguration.self, from: data)

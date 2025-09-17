@@ -32,24 +32,29 @@ public final class MCPApprovalTool: @unchecked Sendable {
     /// This method should be called when setting up ClaudeCodeOptions for MCP integration
     /// - Parameter options: The ClaudeCodeOptions to configure
     public func configure(options: inout ClaudeCodeOptions) {
+        // Try to get the approval server path
+        guard let approvalServerPath = getApprovalServerExecutablePath() else {
+            print("[MCPApprovalTool] Approval server not available - skipping configuration")
+            return
+        }
+
         // Set up the permission prompt tool name
         let permissionToolName = "mcp__approval_server__\(toolName)"
         options.permissionPromptToolName = permissionToolName
         print("[MCPApprovalTool] Setting permissionPromptToolName: \(permissionToolName)")
-        
+
         // Add the approval server to MCP servers if not already present
         if options.mcpServers == nil {
             options.mcpServers = [:]
         }
-        
+
         // Configure the approval server to use our Swift MCP executable
-        let approvalServerPath = getApprovalServerExecutablePath()
         options.mcpServers?["approval_server"] = .stdio(McpStdioServerConfig(
             command: approvalServerPath,
             args: []
         ))
         print("[MCPApprovalTool] Configured approval server at: \(approvalServerPath)")
-        
+
         // Ensure the approval tool is allowed
         var allowedTools = options.allowedTools ?? []
         let approvalToolName = "mcp__approval_server__\(toolName)"
@@ -65,152 +70,28 @@ public final class MCPApprovalTool: @unchecked Sendable {
     
     /// Get the path to the compiled Swift MCP approval server executable
     /// This locates our ApprovalMCPServer binary that handles approval requests
-    private func getApprovalServerExecutablePath() -> String {
-        // First, check if it's in the app bundle (for packaged apps)
+    private func getApprovalServerExecutablePath() -> String? {
+        // Check if it's in the app bundle (for packaged apps)
         if let bundlePath = Bundle.main.path(forResource: "ApprovalMCPServer", ofType: nil) {
             if FileManager.default.fileExists(atPath: bundlePath) {
+                print("MCPApprovalTool: Found bundled approval server at: \(bundlePath)")
                 return bundlePath
             }
         }
-        
-        // For development, find the project root directory
-        let fileManager = FileManager.default
-        var currentPath = fileManager.currentDirectoryPath
-        
-        // Try multiple strategies to find the project root
-        
-        // Strategy 1: Check if we're in a subdirectory of the project
-        var searchPath = URL(fileURLWithPath: currentPath)
-        var foundProjectRoot = false
-        for _ in 0..<10 {
-            let projectFile = searchPath.appendingPathComponent("ClaudeCodeUI.xcodeproj")
-            if fileManager.fileExists(atPath: projectFile.path) {
-                currentPath = searchPath.path
-                foundProjectRoot = true
-                break
-            }
-            searchPath = searchPath.deletingLastPathComponent()
-        }
-        
-        // Strategy 2: Check common development paths
-        if !foundProjectRoot {
-            let homePath = NSHomeDirectory()
-            let commonPaths = [
-                "\(homePath)/Desktop/git/ClaudeCodeUI",
-                "\(homePath)/Documents/ClaudeCodeUI",
-                "\(homePath)/Developer/ClaudeCodeUI",
-                "\(homePath)/Projects/ClaudeCodeUI",
-                "\(homePath)/Code/ClaudeCodeUI"
-            ]
-            
-            for path in commonPaths {
-                if fileManager.fileExists(atPath: "\(path)/ClaudeCodeUI.xcodeproj") {
-                    currentPath = path
-                    foundProjectRoot = true
-                    break
-                }
-            }
-        }
-        
-        // Strategy 3: Use Bundle path to find project
-        if !foundProjectRoot {
-            // Get the bundle path and traverse up to find project root
-            let bundlePath = Bundle.main.bundlePath
-            var bundleURL = URL(fileURLWithPath: bundlePath)
-            
-            // Go up several levels from the app bundle
-            for _ in 0..<8 {
-                let projectFile = bundleURL.appendingPathComponent("ClaudeCodeUI.xcodeproj")
-                if fileManager.fileExists(atPath: projectFile.path) {
-                    currentPath = bundleURL.path
-                    foundProjectRoot = true
-                    break
-                }
-                bundleURL = bundleURL.deletingLastPathComponent()
-            }
-        }
-        
-        // Determine the architecture
-        let architecture = ProcessInfo.processInfo.machineHardwareName ?? "arm64"
-        
-        print("MCPApprovalTool: Project root found at: \(currentPath)")
-        print("MCPApprovalTool: Architecture: \(architecture)")
-        
-        // Build possible paths relative to project root
-        let possiblePaths = [
-            // Architecture-specific paths
-            "\(currentPath)/modules/ApprovalMCPServer/.build/\(architecture)-apple-macosx/debug/ApprovalMCPServer",
-            "\(currentPath)/modules/ApprovalMCPServer/.build/\(architecture)-apple-macosx/release/ApprovalMCPServer",
-            // Generic paths
-            "\(currentPath)/modules/ApprovalMCPServer/.build/debug/ApprovalMCPServer",
-            "\(currentPath)/modules/ApprovalMCPServer/.build/release/ApprovalMCPServer",
-        ]
-        
-        // Check each path
-        for path in possiblePaths {
-            if fileManager.fileExists(atPath: path) {
-                print("MCPApprovalTool: Found approval server at: \(path)")
-                return path
-            }
-        }
-        
-        print("MCPApprovalTool: No pre-built approval server found, will attempt to build")
-        
-        // If not found, try to build it
-        let buildPath = "\(currentPath)/modules/ApprovalMCPServer"
-        if fileManager.fileExists(atPath: buildPath) {
-            print("MCPApprovalTool: Attempting to build approval server at: \(buildPath)")
-            
-            // Build the server (this will only work in development)
-            let task = Process()
-            task.executableURL = URL(fileURLWithPath: "/usr/bin/swift")
-            task.arguments = ["build", "-c", "debug"]
-            task.currentDirectoryURL = URL(fileURLWithPath: buildPath)
-            
-            // Capture output for debugging
-            let outputPipe = Pipe()
-            let errorPipe = Pipe()
-            task.standardOutput = outputPipe
-            task.standardError = errorPipe
-            
-            do {
-                try task.run()
-                task.waitUntilExit()
-                
-                if task.terminationStatus == 0 {
-                    print("MCPApprovalTool: Build completed successfully")
-                    
-                    // Check if build succeeded
-                    let builtPath = "\(buildPath)/.build/\(architecture)-apple-macosx/debug/ApprovalMCPServer"
-                    if fileManager.fileExists(atPath: builtPath) {
-                        print("MCPApprovalTool: Built approval server found at: \(builtPath)")
-                        return builtPath
-                    }
-                } else {
-                    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                    let errorString = String(data: errorData, encoding: .utf8) ?? "Unknown error"
-                    print("MCPApprovalTool: Build failed with error: \(errorString)")
-                }
-            } catch {
-                print("MCPApprovalTool: Failed to build ApprovalMCPServer: \(error)")
-            }
-        } else {
-            print("MCPApprovalTool: ApprovalMCPServer directory not found at: \(buildPath)")
-        }
-        
-        // Final fallback - return expected debug path and let the app handle the error
-        let fallbackPath = "\(currentPath)/modules/ApprovalMCPServer/.build/\(architecture)-apple-macosx/debug/ApprovalMCPServer"
-        print("MCPApprovalTool: WARNING - Approval server not found!")
-        print("MCPApprovalTool: To fix this issue, run the following command:")
-        print("MCPApprovalTool: cd \(currentPath)/modules/ApprovalMCPServer && swift build -c debug")
-        print("MCPApprovalTool: Or open the project in Xcode and build - it will be built automatically")
-        return fallbackPath
+
+        // Not found in bundle
+        print("MCPApprovalTool: ApprovalMCPServer not found in app bundle")
+        print("MCPApprovalTool: The approval server feature will be disabled")
+        return nil
     }
     
     /// Create a custom MCP configuration for the approval tool
     /// - Returns: MCP configuration dictionary
     public func createMCPConfiguration() -> [String: Any] {
-        let approvalServerPath = getApprovalServerExecutablePath()
+        guard let approvalServerPath = getApprovalServerExecutablePath() else {
+            // Return empty config if server not available
+            return ["mcpServers": [:]]
+        }
         return [
             "mcpServers": [
                 "approval_server": [
