@@ -46,7 +46,10 @@ public final class ChatViewModel {
   /// Controls whether this view model should manage sessions (load, save, switch, etc.)
   /// Set to false when using ChatScreen directly without RootView to avoid unnecessary session operations
   public let shouldManageSessions: Bool
-  
+
+  /// Optional system prompt prefix that gets prepended to the additional system prompt
+  private let systemPromptPrefix: String?
+
   private let streamProcessor: StreamProcessor
   private let messageStore = MessageStore()
   private var firstMessageInSession: String?
@@ -135,6 +138,7 @@ public final class ChatViewModel {
   ///   - settingsStorage: Storage for application settings
   ///   - globalPreferences: Global preferences storage
   ///   - customPermissionService: Service for custom permission management
+  ///   - systemPromptPrefix: Optional prefix to prepend to the additional system prompt
   ///   - shouldManageSessions: Whether to manage sessions (load, save, switch). Default is true for backward compatibility.
   ///                           Set to false when using ChatScreen directly without session management needs.
   ///   - onSessionChange: Optional callback when session changes
@@ -144,6 +148,7 @@ public final class ChatViewModel {
     settingsStorage: SettingsStorage,
     globalPreferences: GlobalPreferencesStorage,
     customPermissionService: CustomPermissionService,
+    systemPromptPrefix: String? = nil,
     shouldManageSessions: Bool = true,
     onSessionChange: ((String) -> Void)? = nil,
     onUserMessageSent: ((String, [TextSelection]?, [FileAttachment]?) -> Void)? = nil)
@@ -153,6 +158,7 @@ public final class ChatViewModel {
     self.settingsStorage = settingsStorage
     self.globalPreferences = globalPreferences
     self.customPermissionService = customPermissionService
+    self.systemPromptPrefix = systemPromptPrefix
     self.shouldManageSessions = shouldManageSessions
     self.onSessionChange = onSessionChange
     self.onUserMessageSent = onUserMessageSent
@@ -792,8 +798,16 @@ public final class ChatViewModel {
     if !globalPreferences.systemPrompt.isEmpty {
       options.systemPrompt = globalPreferences.systemPrompt
     }
-    if !globalPreferences.appendSystemPrompt.isEmpty {
-      options.appendSystemPrompt = globalPreferences.appendSystemPrompt
+
+    // Combine system prompt prefix with user's additional system prompt
+    var combinedAppendPrompt = systemPromptPrefix ?? ""
+    if !combinedAppendPrompt.isEmpty && !globalPreferences.appendSystemPrompt.isEmpty {
+      combinedAppendPrompt += "\n"  // Add line break between prefix and user prompt
+    }
+    combinedAppendPrompt += globalPreferences.appendSystemPrompt
+
+    if !combinedAppendPrompt.isEmpty {
+      options.appendSystemPrompt = combinedAppendPrompt
     }
     
     // Configure MCP with custom permission service integration

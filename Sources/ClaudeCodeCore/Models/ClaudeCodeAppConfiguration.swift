@@ -53,14 +53,16 @@ public struct ClaudeCodeAppConfiguration {
   public init(
     appName: String,
     showSettingsInNavBar: Bool,
-    showRiskData: Bool = true
+    showRiskData: Bool = true,
+    initialAdditionalSystemPromptPrefix: String? = nil
   ) {
     self.init(
       claudeCodeConfiguration: .default,
       uiConfiguration: UIConfiguration(
         appName: appName,
         showSettingsInNavBar: showSettingsInNavBar,
-        showRiskData: showRiskData
+        showRiskData: showRiskData,
+        initialAdditionalSystemPromptPrefix: initialAdditionalSystemPromptPrefix
       )
     )
   }
@@ -83,7 +85,8 @@ public struct ClaudeCodeAppConfiguration {
     appName: String,
     workingDirectory: String? = nil,
     showSettingsInNavBar: Bool,
-    showRiskData: Bool = true
+    showRiskData: Bool = true,
+    initialAdditionalSystemPromptPrefix: String? = nil
   ) {
     var config = ClaudeCodeConfiguration.default
     config.workingDirectory = workingDirectory
@@ -92,7 +95,8 @@ public struct ClaudeCodeAppConfiguration {
       uiConfiguration: UIConfiguration(
         appName: appName,
         showSettingsInNavBar: showSettingsInNavBar,
-        showRiskData: showRiskData
+        showRiskData: showRiskData,
+        initialAdditionalSystemPromptPrefix: initialAdditionalSystemPromptPrefix
       )
     )
   }
