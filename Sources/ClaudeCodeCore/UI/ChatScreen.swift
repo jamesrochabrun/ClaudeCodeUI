@@ -122,9 +122,6 @@ public struct ChatScreen: View {
       messagesListView
         .padding(.bottom, 8)
       
-      // Error message if present
-      errorView
-      
       // Loading indicator
       loadingView
       
@@ -137,11 +134,27 @@ public struct ChatScreen: View {
         triggerFocus: $triggerTextEditorFocus)
     }
     .overlay(approvalToastOverlay)
+    .overlay(
+      errorToastOverlay
+        .zIndex(999) // Ensure error toast is on top
+    )
     .navigationTitle(uiConfiguration.appName)
     .toolbar {
       ToolbarItem(placement: .automatic) {
         toolbarContent
       }
+      // #if DEBUG
+      // ToolbarItem(placement: .automatic) {
+      //   Button("Test Error") {
+      //     let testError = NSError(
+      //       domain: "TestDomain",
+      //       code: 999,
+      //       userInfo: [NSLocalizedDescriptionKey: "Test error to verify toast display"]
+      //     )
+      //     viewModel.handleError(testError, operation: .apiCall)
+      //   }
+      // }
+      // #endif
     }
     .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
     .sheet(isPresented: $showingSettings) {
@@ -158,30 +171,17 @@ public struct ChatScreen: View {
   // MARK: - Subviews
   
   @ViewBuilder
-  private var errorView: some View {
-    if let error = viewModel.error {
-      HStack {
-        Image(systemName: "exclamationmark.triangle.fill")
-          .foregroundColor(.red)
-        Text(error.localizedDescription)
-          .foregroundColor(.red)
-          .multilineTextAlignment(.leading)
-          .fixedSize(horizontal: false, vertical: true)
-        Spacer()
-        Button(action: {
-          viewModel.error = nil
-        }) {
-          Image(systemName: "xmark.circle.fill")
-            .foregroundColor(.secondary)
+  private var errorToastOverlay: some View {
+    ErrorToastContainer(
+      errorQueue: $viewModel.errorQueue,
+      onRetry: {
+        // Clear error and retry last operation if possible
+        if let lastMessage = viewModel.messages.last(where: { $0.role == .user }) {
+          viewModel.sendMessage(lastMessage.content)
         }
-        .buttonStyle(.plain)
-      }
-      .padding()
-      .background(Color.red.opacity(0.1))
-      .cornerRadius(8)
-      .padding(.horizontal)
-      .padding(.bottom, 8)
-    }
+      },
+      isDebugEnabled: viewModel.isDebugEnabled
+    )
   }
   
   @ViewBuilder
@@ -374,7 +374,8 @@ public struct ChatScreen: View {
       claudeClient: viewModel.claudeClient,
       projectPath: viewModel.projectPath
     ) {
-      viewModel.error = error
+      viewModel.errorInfo = ErrorInfo.fileError(error, fileName: "Terminal launch")
+      viewModel.errorQueue.append(viewModel.errorInfo!)
     } else {
       // Show success indicator
       isCopied = true

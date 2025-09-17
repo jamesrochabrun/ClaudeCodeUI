@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/jamesrochabrun/ClaudeCodeSDK",
       "state" : {
-        "revision" : "0c287d2d9ecd0b6c56c0e7beffac86aa44c4d50b",
-        "version" : "1.1.2"
+        "revision" : "e64d54c7b39054670aeef0fb3b70cb22db86fe6c",
+        "version" : "1.1.4"
       }
     },
     {
