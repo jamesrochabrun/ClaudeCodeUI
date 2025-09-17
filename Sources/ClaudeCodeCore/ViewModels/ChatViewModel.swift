@@ -108,8 +108,11 @@ public final class ChatViewModel {
   /// Loading state
   public private(set) var isLoading: Bool = false
   
-  /// Error state
-  public var error: Error?
+  /// Error state with detailed information
+  public var errorInfo: ErrorInfo?
+
+  /// Error queue for multiple errors
+  public var errorQueue: [ErrorInfo] = []
   
   /// Current project path (observable)
   public var projectPath: String = ""
@@ -172,6 +175,11 @@ public final class ChatViewModel {
         claudeClient.configuration.workingDirectory
       }
     )
+
+    // Set up error handler for SessionManager after all properties are initialized
+    self.sessionManager.setErrorHandler { [weak self] error, operation in
+      self?.handleError(error, operation: operation)
+    }
     
     // Only load sessions if we're managing them (e.g., when used with RootView)
     // Skip loading when using ChatScreen directly to avoid wasteful operations
@@ -255,7 +263,7 @@ public final class ChatViewModel {
     onUserMessageSent?(displayContent, codeSelections, attachments)
 
     // Clear any previous errors
-    error = nil
+    errorInfo = nil
     
     // Store the message ID for potential assistant response
     let assistantId = UUID()
@@ -284,7 +292,7 @@ public final class ChatViewModel {
         }
       } catch {
         await MainActor.run {
-          self.handleError(error)
+          self.handleError(error, operation: .apiCall)
         }
       }
     }
@@ -295,7 +303,8 @@ public final class ChatViewModel {
     messageStore.clear()
     sessionManager.clearSession()
     currentMessageId = nil
-    error = nil
+    errorInfo = nil
+    errorQueue.removeAll()
     firstMessageInSession = nil
     hasSessionStarted = false
   }
@@ -311,7 +320,7 @@ public final class ChatViewModel {
         // Clear only the local state to prepare for a new session
         self.messageStore.clear()
         self.currentMessageId = nil
-        self.error = nil
+        self.errorInfo = nil
         self.firstMessageInSession = nil
         self.hasSessionStarted = false
         
@@ -437,7 +446,7 @@ public final class ChatViewModel {
     // For now, we're just switching to the session
     
     // Clear any errors
-    error = nil
+    errorInfo = nil
   }
   
   /// Resumes an existing session with optional initial prompt
@@ -499,7 +508,7 @@ public final class ChatViewModel {
 
     // Mark as active session
     hasSessionStarted = true
-    error = nil
+    errorInfo = nil
     
     if isDebugEnabled {
       let log = "Injected session '\(sessionId)' with \(messages.count) messages"
@@ -623,7 +632,7 @@ public final class ChatViewModel {
     }
     
     // Clear any errors
-    error = nil
+    errorInfo = nil
     
     // Mark session as already started since we're resuming
     hasSessionStarted = true
@@ -711,7 +720,7 @@ public final class ChatViewModel {
           let log = "Session \(sessionId) exists locally but not in Claude. Continuing with local history."
           logger.info("\(log)")
         }
-        self.error = nil
+        self.errorInfo = nil
         
         // Keep the session active with its message history
         // User can continue the conversation, and Claude will create a new backend session
@@ -847,7 +856,7 @@ public final class ChatViewModel {
         firstMessageInSession: firstMessageInSession,
         onError: { [weak self] error in
           Task { @MainActor in
-            self?.handleError(error)
+            self?.handleError(error, operation: .streaming)
           }
         },
         onTokenUsageUpdate: { [weak self] inputTokens, outputTokens in
@@ -873,25 +882,92 @@ public final class ChatViewModel {
       
     default:
       await MainActor.run {
-        error = NSError(
+        let error = NSError(
           domain: "ChatViewModel",
           code: 1001,
           userInfo: [NSLocalizedDescriptionKey: "Unexpected response format"]
         )
-        isLoading = false
-        streamingStartTime = nil
+        self.handleError(error, operation: .streaming)
       }
     }
   }
   
   
-  func handleError(_ error: Error) {
+  func handleError(_ error: Error, operation: ErrorOperation = .general) {
     logger.error("Error: \(error.localizedDescription)")
-    
-    self.error = error
+    print("[DEBUG] handleError called with error: \(error.localizedDescription), operation: \(operation)")
+    print("[DEBUG] Error type: \(type(of: error))")
+    print("[DEBUG] Full error: \(error)")
+
+    // Log specific ClaudeCodeError details
+    if let claudeError = error as? ClaudeCodeError {
+      print("[DEBUG] ClaudeCodeError case: \(claudeError)")
+    }
+
+    // Create detailed error info based on operation type
+    var errorInfo: ErrorInfo
+    switch operation {
+    case .sessionManagement:
+      errorInfo = ErrorInfo.sessionError(error)
+    case .streaming:
+      errorInfo = ErrorInfo.streamingError(error)
+    case .apiCall:
+      errorInfo = ErrorInfo.apiError(error)
+    case .fileOperation:
+      errorInfo = ErrorInfo.fileError(error)
+    default:
+      errorInfo = ErrorInfo(
+        error: error,
+        severity: .error,
+        context: "Operation failed",
+        recoverySuggestion: "Please try again or check your settings.",
+        operation: operation
+      )
+    }
+
+    // For notInstalled errors, enhance with the actual command being used
+    if let claudeError = error as? ClaudeCodeError,
+       case .notInstalled = claudeError {
+      let actualCommand = globalPreferences.claudeCommand
+      print("[DEBUG] Command configured: '\(actualCommand)'")
+
+      // Check if it looks like a typo
+      if actualCommand != "claude" && actualCommand.contains("cl") {
+        errorInfo = ErrorInfo(
+          error: error,
+          severity: .critical,
+          context: "Command '\(actualCommand)' Not Found",
+          recoverySuggestion: "The command '\(actualCommand)' was not found. This looks like a typo - did you mean 'claude'? Check your Settings > Claude Command.",
+          operation: .configuration
+        )
+      } else if actualCommand == "claude" {
+        // It's the correct command name, so probably not installed
+        errorInfo = ErrorInfo(
+          error: error,
+          severity: .critical,
+          context: "Claude Not Installed",
+          recoverySuggestion: "Claude command-line tool is not installed. Run: npm install -g @anthropic/claude-code",
+          operation: .configuration
+        )
+      } else {
+        // Some other command name
+        errorInfo = ErrorInfo(
+          error: error,
+          severity: .critical,
+          context: "Command '\(actualCommand)' Not Found",
+          recoverySuggestion: "The command '\(actualCommand)' was not found in PATH. Check your Settings > Claude Command.",
+          operation: .configuration
+        )
+      }
+    }
+
+    self.errorInfo = errorInfo
+    self.errorQueue.append(errorInfo)
+    print("[DEBUG] Error added to queue. Queue count: \(self.errorQueue.count)")
+    print("[DEBUG] Error info: \(errorInfo.displayMessage), severity: \(errorInfo.severity)")
     self.isLoading = false
     self.streamingStartTime = nil
-    
+
     // Remove incomplete assistant message if there was an error
     if let currentMessageId = currentMessageId {
       messageStore.removeMessage(id: currentMessageId)

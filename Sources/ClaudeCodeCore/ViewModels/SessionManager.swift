@@ -18,9 +18,14 @@ final class SessionManager {
   private(set) var sessionsError: Error?
   
   private let sessionStorage: SessionStorageProtocol
-  
+  private var errorHandler: ((Error, ErrorOperation) -> Void)?
+
   init(sessionStorage: SessionStorageProtocol) {
     self.sessionStorage = sessionStorage
+  }
+
+  func setErrorHandler(_ handler: @escaping (Error, ErrorOperation) -> Void) {
+    self.errorHandler = handler
   }
   
   func startNewSession(id: String, firstMessage: String, workingDirectory: String? = nil) {
@@ -33,7 +38,8 @@ final class SessionManager {
         // Refresh sessions list
         await fetchSessions()
       } catch {
-        // Handle error silently
+        // Surface error to user
+        errorHandler?(error, .sessionManagement)
       }
     }
   }
@@ -75,6 +81,7 @@ final class SessionManager {
           try await sessionStorage.updateSessionId(oldId: oldId, newId: id)
         } catch {
           ClaudeCodeLogger.shared.session("SessionManager.updateCurrentSession - ERROR: Failed to update session ID in storage: \(error)")
+          errorHandler?(error, .sessionManagement)
         }
       }
     }
@@ -85,7 +92,8 @@ final class SessionManager {
       do {
         try await sessionStorage.updateLastAccessed(id: id)
       } catch {
-        // Failed to update last accessed
+        // Log but don't surface - this is non-critical
+        ClaudeCodeLogger.shared.session("SessionManager.updateLastAccessed - Failed to update: \(error)")
       }
     }
   }
