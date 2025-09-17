@@ -179,7 +179,8 @@ public struct ChatScreen: View {
         if let lastMessage = viewModel.messages.last(where: { $0.role == .user }) {
           viewModel.sendMessage(lastMessage.content)
         }
-      }
+      },
+      isDebugEnabled: viewModel.isDebugEnabled
     )
   }
   

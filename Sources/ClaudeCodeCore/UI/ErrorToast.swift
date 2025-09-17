@@ -236,24 +236,35 @@ public struct ErrorToast: View {
 public struct ErrorToastContainer: View {
   @Binding var errorQueue: [ErrorInfo]
   let onRetry: (() -> Void)?
+  let isDebugEnabled: Bool
 
   public init(
     errorQueue: Binding<[ErrorInfo]>,
-    onRetry: (() -> Void)? = nil
+    onRetry: (() -> Void)? = nil,
+    isDebugEnabled: Bool = false
   ) {
     _errorQueue = errorQueue
     self.onRetry = onRetry
+    self.isDebugEnabled = isDebugEnabled
   }
 
   public var body: some View {
-    let _ = print("[DEBUG] ErrorToastContainer - Queue count: \(errorQueue.count)")
+    #if DEBUG
+    if isDebugEnabled {
+      let _ = print("[DEBUG] ErrorToastContainer - Queue count: \(errorQueue.count)")
+    }
+    #endif
     return GeometryReader { _ in
       VStack {
         Spacer()
 
         // Show only the first error in the queue
         if let firstError = errorQueue.first {
-          let _ = print("[DEBUG] ErrorToastContainer - Showing error: \(firstError.displayMessage)")
+          #if DEBUG
+          if isDebugEnabled {
+            let _ = print("[DEBUG] ErrorToastContainer - Showing error: \(firstError.displayMessage)")
+          }
+          #endif
           ErrorToast(
             errorInfo: firstError,
             onDismiss: {
@@ -336,7 +347,11 @@ struct ErrorToast_Previews: PreviewProvider {
               ])
             ),
             onDismiss: { },
-            onRetry: { print("Retry clicked") }
+            onRetry: {
+              #if DEBUG
+              print("Retry clicked")
+              #endif
+            }
           )
           .padding(.horizontal, 16)
           .padding(.bottom, 20)

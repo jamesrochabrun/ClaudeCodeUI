@@ -127,7 +127,7 @@ public final class ChatViewModel {
   public private(set) var hasSessionStarted: Bool = false
   
   /// Check if debug logging is enabled from the Claude client configuration
-  private var isDebugEnabled: Bool {
+  var isDebugEnabled: Bool {
     claudeClient.configuration.enableDebugLogging
   }
   
@@ -895,13 +895,16 @@ public final class ChatViewModel {
   
   func handleError(_ error: Error, operation: ErrorOperation = .general) {
     logger.error("Error: \(error.localizedDescription)")
-    print("[DEBUG] handleError called with error: \(error.localizedDescription), operation: \(operation)")
-    print("[DEBUG] Error type: \(type(of: error))")
-    print("[DEBUG] Full error: \(error)")
 
-    // Log specific ClaudeCodeError details
-    if let claudeError = error as? ClaudeCodeError {
-      print("[DEBUG] ClaudeCodeError case: \(claudeError)")
+    if isDebugEnabled {
+      logger.debug("[DEBUG] handleError called with error: \(error.localizedDescription), operation: \(String(describing: operation))")
+      logger.debug("[DEBUG] Error type: \(String(describing: type(of: error)))")
+      logger.debug("[DEBUG] Full error: \(String(describing: error))")
+
+      // Log specific ClaudeCodeError details
+      if let claudeError = error as? ClaudeCodeError {
+        logger.debug("[DEBUG] ClaudeCodeError case: \(String(describing: claudeError))")
+      }
     }
 
     // Create detailed error info based on operation type
@@ -929,7 +932,9 @@ public final class ChatViewModel {
     if let claudeError = error as? ClaudeCodeError,
        case .notInstalled = claudeError {
       let actualCommand = globalPreferences.claudeCommand
-      print("[DEBUG] Command configured: '\(actualCommand)'")
+      if isDebugEnabled {
+        logger.debug("[DEBUG] Command configured: '\(actualCommand)'")
+      }
 
       // Check if it looks like a typo
       if actualCommand != "claude" && actualCommand.contains("cl") {
@@ -963,8 +968,10 @@ public final class ChatViewModel {
 
     self.errorInfo = errorInfo
     self.errorQueue.append(errorInfo)
-    print("[DEBUG] Error added to queue. Queue count: \(self.errorQueue.count)")
-    print("[DEBUG] Error info: \(errorInfo.displayMessage), severity: \(errorInfo.severity)")
+    if isDebugEnabled {
+      logger.debug("[DEBUG] Error added to queue. Queue count: \(self.errorQueue.count)")
+      logger.debug("[DEBUG] Error info: \(errorInfo.displayMessage), severity: \(String(describing: errorInfo.severity))")
+    }
     self.isLoading = false
     self.streamingStartTime = nil
 
