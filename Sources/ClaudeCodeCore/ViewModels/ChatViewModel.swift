@@ -739,19 +739,19 @@ public final class ChatViewModel {
       let log = "Starting new conversation while session '\(existingId)' exists"
       logger.warning("\(log)")
     }
-    
+
     if isDebugEnabled {
       logger.info("Starting new conversation")
     }
-    
+
     let options = createOptions()
-    
+
     let result = try await claudeClient.runSinglePrompt(
       prompt: prompt,
       outputFormat: .streamJson,
       options: options
     )
-    
+
     await processResult(result, messageId: messageId)
   }
   
@@ -893,19 +893,9 @@ public final class ChatViewModel {
   }
   
   
+  @MainActor
   func handleError(_ error: Error, operation: ErrorOperation = .general) {
     logger.error("Error: \(error.localizedDescription)")
-
-    if isDebugEnabled {
-      logger.debug("[DEBUG] handleError called with error: \(error.localizedDescription), operation: \(String(describing: operation))")
-      logger.debug("[DEBUG] Error type: \(String(describing: type(of: error)))")
-      logger.debug("[DEBUG] Full error: \(String(describing: error))")
-
-      // Log specific ClaudeCodeError details
-      if let claudeError = error as? ClaudeCodeError {
-        logger.debug("[DEBUG] ClaudeCodeError case: \(String(describing: claudeError))")
-      }
-    }
 
     // Create detailed error info based on operation type
     var errorInfo: ErrorInfo
@@ -968,10 +958,6 @@ public final class ChatViewModel {
 
     self.errorInfo = errorInfo
     self.errorQueue.append(errorInfo)
-    if isDebugEnabled {
-      logger.debug("[DEBUG] Error added to queue. Queue count: \(self.errorQueue.count)")
-      logger.debug("[DEBUG] Error info: \(errorInfo.displayMessage), severity: \(String(describing: errorInfo.severity))")
-    }
     self.isLoading = false
     self.streamingStartTime = nil
 

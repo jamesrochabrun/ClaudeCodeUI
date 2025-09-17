@@ -84,20 +84,43 @@ final class StreamProcessor {
     await withCheckedContinuation { continuation in
       // Store the continuation for cancellation handling
       self.activeContinuation = continuation
-      
+
       let state = StreamState()
-      
-      publisher
+
+      // Set up a timeout to detect if no data is received
+      var timeoutTask: Task<Void, Never>?
+      var hasReceivedData = false
+
+      timeoutTask = Task {
+        try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+        if !hasReceivedData && !Task.isCancelled {
+          self.logger.error("Stream timeout - no data received within 5 seconds")
+          onError?(ClaudeCodeError.timeout(5.0))
+          continuation.resume()
+        }
+      }
+
+      let subscription = publisher
         .receive(on: DispatchQueue.main)
         .sink(
           receiveCompletion: { [weak self] completion in
+            timeoutTask?.cancel() // Cancel timeout on completion
             guard let self = self else {
               continuation.resume()
               return
             }
-            
+
             switch completion {
             case .finished:
+              // Check if we received any data at all
+              if !hasReceivedData && !state.assistantMessageCreated {
+                self.logger.error("Stream finished without receiving any data - treating as error")
+                let error = ClaudeCodeError.executionFailed("Process terminated without sending any data. Check your Claude CLI configuration and MCP settings.")
+                if let onError = onError {
+                  onError(error)
+                }
+              }
+
               // Commit the pending session ID now that stream completed successfully
               if let pending = self.pendingSessionId {
                 ClaudeCodeLogger.shared.stream("Stream finished. Committing pending session ID: \(pending)")
@@ -131,17 +154,17 @@ final class StreamProcessor {
               }
             case .failure(let error):
               self.logger.error("Stream failed with error: \(error.localizedDescription)")
-              
+
               // Discard pending session ID since stream failed
               if let pending = self.pendingSessionId {
                 // Discarding pending session ID since stream failed
                 self.pendingSessionId = nil
               }
-              
+
               // Clean up any partial messages
               if state.assistantMessageCreated {
                 let finalMessageId = state.currentLocalMessageId ?? messageId
-                
+
                 // If we have partial content, mark it as incomplete with error indicator
                 if !state.contentBuffer.isEmpty {
                   self.messageStore.updateMessage(
@@ -154,7 +177,7 @@ final class StreamProcessor {
                   self.messageStore.removeMessage(id: finalMessageId)
                 }
               }
-              
+
               // Call the error handler if provided
               onError?(error)
             }
@@ -167,11 +190,14 @@ final class StreamProcessor {
             self.cancellables.removeAll()
           },
           receiveValue: { [weak self] chunk in
+            hasReceivedData = true // Mark that we received data
+            timeoutTask?.cancel() // Cancel timeout when data arrives
             guard let self = self else { return }
             self.processChunk(chunk, messageId: messageId, state: state, firstMessageInSession: firstMessageInSession, onTokenUsageUpdate: onTokenUsageUpdate, onCostUpdate: onCostUpdate)
           }
         )
-        .store(in: &cancellables)
+
+      subscription.store(in: &cancellables)
     }
   }
   
