@@ -292,29 +292,8 @@ extension ChatInputView {
   private var textEditorOverlay: some View {
     Color.clear
       .allowsHitTesting(true)
-      .onDrop(of: [.fileURL], isTargeted: $isDragging) { providers in
+      .onDrop(of: [.fileURL, .png, .tiff, .image], isTargeted: $isDragging) { providers in
         handleDroppedProviders(providers)
-        return true
-      }
-      .dropDestination(for: Data.self) { items, _ in
-        // Handle raw data drops (e.g., images from web browsers)
-        Task { @MainActor in
-          for data in items {
-            // Save data to temporary file
-            let tempDirectory = FileManager.default.temporaryDirectory
-            let fileName = "dropped_file_\(UUID().uuidString)"
-            let tempURL = tempDirectory.appendingPathComponent(fileName)
-            
-            do {
-              try data.write(to: tempURL)
-              let attachment = FileAttachment(url: tempURL, isTemporary: true)
-              attachments.append(attachment)
-              await processor.process(attachment)
-            } catch {
-              print("Failed to save dropped data: \(error)")
-            }
-          }
-        }
         return true
       }
   }
@@ -567,11 +546,11 @@ extension ChatInputView {
   private func handleDroppedProviders(_ providers: [NSItemProvider]) {
     Task {
       for provider in providers {
-        // Try to load as file URL (this should handle both files and folders)
+        // Try to load as file URL first (this handles both files and folders)
         if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
           _ = provider.loadObject(ofClass: URL.self) { url, error in
             guard let url = url, error == nil else { return }
-            
+
             Task { @MainActor in
               // Check if it's a directory
               var isDirectory: ObjCBool = false
@@ -581,7 +560,9 @@ extension ChatInputView {
                   await handleDroppedFolder(url)
                 } else {
                   // Handle single file
-                  let attachment = FileAttachment(url: url)
+                  // Check if it's a screenshot from temporary directory
+                  let isScreenshot = url.path.contains("TemporaryItems") || url.path.contains("screencaptureui")
+                  let attachment = FileAttachment(url: url, isTemporary: isScreenshot)
                   attachments.append(attachment)
                   await processor.process(attachment)
                 }
@@ -589,17 +570,61 @@ extension ChatInputView {
             }
           }
         }
-        // Try to load as image data
+        // If not a file URL, try to load as PNG data (for screenshots)
+        else if provider.hasItemConformingToTypeIdentifier(UTType.png.identifier) {
+          _ = provider.loadDataRepresentation(for: .png) { data, error in
+            guard let data = data, error == nil else { return }
+
+            Task { @MainActor in
+              // Save PNG data to temporary file
+              let tempDirectory = FileManager.default.temporaryDirectory
+              let fileName = "screenshot_\(UUID().uuidString).png"
+              let tempURL = tempDirectory.appendingPathComponent(fileName)
+
+              do {
+                try data.write(to: tempURL)
+                let attachment = FileAttachment(url: tempURL, isTemporary: true)
+                attachments.append(attachment)
+                await processor.process(attachment)
+              } catch {
+                print("Failed to save dropped screenshot: \(error)")
+              }
+            }
+          }
+        }
+        // Try TIFF data (another common screenshot format)
+        else if provider.hasItemConformingToTypeIdentifier(UTType.tiff.identifier) {
+          _ = provider.loadDataRepresentation(for: .tiff) { data, error in
+            guard let data = data, error == nil else { return }
+
+            Task { @MainActor in
+              // Save TIFF data to temporary file
+              let tempDirectory = FileManager.default.temporaryDirectory
+              let fileName = "screenshot_\(UUID().uuidString).tiff"
+              let tempURL = tempDirectory.appendingPathComponent(fileName)
+
+              do {
+                try data.write(to: tempURL)
+                let attachment = FileAttachment(url: tempURL, isTemporary: true)
+                attachments.append(attachment)
+                await processor.process(attachment)
+              } catch {
+                print("Failed to save dropped screenshot: \(error)")
+              }
+            }
+          }
+        }
+        // Finally, try generic image data
         else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
           _ = provider.loadDataRepresentation(for: .image) { data, error in
             guard let data = data, error == nil else { return }
-            
+
             Task { @MainActor in
               // Save image data to temporary file
               let tempDirectory = FileManager.default.temporaryDirectory
               let fileName = "dropped_image_\(UUID().uuidString).png"
               let tempURL = tempDirectory.appendingPathComponent(fileName)
-              
+
               do {
                 try data.write(to: tempURL)
                 let attachment = FileAttachment(url: tempURL, isTemporary: true)
