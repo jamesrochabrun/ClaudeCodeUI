@@ -52,7 +52,7 @@ struct ChatInputView: View {
     contextManager: ContextManager,
     xcodeObservationViewModel: XcodeObservationViewModel,
     permissionsService: PermissionsService,
-    placeholder: String = "Type a message...",
+    placeholder: String = "↵ send new message, ⇧↵ new line",
     triggerFocus: Binding<Bool> = .constant(false))
   {
     _text = text
@@ -345,8 +345,15 @@ extension ChatInputView {
       // Normal text editor behavior
       switch key.key {
       case .return:
-        sendMessage()
-        return .handled
+        // Check if shift is pressed - if so, allow new line
+        if key.modifiers.contains(.shift) {
+          // Return .ignored to let TextEditor handle the newline insertion naturally
+          return .ignored
+        } else {
+          // Send message on regular return (without shift)
+          sendMessage()
+          return .handled
+        }
       case .escape:
         if viewModel.isLoading {
           viewModel.cancelRequest()
