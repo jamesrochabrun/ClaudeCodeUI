@@ -134,7 +134,6 @@ public struct ChatScreen: View {
         contextManager: contextManager,
         xcodeObservationViewModel: xcodeObservationViewModel,
         permissionsService: permissionsService,
-        placeholder: "Type a message...",
         triggerFocus: $triggerTextEditorFocus)
     }
     .overlay(approvalToastOverlay)
