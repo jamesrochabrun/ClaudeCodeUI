@@ -143,18 +143,18 @@ public struct ChatScreen: View {
       ToolbarItem(placement: .automatic) {
         toolbarContent
       }
-      #if DEBUG
-      ToolbarItem(placement: .automatic) {
-        Button("Test Error") {
-          let testError = NSError(
-            domain: "TestDomain",
-            code: 999,
-            userInfo: [NSLocalizedDescriptionKey: "Test error to verify toast display"]
-          )
-          viewModel.handleError(testError, operation: .apiCall)
-        }
-      }
-      #endif
+      // #if DEBUG
+      // ToolbarItem(placement: .automatic) {
+      //   Button("Test Error") {
+      //     let testError = NSError(
+      //       domain: "TestDomain",
+      //       code: 999,
+      //       userInfo: [NSLocalizedDescriptionKey: "Test error to verify toast display"]
+      //     )
+      //     viewModel.handleError(testError, operation: .apiCall)
+      //   }
+      // }
+      // #endif
     }
     .animation(.easeInOut(duration: 0.3), value: viewModel.isLoading)
     .sheet(isPresented: $showingSettings) {
