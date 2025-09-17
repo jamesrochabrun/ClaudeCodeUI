@@ -11,21 +11,25 @@ import Foundation
 public struct UIConfiguration {
   /// The name of the application to display in the UI
   public let appName: String
-  
+
   /// Whether to show the settings button in the navigation bar
   public let showSettingsInNavBar: Bool
-  
+
   /// Whether to show risk-related data (risk labels and low-risk auto-approve option)
   public let showRiskData: Bool
-  
+
   /// Whether to show the token count in the loading indicator
   public let showTokenCount: Bool
-  
+
   /// Optional tooltip text to display when no working directory is selected
   public let workingDirectoryToolTip: String?
-  
+
   /// Whether to show the system prompt fields in settings
   public let showSystemPromptFields: Bool
+
+  /// Initial additional system prompt prefix that will be prepended to user's additional system prompt
+  /// This is not shown in the preferences UI and is set programmatically
+  public let initialAdditionalSystemPromptPrefix: String?
   
   /// Default configuration for ClaudeCodeUI app
   public static var `default`: UIConfiguration {
@@ -35,10 +39,11 @@ public struct UIConfiguration {
       showRiskData: true,
       showTokenCount: true,
       workingDirectoryToolTip: nil,
-      showSystemPromptFields: false
+      showSystemPromptFields: false,
+      initialAdditionalSystemPromptPrefix: nil
     )
   }
-  
+
   /// Library consumer configuration (without settings in nav bar)
   public static var library: UIConfiguration {
     UIConfiguration(
@@ -47,7 +52,8 @@ public struct UIConfiguration {
       showRiskData: true,
       showTokenCount: true,
       workingDirectoryToolTip: nil,
-      showSystemPromptFields: false
+      showSystemPromptFields: false,
+      initialAdditionalSystemPromptPrefix: nil
     )
   }
   
@@ -58,7 +64,8 @@ public struct UIConfiguration {
     showRiskData: Bool = true,
     showTokenCount: Bool = true,
     workingDirectoryToolTip: String? = nil,
-    showSystemPromptFields: Bool = false
+    showSystemPromptFields: Bool = false,
+    initialAdditionalSystemPromptPrefix: String? = nil
   ) {
     self.appName = appName
     self.showSettingsInNavBar = showSettingsInNavBar
@@ -66,5 +73,6 @@ public struct UIConfiguration {
     self.showTokenCount = showTokenCount
     self.workingDirectoryToolTip = workingDirectoryToolTip
     self.showSystemPromptFields = showSystemPromptFields
+    self.initialAdditionalSystemPromptPrefix = initialAdditionalSystemPromptPrefix
   }
 }

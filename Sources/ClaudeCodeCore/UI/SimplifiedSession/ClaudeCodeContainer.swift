@@ -63,9 +63,9 @@ public struct ClaudeCodeContainer: View {
   
   @State private var sessionManager: SimplifiedSessionManagerProtocol
   @State private var isInitialized = false
-  @State private var chatViewModel: ClaudeCodeCore.ChatViewModel?
+  @State private var chatViewModel: ChatViewModel?
   @State private var globalPreferences: GlobalPreferencesStorage?
-  @State private var claudeCodeDeps: ClaudeCodeCore.DependencyContainer?
+  @State private var claudeCodeDeps: DependencyContainer?
   
   @State private var showSessionPicker = false
   @State private var availableSessions: [StoredSession] = []
@@ -110,6 +110,7 @@ public struct ClaudeCodeContainer: View {
       settingsStorage: deps.settingsStorage,
       globalPreferences: globalPrefs,
       customPermissionService: deps.customPermissionService,
+      systemPromptPrefix: uiConfiguration.initialAdditionalSystemPromptPrefix,
       onSessionChange: { newSessionId in
         Task { @MainActor in
           currentSessionId = newSessionId
