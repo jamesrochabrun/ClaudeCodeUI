@@ -350,6 +350,10 @@ extension ChatInputView {
           // Return .ignored to let TextEditor handle the newline insertion naturally
           return .ignored
         } else {
+          // Don't send message if already loading/streaming
+          if viewModel.isLoading {
+            return .handled  // Prevent any action including new line
+          }
           // Send message on regular return (without shift)
           sendMessage()
           return .handled
