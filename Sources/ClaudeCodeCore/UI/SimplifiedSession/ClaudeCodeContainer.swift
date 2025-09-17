@@ -119,6 +119,13 @@ public struct ClaudeCodeContainer: View {
       },
       onUserMessageSent: onUserMessageSent
     )
+
+    // Set the default working directory from global preferences on app launch
+    if !globalPrefs.defaultWorkingDirectory.isEmpty {
+      claudeClient.configuration.workingDirectory = globalPrefs.defaultWorkingDirectory
+      viewModel.projectPath = globalPrefs.defaultWorkingDirectory
+      deps.settingsStorage.setProjectPath(globalPrefs.defaultWorkingDirectory)
+    }
     
     await MainActor.run {
       chatViewModel = viewModel
