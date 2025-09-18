@@ -795,28 +795,30 @@ public final class ChatViewModel {
     // Only add approval tool if the approval server exists in MCP config
     let approvalToolName = "mcp__approval_server__approval_prompt"
 
-    // Check if we have the approval server configured
-    if !globalPreferences.mcpConfigPath.isEmpty {
-      // Load MCP config to check if approval_server is configured
-      let configManager = MCPConfigurationManager()
-      if configManager.configuration.mcpServers["approval_server"] != nil {
-        // Approval server is configured, add the tool if not already present
-        if !allowedTools.contains(approvalToolName) {
-          if isDebugEnabled {
-            let log = "Adding approval tool to allowed tools: \(approvalToolName)"
-            logger.debug("\(log)")
-          }
-          allowedTools.append(approvalToolName)
-        }
-      } else {
+    // Always check if approval server is configured (it might be auto-added on app launch)
+    let configManager = MCPConfigurationManager()
+    if configManager.configuration.mcpServers["approval_server"] != nil {
+      // Approval server is configured, add the tool if not already present
+      if !allowedTools.contains(approvalToolName) {
         if isDebugEnabled {
-          logger.debug("Approval server not configured in MCP - skipping approval tool")
+          let log = "Adding approval tool to allowed tools: \(approvalToolName)"
+          logger.debug("\(log)")
         }
+        allowedTools.append(approvalToolName)
+      }
+    } else {
+      if isDebugEnabled {
+        logger.debug("Approval server not configured in MCP - skipping approval tool")
       }
     }
 
+    // Configure chat options with global preferences
     options.allowedTools = allowedTools
+
+    // Set the maximum number of turns for the conversation
     options.maxTurns = globalPreferences.maxTurns
+
+    // Apply user-defined system prompt if provided
     if !globalPreferences.systemPrompt.isEmpty {
       options.systemPrompt = globalPreferences.systemPrompt
     }
