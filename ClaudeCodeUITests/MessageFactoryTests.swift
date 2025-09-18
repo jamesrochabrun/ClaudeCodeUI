@@ -7,7 +7,7 @@
 
 import Testing
 import Foundation
-@testable import ClaudeCodeUI
+@testable import ClaudeCodeCore
 
 struct MessageFactoryTests {
   

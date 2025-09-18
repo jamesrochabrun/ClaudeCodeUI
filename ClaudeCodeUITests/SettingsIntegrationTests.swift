@@ -6,7 +6,8 @@
 //
 
 import XCTest
-@testable import ClaudeCodeUI
+@testable import ClaudeCodeCore
+
 
 @MainActor
 final class SettingsIntegrationTests: XCTestCase {
