@@ -4,7 +4,7 @@ A beautiful, native macOS application and Swift Package providing a graphical in
 
 ⚠️ **Note**: This is not an official Anthropic product.
 
-[**Download Latest Release (v1.3.9)**](https://github.com/jamesrochabrun/ClaudeCodeUI/releases/download/v1.3.9/ClaudeCodeUI_v1.3.9.dmg)
+[**Download Latest Release (v1.4.6)**](https://github.com/jamesrochabrun/ClaudeCodeUI/releases/download/v1.4.6/ClaudeCodeUI.dmg)
 
 ![ClaudeCodeUI Demo](https://github.com/user-attachments/assets/d4a1c15f-252e-49b0-88bd-fec92a4c491b)
 
