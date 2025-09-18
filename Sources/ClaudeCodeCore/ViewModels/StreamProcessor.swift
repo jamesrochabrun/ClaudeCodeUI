@@ -84,39 +84,39 @@ final class StreamProcessor {
     await withCheckedContinuation { continuation in
       // Store the continuation for cancellation handling
       self.activeContinuation = continuation
-
+      
       let state = StreamState()
-
+      
       // Set up a timeout to detect if no data is received
       var timeoutTask: Task<Void, Never>?
       var hasReceivedData = false
       var subscription: AnyCancellable?
-
+      
       timeoutTask = Task { [weak self] in
         try? await Task.sleep(nanoseconds: 25_000_000_000) // 25 seconds
         if !hasReceivedData && !Task.isCancelled {
           guard let self = self else { return }
           self.logger.error("Stream timeout - no data received within 5 seconds")
-
+          
           // Cancel the stream subscription to prevent completion handler from running
           subscription?.cancel()
           self.cancellables.removeAll()
-
+          
           // Clear any pending session ID since the stream timed out
           if let pending = self.pendingSessionId {
             ClaudeCodeLogger.shared.stream("Timeout occurred - discarding pending session ID: \(pending)")
             self.pendingSessionId = nil
           }
-
+          
           // Clear the active continuation reference before resuming
           self.activeContinuation = nil
-
+          
           // Call error handler and resume continuation
           onError?(ClaudeCodeError.timeout(5.0))
           continuation.resume()
         }
       }
-
+      
       subscription = publisher
         .receive(on: DispatchQueue.main)
         .sink(
@@ -126,7 +126,7 @@ final class StreamProcessor {
               continuation.resume()
               return
             }
-
+            
             switch completion {
             case .finished:
               // Check if we received any data at all
@@ -137,7 +137,7 @@ final class StreamProcessor {
                   onError(error)
                 }
               }
-
+              
               // Commit the pending session ID now that stream completed successfully
               if let pending = self.pendingSessionId {
                 ClaudeCodeLogger.shared.stream("Stream finished. Committing pending session ID: \(pending)")
@@ -171,17 +171,17 @@ final class StreamProcessor {
               }
             case .failure(let error):
               self.logger.error("Stream failed with error: \(error.localizedDescription)")
-
+              
               // Discard pending session ID since stream failed
               if let pending = self.pendingSessionId {
                 // Discarding pending session ID since stream failed
                 self.pendingSessionId = nil
               }
-
+              
               // Clean up any partial messages
               if state.assistantMessageCreated {
                 let finalMessageId = state.currentLocalMessageId ?? messageId
-
+                
                 // If we have partial content, mark it as incomplete with error indicator
                 if !state.contentBuffer.isEmpty {
                   self.messageStore.updateMessage(
@@ -194,7 +194,7 @@ final class StreamProcessor {
                   self.messageStore.removeMessage(id: finalMessageId)
                 }
               }
-
+              
               // Call the error handler if provided
               onError?(error)
             }
@@ -213,7 +213,7 @@ final class StreamProcessor {
             self.processChunk(chunk, messageId: messageId, state: state, firstMessageInSession: firstMessageInSession, onTokenUsageUpdate: onTokenUsageUpdate, onCostUpdate: onCostUpdate)
           }
         )
-
+      
       if let subscription = subscription {
         subscription.store(in: &cancellables)
       }
@@ -257,15 +257,9 @@ final class StreamProcessor {
       let mcpServers = initMessage.mcpServers.map { (name: $0.name, status: $0.status) }
       MCPToolsDiscoveryService.shared.parseToolsFromInitMessage(tools: tools, mcpServers: mcpServers)
       
-      // Update global preferences with discovered tools
+      // Reconcile discovered tools with stored preferences
       if let preferences = globalPreferences {
-        let allTools = MCPToolsDiscoveryService.shared.getAllAvailableTools()
-        // Store the discovered MCP tools in preferences
-        var mcpTools: [String: [String]] = [:]
-        for (server, serverTools) in allTools where server != "Claude Code" {
-          mcpTools[server] = serverTools
-        }
-        preferences.mcpServerTools = mcpTools
+        preferences.reconcileTools(with: MCPToolsDiscoveryService.shared)
       }
       
       logger.info("Discovered tools from init message: \(tools.count) tools")
@@ -288,14 +282,14 @@ final class StreamProcessor {
         // DON'T update immediately - wait for successful completion
         // Store as pending - will only commit if stream completes successfully
         ClaudeCodeLogger.shared.stream("handleInit - Claude returned different session ID. Current: \(sessionManager.currentSessionId ?? "nil"), New: \(initMessage.sessionId). Setting as pending...")
-
+        
         // Check if this is likely a restored session scenario
         // In restored sessions, Claude doesn't know about our local session ID
         let isLikelyRestoredSession = sessionManager.currentSessionId != nil
         if isLikelyRestoredSession {
           ClaudeCodeLogger.shared.stream("handleInit - WARNING: This appears to be a restored session. Claude doesn't recognize our local ID.")
         }
-
+        
         pendingSessionId = initMessage.sessionId
         let log = "Session chain pending: '\(sessionManager.currentSessionId ?? "nil")' → '\(initMessage.sessionId)'"
         logger.debug("\(log)")

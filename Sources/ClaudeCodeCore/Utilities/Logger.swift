@@ -27,6 +27,7 @@ public final class ClaudeCodeLogger {
     case chat = "CHAT"
     case messages = "MESSAGES"
     case container = "CONTAINER"
+    case preferences = "PREFERENCES"
   }
 
   // MARK: - Initialization
@@ -74,5 +75,10 @@ public final class ClaudeCodeLogger {
   /// Log a container-related message
   public func container(_ message: String) {
     log(.container, message)
+  }
+
+  /// Log a preferences-related message
+  public func preferences(_ message: String) {
+    log(.preferences, message)
   }
 }

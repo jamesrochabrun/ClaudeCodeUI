@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ToolsSelectionView: View {
   @Environment(\.dismiss) private var dismiss
+  @Environment(GlobalPreferencesStorage.self) private var globalPreferences
   @Binding var selectedTools: Set<String>
   @Binding var selectedMCPTools: [String: Set<String>]
   let availableToolsByServer: [String: [String]]
@@ -18,6 +19,35 @@ struct ToolsSelectionView: View {
   var body: some View {
     NavigationStack {
       VStack(spacing: 0) {
+        // Show corruption warning if applicable
+        if globalPreferences.hasCorruptedPreferences {
+          HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+              .foregroundColor(.orange)
+              .imageScale(.large)
+            VStack(alignment: .leading, spacing: 4) {
+              Text("Recovering from Corrupted Preferences")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+              Text("Your previous preferences file was corrupted. Please reconfigure your tool selections.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+              Text("For safety, all tools require permission until you save new preferences.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            }
+            Spacer()
+          }
+          .padding()
+          .background(Color.orange.opacity(0.15))
+          .overlay(
+            Rectangle()
+              .frame(height: 1)
+              .foregroundColor(Color.orange.opacity(0.3)),
+            alignment: .bottom
+          )
+        }
+        
         // Informational header
         VStack(alignment: .leading, spacing: 8) {
           Text("Configure Tool Auto-Approval")
