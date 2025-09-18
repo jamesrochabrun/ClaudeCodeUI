@@ -201,6 +201,20 @@ public final class ChatViewModel {
   /// Updates the Claude command when global preferences change
   public func updateClaudeCommand(from globalPreferences: GlobalPreferencesStorage) {
     claudeClient.configuration.command = globalPreferences.claudeCommand
+
+    // Add manual Claude path if specified
+    if !globalPreferences.claudePath.isEmpty {
+      // Validate that the file exists
+      if FileManager.default.fileExists(atPath: globalPreferences.claudePath) {
+        let url = URL(fileURLWithPath: globalPreferences.claudePath)
+        let directory = url.deletingLastPathComponent().path
+
+        // Insert at the beginning for highest priority (if not already present)
+        if !claudeClient.configuration.additionalPaths.contains(directory) {
+          claudeClient.configuration.additionalPaths.insert(directory, at: 0)
+        }
+      }
+    }
   }
   
   // MARK: - Public Methods
