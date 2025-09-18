@@ -204,7 +204,29 @@ public final class ChatViewModel {
   }
   
   // MARK: - Public Methods
-  
+  /// Retries the last user message with all its original data
+  public func retryLastMessage() {
+    guard let lastUserMessage = messages.last(where: { $0.role == .user }) else { return }
+
+    // Extract the original data from the stored message
+    let text = lastUserMessage.content
+    let codeSelections = lastUserMessage.codeSelections
+
+    // Convert stored attachments back to FileAttachments
+    let attachments: [FileAttachment]? = lastUserMessage.attachments?.compactMap { stored in
+      // Create FileAttachment from the stored file path
+      let fileURL = URL(fileURLWithPath: stored.filePath)
+      let attachment = FileAttachment(url: fileURL)
+      // Set the state to ready since we're just referencing the file path
+      attachment.state = .ready(content: .image(path: stored.filePath, base64URL: "", thumbnailBase64: nil))
+      return attachment
+    }
+
+    // Note: We lose context and hiddenContext on retry since they weren't stored
+    // This is acceptable as the context was likely from clipboard/Xcode at the time
+    sendMessage(text, context: nil, hiddenContext: nil, codeSelections: codeSelections, attachments: attachments)
+  }
+
   /// Sends a new message to Claude
   /// - Parameters:
   ///   - text: The message text to send

@@ -90,17 +90,34 @@ final class StreamProcessor {
       // Set up a timeout to detect if no data is received
       var timeoutTask: Task<Void, Never>?
       var hasReceivedData = false
+      var subscription: AnyCancellable?
 
-      timeoutTask = Task {
-        try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 seconds
+      timeoutTask = Task { [weak self] in
+        try? await Task.sleep(nanoseconds: 25_000_000_000) // 25 seconds
         if !hasReceivedData && !Task.isCancelled {
+          guard let self = self else { return }
           self.logger.error("Stream timeout - no data received within 5 seconds")
+
+          // Cancel the stream subscription to prevent completion handler from running
+          subscription?.cancel()
+          self.cancellables.removeAll()
+
+          // Clear any pending session ID since the stream timed out
+          if let pending = self.pendingSessionId {
+            ClaudeCodeLogger.shared.stream("Timeout occurred - discarding pending session ID: \(pending)")
+            self.pendingSessionId = nil
+          }
+
+          // Clear the active continuation reference before resuming
+          self.activeContinuation = nil
+
+          // Call error handler and resume continuation
           onError?(ClaudeCodeError.timeout(5.0))
           continuation.resume()
         }
       }
 
-      let subscription = publisher
+      subscription = publisher
         .receive(on: DispatchQueue.main)
         .sink(
           receiveCompletion: { [weak self] completion in
@@ -197,7 +214,9 @@ final class StreamProcessor {
           }
         )
 
-      subscription.store(in: &cancellables)
+      if let subscription = subscription {
+        subscription.store(in: &cancellables)
+      }
     }
   }
   
