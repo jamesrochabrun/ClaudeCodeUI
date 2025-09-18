@@ -165,7 +165,6 @@ public struct ChatScreen: View {
     }
     .onChange(of: keyboardManager.capturedText, keyboardTextChanged)
     .onChange(of: keyboardManager.shouldFocusTextEditor, focusTextEditorChanged)
-    .focusedValue(\.toggleSidebar, toggleSidebar)
   }
   
   // MARK: - Subviews
@@ -175,10 +174,8 @@ public struct ChatScreen: View {
     ErrorToastContainer(
       errorQueue: $viewModel.errorQueue,
       onRetry: {
-        // Clear error and retry last operation if possible
-        if let lastMessage = viewModel.messages.last(where: { $0.role == .user }) {
-          viewModel.sendMessage(lastMessage.content)
-        }
+        // Retry the last message with all its original data
+        viewModel.retryLastMessage()
       },
       isDebugEnabled: viewModel.isDebugEnabled
     )
