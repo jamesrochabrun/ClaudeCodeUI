@@ -6,8 +6,6 @@ A beautiful, native macOS application and Swift Package providing a graphical in
 
 [**Download Latest Release (v1.4.6)**](https://github.com/jamesrochabrun/ClaudeCodeUI/releases/download/v1.4.6/ClaudeCodeUI.dmg)
 
-![ClaudeCodeUI Demo](https://github.com/user-attachments/assets/d4a1c15f-252e-49b0-88bd-fec92a4c491b)
-
 ## Features
 
 - 🎨 **Native macOS Design** - Beautiful SwiftUI interface that feels right at home on macOS
