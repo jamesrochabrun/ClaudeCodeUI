@@ -739,19 +739,19 @@ public final class ChatViewModel {
       let log = "Starting new conversation while session '\(existingId)' exists"
       logger.warning("\(log)")
     }
-    
+
     if isDebugEnabled {
       logger.info("Starting new conversation")
     }
-    
+
     let options = createOptions()
-    
+
     let result = try await claudeClient.runSinglePrompt(
       prompt: prompt,
       outputFormat: .streamJson,
       options: options
     )
-    
+
     await processResult(result, messageId: messageId)
   }
   
@@ -791,19 +791,78 @@ public final class ChatViewModel {
     
     // Start with the allowed tools from preferences
     var allowedTools = globalPreferences.allowedTools
-    
-    // Always ensure the approval tool is in the allowed list
+
+    // Only add approval tool if the approval server exists in MCP config
     let approvalToolName = "mcp__approval_server__approval_prompt"
-    if !allowedTools.contains(approvalToolName) {
-      if isDebugEnabled {
-        let log = "Adding approval tool to allowed tools: \(approvalToolName)"
-        logger.debug("\(log)")
+
+    // Always check if approval server is configured (it might be auto-added on app launch)
+    let configManager = MCPConfigurationManager()
+    if configManager.configuration.mcpServers["approval_server"] != nil {
+      // Approval server is configured, add the tool if not already present
+      if !allowedTools.contains(approvalToolName) {
+        if isDebugEnabled {
+          let log = "Adding approval tool to allowed tools: \(approvalToolName)"
+          logger.debug("\(log)")
+        }
+        allowedTools.append(approvalToolName)
       }
-      allowedTools.append(approvalToolName)
+    } else {
+      if isDebugEnabled {
+        logger.debug("Approval server not configured in MCP - skipping approval tool")
+      }
+
+      // Show error to user with recovery option
+      let configError = NSError(
+        domain: "MCPConfiguration",
+        code: 1001,
+        userInfo: [NSLocalizedDescriptionKey: "Approval server not configured in MCP"]
+      )
+
+      let errorInfo = ErrorInfo(
+        error: configError,
+        severity: .warning,
+        context: "MCP Approval Tool",
+        recoverySuggestion: "The approval server is not configured. Tool approvals won't work until this is fixed. Click 'Fix' to repair the configuration.",
+        operation: .configuration,
+        recoveryAction: { [weak self] in
+          // Re-run the config update
+          let mcpConfigManager = MCPConfigurationManager()
+          mcpConfigManager.updateApprovalServerPath()
+
+          // Check if it worked
+          if mcpConfigManager.configuration.mcpServers["approval_server"] != nil {
+            // The config was updated successfully
+            self?.logger.info("MCP approval server configuration repaired successfully")
+
+            // Clear any existing errors and show success
+            self?.errorQueue.removeAll { $0.displayMessage.contains("Approval server") }
+          } else {
+            // Still couldn't configure - binary might be missing
+            let binaryError = NSError(
+              domain: "MCPConfiguration",
+              code: 1002,
+              userInfo: [NSLocalizedDescriptionKey: "ApprovalMCPServer binary not found in app bundle. Please rebuild the app."]
+            )
+            self?.errorQueue.append(ErrorInfo(
+              error: binaryError,
+              severity: .error,
+              context: "MCP Approval Tool",
+              recoverySuggestion: "The approval server binary is missing. Rebuild the app with Xcode to bundle it.",
+              operation: .configuration
+            ))
+          }
+        }
+      )
+      errorQueue.append(errorInfo)
     }
-    
+
+    // Configure chat options with global preferences
     options.allowedTools = allowedTools
+
+    // Set the maximum number of turns for the conversation
     options.maxTurns = globalPreferences.maxTurns
+
+    // Apply user-defined system prompt if provided
     if !globalPreferences.systemPrompt.isEmpty {
       options.systemPrompt = globalPreferences.systemPrompt
     }
@@ -893,19 +952,9 @@ public final class ChatViewModel {
   }
   
   
+  @MainActor
   func handleError(_ error: Error, operation: ErrorOperation = .general) {
     logger.error("Error: \(error.localizedDescription)")
-
-    if isDebugEnabled {
-      logger.debug("[DEBUG] handleError called with error: \(error.localizedDescription), operation: \(String(describing: operation))")
-      logger.debug("[DEBUG] Error type: \(String(describing: type(of: error)))")
-      logger.debug("[DEBUG] Full error: \(String(describing: error))")
-
-      // Log specific ClaudeCodeError details
-      if let claudeError = error as? ClaudeCodeError {
-        logger.debug("[DEBUG] ClaudeCodeError case: \(String(describing: claudeError))")
-      }
-    }
 
     // Create detailed error info based on operation type
     var errorInfo: ErrorInfo
@@ -968,10 +1017,6 @@ public final class ChatViewModel {
 
     self.errorInfo = errorInfo
     self.errorQueue.append(errorInfo)
-    if isDebugEnabled {
-      logger.debug("[DEBUG] Error added to queue. Queue count: \(self.errorQueue.count)")
-      logger.debug("[DEBUG] Error info: \(errorInfo.displayMessage), severity: \(String(describing: errorInfo.severity))")
-    }
     self.isLoading = false
     self.streamingStartTime = nil
 

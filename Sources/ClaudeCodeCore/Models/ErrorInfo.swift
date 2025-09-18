@@ -17,6 +17,7 @@ public struct ErrorInfo: Identifiable, Equatable {
   public let recoverySuggestion: String?
   public let timestamp: Date
   public let operation: ErrorOperation
+  public let recoveryAction: (() -> Void)?
 
   public var displayMessage: String {
     // For ClaudeCodeError, use its localizedDescription which has the actual error details
@@ -31,7 +32,8 @@ public struct ErrorInfo: Identifiable, Equatable {
     severity: ErrorSeverity = .error,
     context: String,
     recoverySuggestion: String? = nil,
-    operation: ErrorOperation = .general
+    operation: ErrorOperation = .general,
+    recoveryAction: (() -> Void)? = nil
   ) {
     self.error = error
     self.severity = severity
@@ -39,9 +41,10 @@ public struct ErrorInfo: Identifiable, Equatable {
     self.recoverySuggestion = recoverySuggestion
     self.timestamp = Date()
     self.operation = operation
+    self.recoveryAction = recoveryAction
   }
 
-  // Equatable conformance (excluding id and timestamp for logical equality)
+  // Equatable conformance (excluding id, timestamp, and recoveryAction for logical equality)
   public static func == (lhs: ErrorInfo, rhs: ErrorInfo) -> Bool {
     lhs.displayMessage == rhs.displayMessage &&
     lhs.severity == rhs.severity &&

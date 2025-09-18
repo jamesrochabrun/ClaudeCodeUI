@@ -22,6 +22,7 @@ public struct ClaudeCodeContainer: View {
       claudeCodeStorage: customStorage,
       globalPreferences: GlobalPreferencesStorage() // Temporary, will be replaced
     )
+    ClaudeCodeLogger.shared.configure(enableDebugLogging: claudeCodeConfiguration.enableDebugLogging)
   }
   
   // MARK: Public
@@ -79,6 +80,20 @@ public struct ClaudeCodeContainer: View {
   private func initializeClaudeCodeUI() async {
 
     let globalPrefs = GlobalPreferencesStorage()
+
+    // Update MCP configuration to ensure approval server path is correct
+    await MainActor.run {
+      let mcpConfigManager = MCPConfigurationManager()
+      mcpConfigManager.updateApprovalServerPath()
+
+      // Ensure the MCP config path is set in global preferences
+      if globalPrefs.mcpConfigPath.isEmpty {
+        if let configPath = mcpConfigManager.getConfigurationPath() {
+          globalPrefs.mcpConfigPath = configPath
+          ClaudeCodeLogger.shared.log(.container, "[ClaudeCodeContainer] Set MCP config path to: \(configPath)")
+        }
+      }
+    }
 
     // If the injected configuration has a non-default command, update global preferences with it
     // This respects the injected configuration while still allowing user to override later

@@ -94,6 +94,20 @@ public struct ErrorToast: View {
 
       // Action buttons
       HStack(spacing: 8) {
+        // Recovery action button (if available)
+        if let recoveryAction = errorInfo.recoveryAction {
+          Button(action: {
+            timer?.invalidate()
+            recoveryAction()
+            onDismiss()
+          }) {
+            Label("Fix", systemImage: "wrench.and.screwdriver")
+              .font(.system(size: 12))
+          }
+          .buttonStyle(.borderedProminent)
+          .controlSize(.small)
+        }
+
         if onRetry != nil {
           Button(action: {
             timer?.invalidate()
@@ -249,11 +263,6 @@ public struct ErrorToastContainer: View {
   }
 
   public var body: some View {
-    #if DEBUG
-    if isDebugEnabled {
-      let _ = print("[DEBUG] ErrorToastContainer - Queue count: \(errorQueue.count)")
-    }
-    #endif
     return GeometryReader { _ in
       VStack {
         Spacer()
