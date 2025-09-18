@@ -895,9 +895,6 @@ public final class ChatViewModel {
     // Configure chat options with global preferences
     options.allowedTools = allowedTools
 
-    // Set the maximum number of turns for the conversation
-    options.maxTurns = globalPreferences.maxTurns
-
     // Apply user-defined system prompt if provided
     if !globalPreferences.systemPrompt.isEmpty {
       options.systemPrompt = globalPreferences.systemPrompt

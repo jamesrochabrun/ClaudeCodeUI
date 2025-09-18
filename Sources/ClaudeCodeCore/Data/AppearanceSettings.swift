@@ -14,7 +14,6 @@ import Observation
 public final class AppearanceSettings {
   // MARK: - Constants
   private enum Keys {
-    static let colorScheme = "colorScheme"
     static let fontSize = "fontSize"
     static let selectedTheme = "selectedTheme"
     static let customPrimaryHex = "customPrimaryHex"
@@ -23,7 +22,6 @@ public final class AppearanceSettings {
   }
   
   private enum Defaults {
-    static let colorScheme = "system"
     static let fontSize: Double = 12.0
     static let theme: AppTheme = .claude
     static let customPrimaryHex = "#7C3AED"   // purple
@@ -32,12 +30,6 @@ public final class AppearanceSettings {
   }
   
   // MARK: - Properties
-  var colorScheme: String {
-    didSet {
-      UserDefaults.standard.set(colorScheme, forKey: Keys.colorScheme)
-    }
-  }
-  
   var fontSize: Double {
     didSet {
       UserDefaults.standard.set(fontSize, forKey: Keys.fontSize)
@@ -69,7 +61,6 @@ public final class AppearanceSettings {
   
   // MARK: - Initialization
   init() {
-    self.colorScheme = UserDefaults.standard.string(forKey: Keys.colorScheme) ?? Defaults.colorScheme
     let storedFontSize = UserDefaults.standard.double(forKey: Keys.fontSize)
     self.fontSize = storedFontSize != 0 ? storedFontSize : Defaults.fontSize
     

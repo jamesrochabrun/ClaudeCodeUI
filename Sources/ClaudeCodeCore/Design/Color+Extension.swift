@@ -10,7 +10,7 @@ import AppKit
 public enum AppTheme: String, CaseIterable, Identifiable {
   case claude = "claude"
   case bat = "bat"
-  case xcode = "xcode"
+  case xcode = "Blue"
   case custom = "custom"
   
   public var id: String { rawValue }
@@ -19,7 +19,7 @@ public enum AppTheme: String, CaseIterable, Identifiable {
     switch self {
     case .claude: return "Claude"
     case .bat: return "Bat"
-    case .xcode: return "Xcode"
+    case .xcode: return "Blue"
     case .custom: return "Custom"
     }
   }

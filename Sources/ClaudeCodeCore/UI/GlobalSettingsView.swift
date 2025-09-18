@@ -34,7 +34,6 @@ struct GlobalSettingsView: View {
     static let tabPaddingHorizontal: CGFloat = 20
     static let tabPaddingVertical: CGFloat = 10
     static let segmentedPickerWidth: CGFloat = 200
-    static let maxTurnsFieldWidth: CGFloat = 80
     static let textEditorHeight: CGFloat = 100
   }
   
@@ -54,7 +53,7 @@ struct GlobalSettingsView: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(GlobalPreferencesStorage.self) private var globalPreferences
   @State private var appearanceSettings = AppearanceSettings()
-  @State private var selectedTab = Tab.appearance.rawValue
+  @State private var selectedTab = Tab.preferences.rawValue
   @State private var showingToolsEditor = false
   @State private var showingMCPConfig = false
   @State private var selectedTools: Set<String> = []
@@ -88,7 +87,6 @@ struct GlobalSettingsView: View {
       mcpConfigurationSheet
     }
     .onAppear {
-      // Initialize selected tools from allowed tools
       let claudeTools = ClaudeCodeTool.allCases.map { $0.rawValue }
       selectedTools = Set(globalPreferences.allowedTools.filter { claudeTools.contains($0) })
       selectedMCPTools = globalPreferences.selectedMCPTools
@@ -129,9 +127,10 @@ struct GlobalSettingsView: View {
   private var toolsSelectionSheet: some View {
     ToolsSelectionView(
       selectedTools: Binding(
-        get: { 
+        get: {
           // Filter Claude Code tools from allowedTools (exclude MCP tools)
-          return Set(globalPreferences.allowedTools.filter { !$0.hasPrefix("mcp__") })
+          let tools = Set(globalPreferences.allowedTools.filter { !$0.hasPrefix("mcp__") })
+          return tools
         },
         set: { newTools in
           // Combine Claude Code tools with selected MCP tools (properly formatted)
@@ -221,7 +220,6 @@ struct GlobalSettingsView: View {
       defaultWorkingDirectoryRow
       claudeCommandRow
       claudePathRow
-      maxTurnsRow
       if uiConfiguration.showSystemPromptFields {
         systemPromptRow
       }
@@ -362,18 +360,6 @@ struct GlobalSettingsView: View {
   }
 
   @ViewBuilder
-  private var maxTurnsRow: some View {
-    @Bindable var preferences = globalPreferences
-    HStack {
-      Text("Max Turns")
-      Spacer()
-      TextField("Max Turns", value: $preferences.maxTurns, format: .number)
-        .textFieldStyle(.roundedBorder)
-        .frame(width: Layout.maxTurnsFieldWidth)
-    }
-  }
-  
-  @ViewBuilder
   private var systemPromptRow: some View {
     @Bindable var preferences = globalPreferences
     VStack(alignment: .leading, spacing: 8) {
@@ -401,9 +387,60 @@ struct GlobalSettingsView: View {
         }
         .buttonStyle(.bordered)
       }
-      Text("\(globalPreferences.allowedTools.count) tools auto-approved (no permission prompts)")
-        .font(.caption)
-        .foregroundColor(.secondary)
+
+      // Show corruption warning if preferences are corrupted
+      if globalPreferences.hasCorruptedPreferences {
+        VStack(alignment: .leading, spacing: 8) {
+          HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+              .foregroundColor(.orange)
+              .imageScale(.large)
+            VStack(alignment: .leading, spacing: 4) {
+              Text("Preferences File Corrupted")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(.orange)
+              Text("Your preferences file was corrupted. For safety, no tools are auto-approved.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+              if let error = globalPreferences.corruptionError {
+                Text(error.localizedDescription)
+                  .font(.caption2)
+                  .foregroundColor(.secondary)
+                  .italic()
+              }
+            }
+            Spacer()
+          }
+          .padding(12)
+          .background(Color.orange.opacity(0.1))
+          .cornerRadius(8)
+
+          HStack(spacing: 12) {
+            if globalPreferences.hasBackupAvailable {
+              Button("Restore from Backup") {
+                if globalPreferences.restoreFromBackup() {
+                  // Successfully restored
+                  showingToolsEditor = false
+                }
+              }
+              .buttonStyle(.bordered)
+            }
+
+            Button("Reset and Reconfigure") {
+              globalPreferences.resetAfterCorruption()
+              showingToolsEditor = true
+            }
+            .buttonStyle(.borderedProminent)
+            .foregroundColor(.white)
+            .tint(.orange)
+          }
+        }
+      } else {
+        Text("\(globalPreferences.allowedTools.count) tools auto-approved (no permission prompts)")
+          .font(.caption)
+          .foregroundColor(.secondary)
+      }
     }
   }
   
