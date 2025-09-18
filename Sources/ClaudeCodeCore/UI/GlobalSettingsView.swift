@@ -399,11 +399,42 @@ struct GlobalSettingsView: View {
     }
   }
 
+  private func repairMCPApprovalServer() {
+    let mcpConfigManager = MCPConfigurationManager()
+    mcpConfigManager.updateApprovalServerPath()
+
+    // Check if it worked
+    if mcpConfigManager.configuration.mcpServers["approval_server"] != nil {
+      // Success - show an alert
+      let alert = NSAlert()
+      alert.messageText = "MCP Configuration Repaired"
+      alert.informativeText = "The approval server has been successfully configured. Tool approvals will now work properly."
+      alert.alertStyle = .informational
+      alert.addButton(withTitle: "OK")
+      alert.runModal()
+    } else {
+      // Failed - show error alert
+      let alert = NSAlert()
+      alert.messageText = "Repair Failed"
+      alert.informativeText = "Could not configure the approval server. The ApprovalMCPServer binary may be missing from the app bundle. Please rebuild the app with Xcode."
+      alert.alertStyle = .warning
+      alert.addButton(withTitle: "OK")
+      alert.runModal()
+    }
+  }
+
   // MARK: - Helper Views
   private var mcpConfigurationControls: some View {
     HStack {
       mcpConfigurationStatus
-      
+
+      // Repair button for approval server
+      Button(action: repairMCPApprovalServer) {
+        Label("Repair", systemImage: "wrench.and.screwdriver")
+      }
+      .buttonStyle(.bordered)
+      .help("Repair MCP approval server configuration")
+
       Button("Configure") {
         showingMCPConfig = true
       }

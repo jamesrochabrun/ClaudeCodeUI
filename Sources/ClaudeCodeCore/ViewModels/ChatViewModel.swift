@@ -810,6 +810,50 @@ public final class ChatViewModel {
       if isDebugEnabled {
         logger.debug("Approval server not configured in MCP - skipping approval tool")
       }
+
+      // Show error to user with recovery option
+      let configError = NSError(
+        domain: "MCPConfiguration",
+        code: 1001,
+        userInfo: [NSLocalizedDescriptionKey: "Approval server not configured in MCP"]
+      )
+
+      let errorInfo = ErrorInfo(
+        error: configError,
+        severity: .warning,
+        context: "MCP Approval Tool",
+        recoverySuggestion: "The approval server is not configured. Tool approvals won't work until this is fixed. Click 'Fix' to repair the configuration.",
+        operation: .configuration,
+        recoveryAction: { [weak self] in
+          // Re-run the config update
+          let mcpConfigManager = MCPConfigurationManager()
+          mcpConfigManager.updateApprovalServerPath()
+
+          // Check if it worked
+          if mcpConfigManager.configuration.mcpServers["approval_server"] != nil {
+            // The config was updated successfully
+            self?.logger.info("MCP approval server configuration repaired successfully")
+
+            // Clear any existing errors and show success
+            self?.errorQueue.removeAll { $0.displayMessage.contains("Approval server") }
+          } else {
+            // Still couldn't configure - binary might be missing
+            let binaryError = NSError(
+              domain: "MCPConfiguration",
+              code: 1002,
+              userInfo: [NSLocalizedDescriptionKey: "ApprovalMCPServer binary not found in app bundle. Please rebuild the app."]
+            )
+            self?.errorQueue.append(ErrorInfo(
+              error: binaryError,
+              severity: .error,
+              context: "MCP Approval Tool",
+              recoverySuggestion: "The approval server binary is missing. Rebuild the app with Xcode to bundle it.",
+              operation: .configuration
+            ))
+          }
+        }
+      )
+      errorQueue.append(errorInfo)
     }
 
     // Configure chat options with global preferences
