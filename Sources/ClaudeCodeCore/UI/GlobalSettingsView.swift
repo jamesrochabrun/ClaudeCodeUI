@@ -220,6 +220,7 @@ struct GlobalSettingsView: View {
     Section("ClaudeCode Configuration") {
       defaultWorkingDirectoryRow
       claudeCommandRow
+      claudePathRow
       maxTurnsRow
       if uiConfiguration.showSystemPromptFields {
         systemPromptRow
@@ -326,6 +327,37 @@ struct GlobalSettingsView: View {
       Text("The command to execute Claude Code (default: 'claude')")
         .font(.caption)
         .foregroundColor(.secondary)
+    }
+  }
+
+  @ViewBuilder
+  private var claudePathRow: some View {
+    @Bindable var preferences = globalPreferences
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Claude Path (Advanced)")
+      HStack {
+        TextField("Path to Claude executable", text: $preferences.claudePath)
+          .textFieldStyle(.roundedBorder)
+          .font(.system(.body, design: .monospaced))
+
+        if !preferences.claudePath.isEmpty {
+          Button("Clear") {
+            preferences.claudePath = ""
+          }
+          .foregroundColor(.orange)
+        }
+      }
+      VStack(alignment: .leading, spacing: 4) {
+        Text("⚠️ Only use this if you see 'Claude not installed' errors")
+          .font(.caption)
+          .foregroundColor(.orange)
+        Text("Run 'which claude' in Terminal and paste the output here")
+          .font(.caption)
+          .foregroundColor(.secondary)
+        Text("Example: /Users/you/.nvm/versions/node/v22.16.0/bin/claude")
+          .font(.caption)
+          .foregroundColor(.secondary.opacity(0.7))
+      }
     }
   }
 
