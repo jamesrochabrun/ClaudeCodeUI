@@ -13,11 +13,6 @@ let package = Package(
         .library(
             name: "ClaudeCodeCore",
             targets: ["ClaudeCodeCore"]
-        ),
-        // Executable for running the macOS app via SPM
-        .executable(
-            name: "ClaudeCodeUI",
-            targets: ["ClaudeCodeUI"]
         )
     ],
     dependencies: [
@@ -149,16 +144,7 @@ let package = Package(
                 .swiftLanguageMode(.v5)
             ]
         ),
-        
-        // Minimal executable target that uses the core library
-        .executableTarget(
-            name: "ClaudeCodeUI",
-            dependencies: [
-                .target(name: "ClaudeCodeCore")
-            ],
-            path: "Sources/ClaudeCodeUI"
-        ),
-        
+
         // Test targets
         .testTarget(
             name: "ClaudeCodeCoreTests",

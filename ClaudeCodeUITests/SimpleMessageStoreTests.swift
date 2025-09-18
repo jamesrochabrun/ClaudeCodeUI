@@ -7,7 +7,7 @@
 
 import Testing
 import Foundation
-@testable import ClaudeCodeUI
+@testable import ClaudeCodeCore
 
 // Simple tests that don't require SDK types
 struct SimpleMessageStoreTests {
@@ -43,21 +43,6 @@ struct SimpleMessageStoreTests {
     // Clear
     store.clear()
     #expect(store.messages.isEmpty)
-  }
-  
-  @Test
-  @MainActor
-  func testSessionManagerBasics() async throws {
-    let sessionStorage = UserDefaultsSessionStorage()
-    let manager = SessionManager(sessionStorage: sessionStorage)
-    
-    #expect(manager.currentSessionId == nil)
-    
-    manager.startNewSession(id: "test-123", firstMessage: "Test message")
-    #expect(manager.currentSessionId == "test-123")
-    
-    manager.clearSession()
-    #expect(manager.currentSessionId == nil)
   }
   
   @Test

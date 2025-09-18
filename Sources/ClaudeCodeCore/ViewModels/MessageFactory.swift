@@ -9,7 +9,7 @@ import Foundation
 import SwiftAnthropic
 
 /// Factory for creating different types of chat messages
-struct MessageFactory {
+public struct MessageFactory {
   
   /// Creates a user message with the specified content
   /// - Parameters:

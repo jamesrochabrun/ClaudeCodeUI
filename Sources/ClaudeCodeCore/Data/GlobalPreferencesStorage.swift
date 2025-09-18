@@ -190,7 +190,7 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     showDetailedPermissionInfo = true
     permissionRequestTimeout = 240.0
     permissionTimeoutEnabled = false
-    maxConcurrentPermissionRequests = 5
+    maxConcurrentPermissionRequests = 50
     mcpServerTools = [:]
     selectedMCPTools = [:]
   }

@@ -11,7 +11,7 @@ import Observation
 
 @Observable
 @MainActor
-final class AppearanceSettings {
+public final class AppearanceSettings {
   // MARK: - Constants
   private enum Keys {
     static let colorScheme = "colorScheme"

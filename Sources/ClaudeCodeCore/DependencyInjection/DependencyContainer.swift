@@ -60,37 +60,18 @@ public final class DependencyContainer {
   ///   - globalPreferences: The global preferences storage instance
   ///   - customSessionStorage: Optional custom implementation of SessionStorageProtocol.
   ///     If nil, the default storage will be selected based on available Claude CLI storage.
-  ///   - useNoOpStorage: When true, uses NoOpSessionStorage to avoid any session loading overhead.
-  ///     Ideal for direct ChatScreen usage without session management.
   public init(
     globalPreferences: GlobalPreferencesStorage,
-    customSessionStorage: SessionStorageProtocol? = nil,
-    useNoOpStorage: Bool = false
-  ) {
+    customSessionStorage: SessionStorageProtocol? = nil)
+  {
     self.settingsStorage = SettingsStorageManager()
     
-    // Determine which session storage to use
-    if useNoOpStorage {
-      // Use no-op storage for lightweight initialization (direct ChatScreen usage)
-      self.sessionStorage = NoOpSessionStorage()
-      print("[DependencyContainer] Using NoOp session storage (no session management)")
-    } else if let customStorage = customSessionStorage {
+    if let customStorage = customSessionStorage {
       // Use custom storage if provided
       self.sessionStorage = customStorage
       print("[DependencyContainer] Using custom session storage")
     } else {
-      // Use native Claude session storage when available
-      // Try to use native storage, fallback to UserDefaults if needed
-      if FileManager.default.fileExists(atPath: NSHomeDirectory() + "/.claude/projects") {
-        // Native Claude CLI storage is available - don't specify a project path initially
-        // This allows us to show ALL projects in the hierarchical view
-        self.sessionStorage = ClaudeNativeStorageAdapter(projectPath: nil)
-        print("[DependencyContainer] Using native Claude session storage (global mode)")
-      } else {
-        // Fallback to UserDefaults storage
-        self.sessionStorage = UserDefaultsSessionStorage()
-        print("[DependencyContainer] Using UserDefaults session storage (Claude CLI storage not found)")
-      }
+      self.sessionStorage = NoOpSessionStorage()
     }
     
     self.globalPreferences = globalPreferences
@@ -176,8 +157,6 @@ public final class DependencyContainer {
   public static func forDirectChatScreen(globalPreferences: GlobalPreferencesStorage) -> DependencyContainer {
     return DependencyContainer(
       globalPreferences: globalPreferences,
-      customSessionStorage: nil,
-      useNoOpStorage: true // Use NoOp storage to avoid any file system checks
-    )
+      customSessionStorage: nil)
   }
 }
