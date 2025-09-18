@@ -54,7 +54,7 @@ struct GlobalSettingsView: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(GlobalPreferencesStorage.self) private var globalPreferences
   @State private var appearanceSettings = AppearanceSettings()
-  @State private var selectedTab = Tab.appearance.rawValue
+  @State private var selectedTab = Tab.preferences.rawValue
   @State private var showingToolsEditor = false
   @State private var showingMCPConfig = false
   @State private var selectedTools: Set<String> = []

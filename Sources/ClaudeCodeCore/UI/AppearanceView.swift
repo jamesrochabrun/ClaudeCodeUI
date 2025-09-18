@@ -17,19 +17,6 @@ struct AppearanceView: View {
     static let sectionPadding: CGFloat = 4
   }
   
-  private enum ColorScheme: String, CaseIterable {
-    case system = "system"
-    case light = "light"
-    case dark = "dark"
-    
-    var displayName: String {
-      switch self {
-      case .system: return "System"
-      case .light: return "Light"
-      case .dark: return "Dark"
-      }
-    }
-  }
   
   // MARK: - Properties
   @Bindable var appearanceSettings: AppearanceSettings
@@ -54,26 +41,12 @@ struct AppearanceView: View {
   
   private var appearanceSection: some View {
     Section("Appearance") {
-      colorSchemePicker
       themePicker
       fontSizeControls
     }
   }
-  
-  private var colorSchemePicker: some View {
-    Picker("Color Scheme", selection: $appearanceSettings.colorScheme) {
-      ForEach(ColorScheme.allCases, id: \.rawValue) { scheme in
-        Text(scheme.displayName).tag(scheme.rawValue)
-      }
-    }
-    .pickerStyle(.segmented)
-  }
-  
   private var themePicker: some View {
     VStack(alignment: .leading, spacing: Layout.sectionSpacing) {
-      Text("Theme")
-        .fontWeight(.medium)
-      
       Picker("Theme", selection: $appearanceSettings.selectedTheme) {
         ForEach(AppTheme.allCases) { theme in
           Text(theme.displayName)
