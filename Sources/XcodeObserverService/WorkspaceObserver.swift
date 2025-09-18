@@ -44,10 +44,11 @@ final class WorkspaceWindowObserver: WindowObserver {
   ) -> URL? {
     let path = window.document
     if let path = path?.removingPercentEncoding {
-      return URL(
+      let url = URL(
         fileURLWithPath: path
           .replacingOccurrences(of: "file://", with: "")
       )
+      return url
     }
     return nil
   }
@@ -60,7 +61,8 @@ final class WorkspaceWindowObserver: WindowObserver {
       if let description = child.description, description.starts(with: "/"), description.count > 1 {
         let path = description
         let trimmedNewLine = path.trimmingCharacters(in: .newlines)
-        return URL(fileURLWithPath: trimmedNewLine)
+        let url = URL(fileURLWithPath: trimmedNewLine)
+        return url
       }
     }
     return nil
@@ -91,7 +93,9 @@ final class WorkspaceWindowObserver: WindowObserver {
         skipDescendants: { $0.role == kAXScrollAreaRole },
         cacheKey: "editor-area"
       )
-    else { return }
+    else {
+      return
+    }
 
     // This element is the UI element that contains all the editors in the workspace.
     // It has one child view for each editor, which contains the tabs as well as the text area.
@@ -117,7 +121,9 @@ final class WorkspaceWindowObserver: WindowObserver {
       ).map { [$0] } ?? []
     }.first
 
-    editors = (editorsUIElement?.children ?? []).compactMap { editorWrapper -> SourceEditorObserver? in
+    let editorChildren = editorsUIElement?.children ?? []
+
+    editors = editorChildren.compactMap { editorWrapper -> SourceEditorObserver? in
       // Get the editor text area
       guard
         let editorElement = accessibilityService.firstChild(
@@ -150,6 +156,7 @@ final class WorkspaceWindowObserver: WindowObserver {
         )
       }
     }
+
 
     for editor in editors {
       let isFocussed = editor.element == focusedElement

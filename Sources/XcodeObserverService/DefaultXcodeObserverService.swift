@@ -29,8 +29,14 @@ public final class DefaultXcodeObserver: XcodeObserver, @unchecked Sendable {
       .isAccessibilityPermissionGrantedCurrentValuePublisher
       .sink { [weak self] isAccessibilityPermissionGranted in
         if isAccessibilityPermissionGranted {
+          #if DEBUG
+          print("[ACCESSIBILITY] Accessibility permission granted")
+          #endif
           self?.accessibilityAccessGranted()
         } else {
+          #if DEBUG
+          print("[ACCESSIBILITY] Accessibility permission denied or not granted")
+          #endif
           self?.update(state: .unknownDueToMissingAccessibilityPermissions)
         }
       }
@@ -44,6 +50,42 @@ public final class DefaultXcodeObserver: XcodeObserver, @unchecked Sendable {
   public let axNotifications = AsyncPassthroughSubject<AXNotification<InstanceState>>()
 
   public var statePublisher: AnyPublisher<State, Never> { $state.eraseToAnyPublisher() }
+
+  public func restartObservation() {
+    Task { @XcodeInspectorActor in
+      #if DEBUG
+      print("[ACCESSIBILITY] Restarting Xcode observation...")
+      #endif
+
+      // Cancel existing observations
+      appObservationTask?.cancel()
+      appObservationTask = nil
+
+      // Stop observing all current Xcodes
+      for xcode in xcodes {
+        stopObservingXcodeWith(processIdentifier: xcode.state.processId)
+      }
+
+      // Clear the xcodes array
+      xcodes.removeAll()
+
+      // Clear the cancellable bag
+      xcodesCancellableBag.removeAll()
+
+      // Clear accessibility cache
+      accessibilityService.clearCache()
+
+      // Reset state to initializing
+      update(state: .initializing)
+
+      // Restart observation
+      self.restartObserving()
+
+      #if DEBUG
+      print("[ACCESSIBILITY] Xcode observation restarted")
+      #endif
+    }
+  }
 
   // MARK: Private
 
@@ -74,8 +116,15 @@ public final class DefaultXcodeObserver: XcodeObserver, @unchecked Sendable {
         axNotifications: axNotifications
       ) }
 
+    #if DEBUG
+    print("[ACCESSIBILITY] Restarting observation - found \(xcodes.count) Xcode instance(s)")
+    #endif
     update(state: .known(xcodes.map { $0.state }))
-    for item in xcodes { observe(xcode: item) }
+    for item in xcodes {
+      observe(xcode: item)
+      // Refresh to get current focus state
+      item.refresh()
+    }
 
     appObservationTask?.cancel()
     appObservationTask = nil
@@ -99,6 +148,9 @@ public final class DefaultXcodeObserver: XcodeObserver, @unchecked Sendable {
             else { continue }
             if app.isXcode {
               let pid = app.processIdentifier
+              #if DEBUG
+              print("[ACCESSIBILITY] Xcode activated - PID: \(pid)")
+              #endif
               Task { @XcodeInspectorActor [weak self] in
                 self?.handleXcodeActivation(pid)
                 self?.axNotifications.send(.init(kind: .applicationActivated, element: AXUIElementCreateApplication(pid)))
@@ -122,6 +174,9 @@ public final class DefaultXcodeObserver: XcodeObserver, @unchecked Sendable {
             else { continue }
             if app.isXcode {
               let pid = app.processIdentifier
+              #if DEBUG
+              print("[ACCESSIBILITY] Xcode terminated - PID: \(pid)")
+              #endif
               Task { @XcodeInspectorActor [weak self] in
                 self?.handleXcodeTermination(pid)
                 self?.axNotifications.send(.init(kind: .applicationTerminated, element: AXUIElementCreateApplication(pid)))
@@ -143,7 +198,11 @@ public final class DefaultXcodeObserver: XcodeObserver, @unchecked Sendable {
   private func observe(xcode: InstanceObserver) {
     xcodesCancellableBag[xcode.state.processId] = xcode.$state.sink { xcode in
       Task { @MainActor [weak self] in
-        guard let self, let instances = state.knownState else { return }
+        guard let self else { return }
+
+        guard let instances = state.knownState else {
+          return
+        }
         updateStateWith(
           instances: instances.map { $0.processId == xcode.processId ? xcode : $0 }
         )
@@ -190,6 +249,9 @@ public final class DefaultXcodeObserver: XcodeObserver, @unchecked Sendable {
 
   @MainActor
   private func updateStateWith(instances: [InstanceState]) {
+    #if DEBUG
+    print("[ACCESSIBILITY] DefaultXcodeObserver updating state with \(instances.count) instances")
+    #endif
     if case .known(let currentKnownState) = state {
       if currentKnownState != instances {
         state = .known(instances)

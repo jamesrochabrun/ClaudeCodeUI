@@ -18,5 +18,10 @@ public final class MockXcodeObserver: XcodeObserver {
 
   public var statePublisher: AnyPublisher<State, Never> { $state.eraseToAnyPublisher() }
 
+  public func restartObservation() {
+    // Mock implementation - just reset to initializing
+    state = .initializing
+  }
+
 }
 #endif

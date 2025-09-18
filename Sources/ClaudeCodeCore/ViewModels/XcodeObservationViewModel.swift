@@ -74,6 +74,18 @@ public final class XcodeObservationViewModel {
     updateWorkspaceModel(from: xcodeObserver.state)
   }
   
+  /// Restarts the entire observation system
+  func restartObservation() {
+    
+    // Clear current workspace model
+    workspaceModel = XcodeWorkspaceModel()
+    
+    // Restart the observer
+    xcodeObserver.restartObservation()
+    
+    // The state will be updated via the subscription when observation restarts
+  }
+  
   /// Clears the active file from the workspace model
   func clearActiveFile() {
     workspaceModel = XcodeWorkspaceModel(
@@ -141,7 +153,6 @@ public final class XcodeObservationViewModel {
     guard let instance = state.knownState?.first,
           let window = instance.windows.first,
           let workspace = window.workspace else {
-      // Clear the model if no workspace is available
       workspaceModel = XcodeWorkspaceModel()
       return
     }
@@ -153,7 +164,9 @@ public final class XcodeObservationViewModel {
     let activeFile: FileInfo? = workspace.editors
       .first(where: { $0.isFocussed })
       .flatMap { editor in
-        guard let url = editor.activeTabURL else { return nil }
+        guard let url = editor.activeTabURL else {
+          return nil
+        }
         
         // Use activeTab if available, otherwise extract filename from URL
         let fileName = editor.activeTab ?? url.lastPathComponent
@@ -212,7 +225,6 @@ public final class XcodeObservationViewModel {
       )
     }
     
-    // Update the model
     workspaceModel = XcodeWorkspaceModel(
       workspaceName: workspaceName,
       activeFile: activeFile,

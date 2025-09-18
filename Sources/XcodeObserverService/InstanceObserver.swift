@@ -265,6 +265,7 @@ class InstanceObserver: ObservableObject, @unchecked Sendable {
     focusedWorkspace?.updateURLs()
 
     let focusedElement = appElement.focusedElement
+
     let editorElement = focusedElement.map { $0.isSourceEditor
       ? $0
       : accessibilityService.firstParent(
@@ -273,6 +274,8 @@ class InstanceObserver: ObservableObject, @unchecked Sendable {
         cacheKey: "source-editor"
       )
     } ?? nil
+
+
     focusedWorkspace?.updateEditors(focusedElement: editorElement)
 
     updateStateWith(focusedElement: focusedElement)

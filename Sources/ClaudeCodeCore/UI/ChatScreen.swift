@@ -115,7 +115,10 @@ public struct ChatScreen: View {
   /// Tracks whether the session ID has been copied to clipboard
   /// Used for visual feedback on the copy button
   @State private var isCopied = false
-  
+
+  /// Global preferences storage for observing default working directory changes
+  @Environment(GlobalPreferencesStorage.self) var globalPreferences
+
   public var body: some View {
     VStack {
       // Always show the messages list (WelcomeRow will handle empty state)
@@ -266,10 +269,13 @@ public struct ChatScreen: View {
     HStack(spacing: 8) {
       // Copy session ID button
       copySessionButton
-      
+
       // Clear chat button
       clearChatButton
-      
+
+      // Refresh Xcode observation button
+      refreshObservationButton
+
       // Settings button
       settingsButton
     }
@@ -296,7 +302,20 @@ public struct ChatScreen: View {
     }
     .disabled(viewModel.messages.isEmpty)
   }
-  
+
+  @ViewBuilder
+  private var refreshObservationButton: some View {
+    if xcodeObservationViewModel.hasAccessibilityPermission {
+      Button(action: {
+        xcodeObservationViewModel.restartObservation()
+      }) {
+        Image(systemName: "eye.circle")
+          .font(.title2)
+      }
+      .help("Refresh Xcode observation")
+    }
+  }
+
   @ViewBuilder
   private var settingsButton: some View {
     if uiConfiguration.showSettingsInNavBar {
