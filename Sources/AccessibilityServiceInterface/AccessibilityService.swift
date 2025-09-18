@@ -52,6 +52,10 @@ public protocol AccessibilityService {
     _ block: () -> [AXUIElement]
   ) -> [AXUIElement]
 
+  /// Clears all cached accessibility elements.
+  /// Useful when restarting observation to ensure fresh data.
+  func clearCache()
+
 }
 
 // MARK: - AccessibilityService + default values

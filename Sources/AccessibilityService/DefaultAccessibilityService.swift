@@ -96,6 +96,15 @@ public final class DefaultAccessibilityService: AccessibilityService {
     return value
   }
 
+  public func clearCache() {
+    lock.withLock { cachedElements in
+      cachedElements.removeAll()
+    }
+    #if DEBUG
+    print("[ACCESSIBILITY] Cache cleared")
+    #endif
+  }
+
   // MARK: Private
 
   private var cachedElements = [AXUIElement: [String: [AXUIElement]]]()

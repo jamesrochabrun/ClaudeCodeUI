@@ -79,6 +79,7 @@ class SourceEditorObserver: ObservableObject, @unchecked Sendable {
     let content = element.value
     let selectionRange = element.selectedTextRange
 
+
     let lines = content?.breakLines() ?? []
     let selection = selectionRange.map { SourceEditorObserver.convertRangeToCursorRange($0, in: lines) }
 

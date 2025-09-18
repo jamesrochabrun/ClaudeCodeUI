@@ -28,7 +28,7 @@ extension AXUIElement {
 
   /// Read the document attribute.
   public var document: String? {
-    try? copyValue(key: kAXDocumentAttribute)
+    (try? copyValue(key: kAXDocumentAttribute))
   }
 
   /// Read the description attribute (label in Accessibility Inspector).

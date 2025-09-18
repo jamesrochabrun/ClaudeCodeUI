@@ -28,6 +28,7 @@ public final class ClaudeCodeLogger {
     case messages = "MESSAGES"
     case container = "CONTAINER"
     case preferences = "PREFERENCES"
+    case accessibility = "ACCESSIBILITY"
   }
 
   // MARK: - Initialization
@@ -80,5 +81,10 @@ public final class ClaudeCodeLogger {
   /// Log a preferences-related message
   public func preferences(_ message: String) {
     log(.preferences, message)
+  }
+
+  /// Log an accessibility-related message
+  public func accessibility(_ message: String) {
+    log(.accessibility, message)
   }
 }

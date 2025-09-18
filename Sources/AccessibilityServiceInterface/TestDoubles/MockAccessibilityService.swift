@@ -52,5 +52,9 @@ public final class MockAccessibilityService: AccessibilityService {
   public func withCachedResult(element: AXUIElement, cacheKey: String?, _ block: () -> [AXUIElement]) -> [AXUIElement] {
     withCachedResultStub?(element, cacheKey, block) ?? []
   }
+
+  public func clearCache() {
+    // Mock implementation - no-op
+  }
 }
 #endif

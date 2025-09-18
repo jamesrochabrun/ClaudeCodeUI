@@ -72,13 +72,18 @@ extension ChatScreen {
     return items
   }
   
-  /// Determines the effective working directory based on manual selection or Xcode active file
+  /// Determines the effective working directory based on manual selection or global default
   var effectiveWorkingDirectory: String? {
-    // First priority: manually set project path
+    // First priority: manually set project path for the session
     if !viewModel.projectPath.isEmpty {
       return "cwd: \(viewModel.projectPath)"
     }
-    
+
+    // Second priority: global default working directory
+    if !globalPreferences.defaultWorkingDirectory.isEmpty {
+      return "cwd: \(globalPreferences.defaultWorkingDirectory)"
+    }
+
     return nil
   }
   
@@ -143,12 +148,22 @@ extension ChatScreen {
       .listStyle(.plain)
       .listRowBackground(Color.clear)
       .scrollContentBackground(.hidden)
-      .onChange(of: viewModel.messages) { _, newMessages in
+      .onChange(of: viewModel.messages) { newMessages in
         // Scroll to bottom when new messages are added
         if let lastMessage = viewModel.messages.last {
           withAnimation {
             scrollView.scrollTo(lastMessage.id, anchor: .bottom)
           }
+        }
+      }
+      .onChange(of: globalPreferences.defaultWorkingDirectory) { _ in
+        // Update the current session's working directory if there's no session-specific path
+        let newDefault = globalPreferences.defaultWorkingDirectory
+        if viewModel.projectPath.isEmpty && !newDefault.isEmpty {
+          // Update all components to use the new default directory
+          viewModel.projectPath = newDefault
+          viewModel.claudeClient.configuration.workingDirectory = newDefault
+          viewModel.settingsStorage.setProjectPath(newDefault)
         }
       }
     }
