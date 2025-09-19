@@ -26,6 +26,17 @@ struct PermissionStatusView: View {
       Text(statusText)
         .font(.caption2)
         .foregroundColor(.secondary)
+
+      // Debug button for testing ApprovalMCPServer discovery
+      Button(action: {
+        showDebugInfo = true
+      }) {
+        Image(systemName: "ladybug")
+          .font(.caption)
+          .foregroundColor(.blue)
+      }
+      .buttonStyle(.plain)
+      .help("Show ApprovalMCPServer Debug Info")
     }
     .help(helpText)
     .onReceive(customPermissionService.autoApprovePublisher) { newValue in
@@ -36,11 +47,23 @@ struct PermissionStatusView: View {
         autoApprove = customPermissionService.autoApproveToolCalls
       }
     }
+    .alert("ApprovalMCPServer Debug Info", isPresented: $showDebugInfo) {
+      Button("Copy to Clipboard") {
+        let debugInfo = customPermissionService.getApprovalServerDebugInfo()
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(debugInfo, forType: .string)
+      }
+      Button("OK", role: .cancel) { }
+    } message: {
+      Text(customPermissionService.getApprovalServerDebugInfo())
+        .font(.system(.caption, design: .monospaced))
+    }
   }
 
   // MARK: Private
 
   @State private var autoApprove = false
+  @State private var showDebugInfo = false
 
   private var statusText: String {
     if autoApprove {
