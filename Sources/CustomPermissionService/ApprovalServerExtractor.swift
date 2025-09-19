@@ -75,6 +75,17 @@ struct ApprovalServerExtractor {
       }
     }
 
+    // First, try direct path to SPM resource bundle
+    let mainBundle = Bundle.main
+    let spmBundlePath = mainBundle.bundleURL.appendingPathComponent("Contents/Resources/ClaudeCodeUI_ClaudeCodeCore.bundle")
+    if let spmBundle = Bundle(url: spmBundlePath) {
+      print("[ApprovalServerExtractor] Found SPM bundle at direct path: \(spmBundlePath.path)")
+      if let url = spmBundle.url(forResource: "ApprovalMCPServer", withExtension: "base64") {
+        print("[ApprovalServerExtractor] Found base64 resource in SPM bundle!")
+        return url
+      }
+    }
+
     // List of bundles to check
     var bundles: [Bundle] = [
       Bundle.main,
@@ -136,9 +147,31 @@ struct ApprovalServerExtractor {
     var info: [String] = []
     info.append("=== ApprovalServerExtractor Debug Info ===")
 
+    // Check direct SPM bundle path first
+    let mainBundle = Bundle.main
+    let spmBundlePath = mainBundle.bundleURL.appendingPathComponent("Contents/Resources/ClaudeCodeUI_ClaudeCodeCore.bundle")
+    info.append("\nChecking direct SPM path: \(spmBundlePath.path)")
+    if FileManager.default.fileExists(atPath: spmBundlePath.path) {
+      info.append("✅ SPM bundle exists at path")
+      if let spmBundle = Bundle(url: spmBundlePath) {
+        if let url = spmBundle.url(forResource: "ApprovalMCPServer", withExtension: "base64") {
+          info.append("✅ Found base64 resource in SPM bundle!")
+        } else {
+          info.append("❌ base64 resource not found in SPM bundle")
+          // List contents of bundle
+          let resourcesPath = spmBundle.bundleURL.appendingPathComponent("Contents/Resources")
+          if let contents = try? FileManager.default.contentsOfDirectory(atPath: resourcesPath.path) {
+            info.append("   Bundle contents: \(contents.joined(separator: ", "))")
+          }
+        }
+      }
+    } else {
+      info.append("❌ SPM bundle does not exist at expected path")
+    }
+
     // Check if base64 resource exists
     if let base64URL = findBase64Resource() {
-      info.append("✅ Found base64 resource at: \(base64URL.path)")
+      info.append("\n✅ Found base64 resource at: \(base64URL.path)")
 
       // Try to get file size
       if let attributes = try? FileManager.default.attributesOfItem(atPath: base64URL.path),
@@ -146,7 +179,7 @@ struct ApprovalServerExtractor {
         info.append("   Size: \(fileSize) bytes")
       }
     } else {
-      info.append("❌ Base64 resource not found")
+      info.append("\n❌ Base64 resource not found")
 
       // List bundles checked
       info.append("\nBundles checked:")
