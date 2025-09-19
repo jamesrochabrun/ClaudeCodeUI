@@ -28,6 +28,13 @@ public final class MCPApprovalTool: @unchecked Sendable {
         self.toolName = toolName
     }
     
+    /// Get debug information about the last search for ApprovalMCPServer
+    public func getDebugInfo() -> String {
+        // Try to find it again to get fresh debug info
+        _ = getApprovalServerExecutablePath()
+        return lastSearchDebugInfo
+    }
+
     /// Configure the MCP approval tool with ClaudeCodeSDK options
     /// This method should be called when setting up ClaudeCodeOptions for MCP integration
     /// - Parameter options: The ClaudeCodeOptions to configure
@@ -68,40 +75,78 @@ public final class MCPApprovalTool: @unchecked Sendable {
         print("[MCPApprovalTool] Final allowed tools: \(options.allowedTools ?? [])")
     }
     
+    /// Debug information about bundle search
+    public var lastSearchDebugInfo: String = ""
+
     /// Get the path to the compiled Swift MCP approval server executable
     /// This locates our ApprovalMCPServer binary that handles approval requests
     private func getApprovalServerExecutablePath() -> String? {
+        var debugInfo: [String] = []
+        debugInfo.append("=== ApprovalMCPServer Search Debug Info ===\n")
         // First check if it's in the app bundle (for DMG/Xcode builds)
+        debugInfo.append("1. Checking Bundle.main: \(Bundle.main.bundleURL.path)")
         if let bundlePath = Bundle.main.path(forResource: "ApprovalMCPServer", ofType: nil) {
             if FileManager.default.fileExists(atPath: bundlePath) {
+                debugInfo.append("✅ FOUND in Bundle.main at: \(bundlePath)")
+                lastSearchDebugInfo = debugInfo.joined(separator: "\n")
                 print("MCPApprovalTool: Found bundled approval server at: \(bundlePath)")
                 return bundlePath
             }
+        } else {
+            debugInfo.append("❌ Not found in Bundle.main")
         }
 
         // Check for Swift Package resource (for SPM integration)
+        debugInfo.append("\n2. Checking for Swift Package resources:")
+
         // Try to find the resource using different bundle lookup methods
         var bundles: [Bundle] = [
             Bundle(for: MCPApprovalTool.self)
         ]
 
+        debugInfo.append("   - MCPApprovalTool bundle: \(Bundle(for: MCPApprovalTool.self).bundleURL.path)")
+
         // Also check all loaded bundles for the resource
+        debugInfo.append("\n3. Checking all loaded bundles containing 'ClaudeCode':")
         for bundle in Bundle.allBundles {
             if bundle.bundleURL.path.contains("ClaudeCodeCore") ||
                bundle.bundleIdentifier?.contains("ClaudeCode") == true {
                 bundles.append(bundle)
+                debugInfo.append("   - Found: \(bundle.bundleURL.path)")
             }
         }
 
         // Also check frameworks
+        debugInfo.append("\n4. Checking frameworks containing 'ClaudeCodeCore':")
         for bundle in Bundle.allFrameworks {
             if bundle.bundleURL.path.contains("ClaudeCodeCore") {
                 bundles.append(bundle)
+                debugInfo.append("   - Found: \(bundle.bundleURL.path)")
             }
         }
 
+        if bundles.count == 1 {
+            debugInfo.append("\n⚠️ Only found 1 bundle to check")
+        } else {
+            debugInfo.append("\n📦 Found \(bundles.count) bundles to check")
+        }
+
+        debugInfo.append("\n5. Searching for ApprovalMCPServer in bundles:")
         for bundle in bundles {
+            debugInfo.append("\n   Checking: \(bundle.bundleURL.path)")
             print("MCPApprovalTool: Checking bundle: \(bundle.bundleURL.path)")
+
+            // List contents of bundle's Resources directory if it exists
+            let resourcesPath = bundle.bundleURL.appendingPathComponent("Resources")
+            if FileManager.default.fileExists(atPath: resourcesPath.path) {
+                do {
+                    let contents = try FileManager.default.contentsOfDirectory(atPath: resourcesPath.path)
+                    debugInfo.append("      Resources: \(contents.joined(separator: ", "))")
+                } catch {
+                    debugInfo.append("      Could not list Resources: \(error)")
+                }
+            }
+
             if let moduleBundle = bundle.url(forResource: "ApprovalMCPServer", withExtension: nil) {
             let modulePath = moduleBundle.path
 
@@ -130,6 +175,8 @@ public final class MCPApprovalTool: @unchecked Sendable {
                 // Make it executable
                 try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: destinationPath.path)
 
+                debugInfo.append("      ✅ FOUND and extracted to: \(destinationPath.path)")
+                lastSearchDebugInfo = debugInfo.joined(separator: "\n")
                 print("MCPApprovalTool: Extracted approval server from package to: \(destinationPath.path)")
                 return destinationPath.path
             } catch {
@@ -144,8 +191,14 @@ public final class MCPApprovalTool: @unchecked Sendable {
         }
 
         // Not found anywhere
+        debugInfo.append("\n\n❌ ApprovalMCPServer NOT FOUND in any bundle!")
+        debugInfo.append("\n📱 App Bundle ID: \(Bundle.main.bundleIdentifier ?? "unknown")")
+        debugInfo.append("📍 App Path: \(Bundle.main.bundlePath)")
+
+        lastSearchDebugInfo = debugInfo.joined(separator: "\n")
         print("MCPApprovalTool: ApprovalMCPServer not found in app bundle or package resources")
         print("MCPApprovalTool: The approval server feature will be disabled")
+        print("Debug Info:\n\(lastSearchDebugInfo)")
         return nil
     }
     
