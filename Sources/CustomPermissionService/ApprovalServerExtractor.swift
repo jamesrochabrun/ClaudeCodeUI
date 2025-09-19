@@ -1,7 +1,11 @@
 import Foundation
+import os
 
 /// Handles extraction of the ApprovalMCPServer binary from embedded base64 resource
 struct ApprovalServerExtractor {
+
+  /// Logger for ApprovalServerExtractor
+  private static let logger = Logger(subsystem: "com.claudecodeui", category: "ApprovalServerExtractor")
 
   /// Extract the ApprovalMCPServer binary from base64 resource to Application Support
   /// - Returns: Path to the extracted executable, or nil if extraction fails
@@ -10,7 +14,7 @@ struct ApprovalServerExtractor {
     let base64URL = findBase64Resource()
 
     guard let base64URL = base64URL else {
-      print("[ApprovalServerExtractor] Could not find ApprovalMCPServer.base64 resource")
+      logger.error("Could not find ApprovalMCPServer.base64 resource")
       return nil
     }
 
@@ -20,7 +24,7 @@ struct ApprovalServerExtractor {
 
       // Decode from base64
       guard let binaryData = Data(base64Encoded: base64String.trimmingCharacters(in: .whitespacesAndNewlines)) else {
-        print("[ApprovalServerExtractor] Failed to decode base64 data")
+        logger.error("Failed to decode base64 data")
         return nil
       }
 
@@ -39,7 +43,6 @@ struct ApprovalServerExtractor {
         let attributes = try FileManager.default.attributesOfItem(atPath: destinationPath.path)
         if let permissions = attributes[.posixPermissions] as? Int,
            permissions & 0o111 != 0 {
-          print("[ApprovalServerExtractor] Using existing binary at: \(destinationPath.path)")
           return destinationPath.path
         }
       }
@@ -50,7 +53,7 @@ struct ApprovalServerExtractor {
       // Make it executable
       try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: destinationPath.path)
 
-      print("[ApprovalServerExtractor] Successfully extracted ApprovalMCPServer to: \(destinationPath.path)")
+      logger.info("Successfully extracted ApprovalMCPServer to: \(destinationPath.path)")
 
       // Note: MCP configuration will be updated when updateApprovalServerPath() is called
       // This happens in ChatViewModel and other initialization points
@@ -58,7 +61,7 @@ struct ApprovalServerExtractor {
       return destinationPath.path
 
     } catch {
-      print("[ApprovalServerExtractor] Error extracting approval server: \(error)")
+      logger.error("Error extracting approval server: \(error)")
       return nil
     }
   }
@@ -72,10 +75,10 @@ struct ApprovalServerExtractor {
       let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("ApprovalMCPServer.base64")
       do {
         try embeddedBase64.write(to: tempURL, atomically: true, encoding: .utf8)
-        print("[ApprovalServerExtractor] Using embedded base64 resource")
+        // Using embedded base64 resource
         return tempURL
       } catch {
-        print("[ApprovalServerExtractor] Failed to write embedded base64 to temp file: \(error)")
+        logger.error("Failed to write embedded base64 to temp file: \(error)")
       }
     }
 
@@ -83,9 +86,7 @@ struct ApprovalServerExtractor {
     let mainBundle = Bundle.main
     let spmBundlePath = mainBundle.bundleURL.appendingPathComponent("Contents/Resources/ClaudeCodeUI_ClaudeCodeCore.bundle")
     if let spmBundle = Bundle(url: spmBundlePath) {
-      print("[ApprovalServerExtractor] Found SPM bundle at direct path: \(spmBundlePath.path)")
       if let url = spmBundle.url(forResource: "ApprovalMCPServer", withExtension: "base64") {
-        print("[ApprovalServerExtractor] Found base64 resource in SPM bundle!")
         return url
       }
     }
@@ -96,10 +97,7 @@ struct ApprovalServerExtractor {
       Bundle(for: MCPApprovalTool.self)
     ]
 
-    // Try to find ClaudeCodeCore bundle
-    if let coreBundle = BundleHelper.findClaudeCodeCoreBundle() {
-      bundles.append(coreBundle)
-    }
+    // No need for separate BundleHelper - the logic below handles bundle discovery
 
     // Also check all bundles containing ClaudeCode
     for bundle in Bundle.allBundles {
@@ -109,7 +107,7 @@ struct ApprovalServerExtractor {
       // Also check SPM-generated bundle names
       if bundle.bundleURL.lastPathComponent == "ClaudeCodeUI_ClaudeCodeCore.bundle" {
         bundles.append(bundle)
-        print("[ApprovalServerExtractor] Found SPM bundle: \(bundle.bundleURL.path)")
+        // Found SPM bundle
       }
     }
 
@@ -124,13 +122,13 @@ struct ApprovalServerExtractor {
     for bundle in bundles {
       // Try with Resources subdirectory
       if let url = bundle.url(forResource: "ApprovalMCPServer", withExtension: "base64", subdirectory: "Resources") {
-        print("[ApprovalServerExtractor] Found base64 resource in \(bundle.bundleURL.lastPathComponent)/Resources")
+        // Found base64 resource in Resources subdirectory
         return url
       }
 
       // Try without subdirectory
       if let url = bundle.url(forResource: "ApprovalMCPServer", withExtension: "base64") {
-        print("[ApprovalServerExtractor] Found base64 resource in \(bundle.bundleURL.lastPathComponent)")
+        // Found base64 resource
         return url
       }
     }

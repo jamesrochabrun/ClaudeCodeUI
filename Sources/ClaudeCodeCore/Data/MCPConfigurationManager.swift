@@ -32,7 +32,7 @@ final class MCPConfigurationManager {
   
   func saveConfiguration() {
     guard let url = configFileURL else {
-      print("[MCP] No config file URL available")
+      ClaudeCodeLogger.shared.preferences("MCP: No config file URL available")
       return
     }
     
@@ -46,10 +46,10 @@ final class MCPConfigurationManager {
       encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
       let data = try encoder.encode(configuration)
       try data.write(to: url)
-      print("[MCP] Configuration saved to: \(url.path)")
-      print("[MCP] Servers: \(configuration.mcpServers.keys.joined(separator: ", "))")
+      ClaudeCodeLogger.shared.preferences("MCP: Configuration saved to: \(url.path)")
+      ClaudeCodeLogger.shared.preferences("MCP: Servers: \(configuration.mcpServers.keys.joined(separator: ", "))")
     } catch {
-      print("[MCP] Failed to save configuration: \(error)")
+      ClaudeCodeLogger.shared.preferences("MCP: Failed to save configuration: \(error)")
     }
   }
   
@@ -65,7 +65,7 @@ final class MCPConfigurationManager {
       let data = try Data(contentsOf: url)
       configuration = try JSONDecoder().decode(MCPConfiguration.self, from: data)
     } catch {
-      print("Failed to load MCP configuration: \(error)")
+      ClaudeCodeLogger.shared.preferences("Failed to load MCP configuration: \(error)")
       loadDefaultConfiguration()
     }
   }
@@ -81,7 +81,7 @@ final class MCPConfigurationManager {
   // MARK: - Server Management
   
   func addServer(_ server: MCPServerConfig) {
-    print("[MCP] Adding server: \(server.name)")
+    ClaudeCodeLogger.shared.preferences("MCP: Adding server: \(server.name)")
     configuration.mcpServers[server.name] = server
     saveConfiguration()
   }
@@ -118,12 +118,12 @@ final class MCPConfigurationManager {
       .path
 
     if FileManager.default.fileExists(atPath: extractedPath) {
-      print("[MCP] Found extracted ApprovalMCPServer at: \(extractedPath)")
+      ClaudeCodeLogger.shared.preferences("MCP: Found extracted ApprovalMCPServer at: \(extractedPath)")
       updateApprovalServerConfig(path: extractedPath)
       return
     }
 
-    print("[MCP] ApprovalMCPServer not found in bundle or Application Support - removing from config")
+    ClaudeCodeLogger.shared.preferences("MCP: ApprovalMCPServer not found in bundle or Application Support - removing from config")
     // Remove approval_server if binary doesn't exist anywhere
     if configuration.mcpServers["approval_server"] != nil {
       configuration.mcpServers.removeValue(forKey: "approval_server")
@@ -132,12 +132,12 @@ final class MCPConfigurationManager {
   }
 
   private func updateApprovalServerConfig(path: String) {
-    print("[MCP] Configuring ApprovalMCPServer at: \(path)")
+    ClaudeCodeLogger.shared.preferences("MCP: Configuring ApprovalMCPServer at: \(path)")
 
     // Check if approval_server already exists and has correct path
     if let existingServer = configuration.mcpServers["approval_server"],
        existingServer.command == path {
-      print("[MCP] Approval server already configured with correct path")
+      ClaudeCodeLogger.shared.preferences("MCP: Approval server already configured with correct path")
       return
     }
 
@@ -149,7 +149,7 @@ final class MCPConfigurationManager {
       env: [:]
     )
     configuration.mcpServers["approval_server"] = approvalServer
-    print("[MCP] Updated approval_server path in configuration")
+    ClaudeCodeLogger.shared.preferences("MCP: Updated approval_server path in configuration")
     saveConfiguration()
   }
 
