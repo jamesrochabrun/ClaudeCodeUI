@@ -82,18 +82,20 @@ public final class MCPApprovalTool: @unchecked Sendable {
         // Check for Swift Package resource (for SPM integration)
         // Try to find the resource using different bundle lookup methods
         var bundles: [Bundle] = [
-            Bundle(for: MCPApprovalTool.self),
-            Bundle(for: CustomPermissionService.self)
+            Bundle(for: MCPApprovalTool.self)
         ]
-
-        // Also check if Bundle.module exists (Swift Package context)
-        #if SWIFT_PACKAGE
-        bundles.append(Bundle.module)
-        #endif
 
         // Also check all loaded bundles for the resource
         for bundle in Bundle.allBundles {
-            if bundle.bundleIdentifier?.contains("ClaudeCode") == true {
+            if bundle.bundleURL.path.contains("ClaudeCodeCore") ||
+               bundle.bundleIdentifier?.contains("ClaudeCode") == true {
+                bundles.append(bundle)
+            }
+        }
+
+        // Also check frameworks
+        for bundle in Bundle.allFrameworks {
+            if bundle.bundleURL.path.contains("ClaudeCodeCore") {
                 bundles.append(bundle)
             }
         }
