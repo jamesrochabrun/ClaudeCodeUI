@@ -51,6 +51,10 @@ struct ApprovalServerExtractor {
       try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: destinationPath.path)
 
       print("[ApprovalServerExtractor] Successfully extracted ApprovalMCPServer to: \(destinationPath.path)")
+
+      // Note: MCP configuration will be updated when updateApprovalServerPath() is called
+      // This happens in ChatViewModel and other initialization points
+
       return destinationPath.path
 
     } catch {

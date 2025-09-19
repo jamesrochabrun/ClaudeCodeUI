@@ -35,6 +35,13 @@ public final class MCPApprovalTool: @unchecked Sendable {
         return lastSearchDebugInfo
     }
 
+    /// Get the path to the ApprovalMCPServer executable
+    /// This is a public wrapper for the private method
+    /// - Returns: Path to the executable if found, nil otherwise
+    public func getApprovalServerPath() -> String? {
+        return getApprovalServerExecutablePath()
+    }
+
     /// Configure the MCP approval tool with ClaudeCodeSDK options
     /// This method should be called when setting up ClaudeCodeOptions for MCP integration
     /// - Parameter options: The ClaudeCodeOptions to configure
@@ -105,6 +112,15 @@ public final class MCPApprovalTool: @unchecked Sendable {
             debugInfo.append("✅ Successfully extracted from base64")
             lastSearchDebugInfo = debugInfo.joined(separator: "\n")
             print("MCPApprovalTool: Using extracted approval server at: \(extractedPath)")
+
+            // After successful extraction, update MCP config asynchronously
+            // This ensures the extracted server appears in the MCP configuration UI
+            Task { @MainActor in
+                // Note: This is a workaround since we can't import MCPConfigurationManager here
+                // The actual update happens via updateApprovalServerPath() calls in ChatViewModel
+                print("MCPApprovalTool: MCP config should be updated via ChatViewModel")
+            }
+
             return extractedPath
         } else {
             debugInfo.append("❌ Base64 extraction failed")

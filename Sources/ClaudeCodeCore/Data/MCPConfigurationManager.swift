@@ -99,25 +99,44 @@ final class MCPConfigurationManager {
   // MARK: - Approval Server Management
 
   /// Updates the approval server path in the MCP configuration
-  /// This ensures the config always points to the bundled binary
+  /// This ensures the config always points to the bundled or extracted binary
   func updateApprovalServerPath() {
-    // Check if ApprovalMCPServer exists in the app bundle
-    guard let bundlePath = Bundle.main.path(forResource: "ApprovalMCPServer", ofType: nil),
-          FileManager.default.fileExists(atPath: bundlePath) else {
-      print("[MCP] ApprovalMCPServer not found in bundle - removing from config")
-      // Remove approval_server if binary doesn't exist
-      if configuration.mcpServers["approval_server"] != nil {
-        configuration.mcpServers.removeValue(forKey: "approval_server")
-        saveConfiguration()
-      }
+    // First check if ApprovalMCPServer exists in the app bundle (for DMG/Xcode builds)
+    if let bundlePath = Bundle.main.path(forResource: "ApprovalMCPServer", ofType: nil),
+       FileManager.default.fileExists(atPath: bundlePath) {
+      // Update or add the approval server configuration
+      updateApprovalServerConfig(path: bundlePath)
       return
     }
 
-    print("[MCP] Found ApprovalMCPServer at: \(bundlePath)")
+    // For Swift Package users, check if it's been extracted to Application Support
+    let appSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+    let appName = Bundle.main.bundleIdentifier ?? "ClaudeCodeUI"
+    let extractedPath = appSupportURL
+      .appendingPathComponent(appName)
+      .appendingPathComponent("ApprovalMCPServer")
+      .path
+
+    if FileManager.default.fileExists(atPath: extractedPath) {
+      print("[MCP] Found extracted ApprovalMCPServer at: \(extractedPath)")
+      updateApprovalServerConfig(path: extractedPath)
+      return
+    }
+
+    print("[MCP] ApprovalMCPServer not found in bundle or Application Support - removing from config")
+    // Remove approval_server if binary doesn't exist anywhere
+    if configuration.mcpServers["approval_server"] != nil {
+      configuration.mcpServers.removeValue(forKey: "approval_server")
+      saveConfiguration()
+    }
+  }
+
+  private func updateApprovalServerConfig(path: String) {
+    print("[MCP] Configuring ApprovalMCPServer at: \(path)")
 
     // Check if approval_server already exists and has correct path
     if let existingServer = configuration.mcpServers["approval_server"],
-       existingServer.command == bundlePath {
+       existingServer.command == path {
       print("[MCP] Approval server already configured with correct path")
       return
     }
@@ -125,8 +144,9 @@ final class MCPConfigurationManager {
     // Update or add the approval_server configuration
     let approvalServer = MCPServerConfig(
       name: "approval_server",
-      command: bundlePath,
-      args: []
+      command: path,
+      args: [],
+      env: [:]
     )
     configuration.mcpServers["approval_server"] = approvalServer
     print("[MCP] Updated approval_server path in configuration")
