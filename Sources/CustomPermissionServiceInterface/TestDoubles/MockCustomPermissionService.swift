@@ -140,4 +140,8 @@ public final class MockCustomPermissionService: CustomPermissionService {
   public func setApprovalStatus(for toolUseId: String, status: ApprovalStatus) {
     approvalStatuses[toolUseId] = status
   }
+
+  public func getApprovalServerDebugInfo() -> String {
+    return "Mock ApprovalMCPServer Debug Info\n- This is a test implementation\n- No actual server binary search performed"
+  }
 }
