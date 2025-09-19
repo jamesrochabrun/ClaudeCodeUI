@@ -370,6 +370,12 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
       affectedResources: affectedResources
     )
   }
+
+  public func getApprovalServerDebugInfo() -> String {
+    // Create a temporary MCPApprovalTool instance to get debug info
+    let approvalTool = MCPApprovalTool(permissionService: self)
+    return approvalTool.getDebugInfo()
+  }
 }
 
 // MARK: - PendingRequest

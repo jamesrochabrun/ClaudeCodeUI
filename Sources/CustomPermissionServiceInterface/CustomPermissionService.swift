@@ -36,6 +36,10 @@ public protocol CustomPermissionService: Sendable {
   /// - Parameter toolCallData: Raw tool call data from MCP
   /// - Returns: JSON-encoded approval response
   func processMCPToolCall(_ toolCallData: [String: Any]) async throws -> String
+
+  /// Get debug information about ApprovalMCPServer discovery
+  /// - Returns: Detailed debug information about bundle search
+  func getApprovalServerDebugInfo() -> String
 }
 
 /// Status of an approval request
