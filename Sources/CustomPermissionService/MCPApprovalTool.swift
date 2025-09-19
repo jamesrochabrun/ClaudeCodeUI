@@ -83,6 +83,7 @@ public final class MCPApprovalTool: @unchecked Sendable {
     private func getApprovalServerExecutablePath() -> String? {
         var debugInfo: [String] = []
         debugInfo.append("=== ApprovalMCPServer Search Debug Info ===\n")
+
         // First check if it's in the app bundle (for DMG/Xcode builds)
         debugInfo.append("1. Checking Bundle.main: \(Bundle.main.bundleURL.path)")
         if let bundlePath = Bundle.main.path(forResource: "ApprovalMCPServer", ofType: nil) {
@@ -96,8 +97,21 @@ public final class MCPApprovalTool: @unchecked Sendable {
             debugInfo.append("❌ Not found in Bundle.main")
         }
 
+        // Try base64 extraction approach for Swift Package
+        debugInfo.append("\n2. Attempting base64 extraction:")
+        debugInfo.append(ApprovalServerExtractor.getDebugInfo())
+
+        if let extractedPath = ApprovalServerExtractor.extractApprovalServer() {
+            debugInfo.append("✅ Successfully extracted from base64")
+            lastSearchDebugInfo = debugInfo.joined(separator: "\n")
+            print("MCPApprovalTool: Using extracted approval server at: \(extractedPath)")
+            return extractedPath
+        } else {
+            debugInfo.append("❌ Base64 extraction failed")
+        }
+
         // Check for Swift Package resource (for SPM integration)
-        debugInfo.append("\n2. Checking for Swift Package resources:")
+        debugInfo.append("\n3. Checking for Swift Package resources:")
 
         // Try to find the resource using different bundle lookup methods
         var bundles: [Bundle] = [
@@ -118,7 +132,7 @@ public final class MCPApprovalTool: @unchecked Sendable {
         debugInfo.append("\n" + BundleHelper.getBundleDebugInfo())
 
         // Also check all loaded bundles for the resource
-        debugInfo.append("\n3. Checking all loaded bundles containing 'ClaudeCode':")
+        debugInfo.append("\n4. Checking all loaded bundles containing 'ClaudeCode':")
         for bundle in Bundle.allBundles {
             if bundle.bundleURL.path.contains("ClaudeCodeCore") ||
                bundle.bundleIdentifier?.contains("ClaudeCode") == true {
@@ -128,7 +142,7 @@ public final class MCPApprovalTool: @unchecked Sendable {
         }
 
         // Also check frameworks
-        debugInfo.append("\n4. Checking frameworks containing 'ClaudeCodeCore':")
+        debugInfo.append("\n5. Checking frameworks containing 'ClaudeCodeCore':")
         for bundle in Bundle.allFrameworks {
             if bundle.bundleURL.path.contains("ClaudeCodeCore") {
                 bundles.append(bundle)
@@ -142,7 +156,7 @@ public final class MCPApprovalTool: @unchecked Sendable {
             debugInfo.append("\n📦 Found \(bundles.count) bundles to check")
         }
 
-        debugInfo.append("\n5. Searching for ApprovalMCPServer in bundles:")
+        debugInfo.append("\n6. Searching for ApprovalMCPServer in bundles:")
         for bundle in bundles {
             debugInfo.append("\n   Checking: \(bundle.bundleURL.path)")
             print("MCPApprovalTool: Checking bundle: \(bundle.bundleURL.path)")
