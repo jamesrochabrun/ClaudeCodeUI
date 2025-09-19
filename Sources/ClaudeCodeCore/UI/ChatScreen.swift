@@ -121,32 +121,6 @@ public struct ChatScreen: View {
 
   public var body: some View {
     VStack {
-      // DEBUG: ApprovalMCPServer discovery info
-      Text("DEBUG: ApprovalMCPServer Info")
-        .font(.caption)
-        .foregroundColor(.orange)
-        .padding(4)
-        .background(Color.orange.opacity(0.1))
-        .cornerRadius(4)
-        .onTapGesture {
-          let debugInfo = customPermissionService.getApprovalServerDebugInfo()
-          print("=== ApprovalMCPServer Debug Info ===")
-          print(debugInfo)
-          print("=====================================")
-
-          // Also copy to clipboard
-          NSPasteboard.general.clearContents()
-          NSPasteboard.general.setString(debugInfo, forType: .string)
-        }
-        .help("Tap to print debug info to console and copy to clipboard")
-        .onAppear {
-          // Automatically print debug info on appear
-          let debugInfo = customPermissionService.getApprovalServerDebugInfo()
-          print("=== ApprovalMCPServer Debug Info (onAppear) ===")
-          print(debugInfo)
-          print("===============================================")
-        }
-
       // Always show the messages list (WelcomeRow will handle empty state)
       messagesListView
         .padding(.bottom, 8)
