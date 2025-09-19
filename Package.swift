@@ -138,7 +138,8 @@ let package = Package(
                 "ClaudeCodeUI.entitlements"
             ],
             resources: [
-                .process("Assets.xcassets")
+                .process("Assets.xcassets"),
+                .copy("Resources/ApprovalMCPServer")
             ],
             swiftSettings: [
                 .swiftLanguageMode(.v5)

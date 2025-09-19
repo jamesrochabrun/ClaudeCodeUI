@@ -71,7 +71,7 @@ public final class MCPApprovalTool: @unchecked Sendable {
     /// Get the path to the compiled Swift MCP approval server executable
     /// This locates our ApprovalMCPServer binary that handles approval requests
     private func getApprovalServerExecutablePath() -> String? {
-        // Check if it's in the app bundle (for packaged apps)
+        // First check if it's in the app bundle (for DMG/Xcode builds)
         if let bundlePath = Bundle.main.path(forResource: "ApprovalMCPServer", ofType: nil) {
             if FileManager.default.fileExists(atPath: bundlePath) {
                 print("MCPApprovalTool: Found bundled approval server at: \(bundlePath)")
@@ -79,8 +79,50 @@ public final class MCPApprovalTool: @unchecked Sendable {
             }
         }
 
-        // Not found in bundle
-        print("MCPApprovalTool: ApprovalMCPServer not found in app bundle")
+        // Check for Swift Package resource (for SPM integration)
+        // When ClaudeCodeCore is used as a package dependency, resources are in Bundle.module
+        if let moduleBundle = Bundle(for: MCPApprovalTool.self).url(forResource: "ApprovalMCPServer", withExtension: nil) {
+            let modulePath = moduleBundle.path
+
+            // The resource might not have executable permissions when copied from Bundle.module
+            // We need to extract it to a location where we can set executable permissions
+            let appSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            let appName = Bundle.main.bundleIdentifier ?? "ClaudeCodeUI"
+            let destinationDir = appSupportURL.appendingPathComponent(appName)
+            let destinationPath = destinationDir.appendingPathComponent("ApprovalMCPServer")
+
+            do {
+                // Create directory if it doesn't exist
+                try FileManager.default.createDirectory(at: destinationDir, withIntermediateDirectories: true)
+
+                // Check if we already have a copy and if it's up to date
+                if FileManager.default.fileExists(atPath: destinationPath.path) {
+                    // For now, always use the existing copy
+                    // In the future, we could check modification dates to update if needed
+                    print("MCPApprovalTool: Using cached approval server at: \(destinationPath.path)")
+                    return destinationPath.path
+                }
+
+                // Copy the binary to Application Support
+                try FileManager.default.copyItem(at: moduleBundle, to: destinationPath)
+
+                // Make it executable
+                try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: destinationPath.path)
+
+                print("MCPApprovalTool: Extracted approval server from package to: \(destinationPath.path)")
+                return destinationPath.path
+            } catch {
+                print("MCPApprovalTool: Error extracting approval server: \(error)")
+                // Fall back to using the bundle path directly (might work on some systems)
+                if FileManager.default.fileExists(atPath: modulePath) {
+                    print("MCPApprovalTool: Falling back to bundle resource at: \(modulePath)")
+                    return modulePath
+                }
+            }
+        }
+
+        // Not found anywhere
+        print("MCPApprovalTool: ApprovalMCPServer not found in app bundle or package resources")
         print("MCPApprovalTool: The approval server feature will be disabled")
         return nil
     }
