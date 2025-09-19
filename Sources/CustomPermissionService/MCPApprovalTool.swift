@@ -106,6 +106,23 @@ public final class MCPApprovalTool: @unchecked Sendable {
 
         debugInfo.append("   - MCPApprovalTool bundle: \(Bundle(for: MCPApprovalTool.self).bundleURL.path)")
 
+        // Try to find the ClaudeCodeCore bundle using our helper
+        if let coreBundle = BundleHelper.findClaudeCodeCoreBundle() {
+            bundles.append(coreBundle)
+            debugInfo.append("   - Found ClaudeCodeCore bundle: \(coreBundle.bundleURL.path)")
+        } else {
+            debugInfo.append("   - ClaudeCodeCore bundle NOT FOUND via BundleHelper")
+        }
+
+        // Try the resource bundle directly
+        #if SWIFT_PACKAGE
+        let resourceBundle = Bundle.module
+        bundles.append(resourceBundle)
+        debugInfo.append("   - Swift Package Bundle.module: \(resourceBundle.bundleURL.path)")
+        #else
+        debugInfo.append("   - Not built as Swift Package (no Bundle.module)")
+        #endif
+
         // Also check all loaded bundles for the resource
         debugInfo.append("\n3. Checking all loaded bundles containing 'ClaudeCode':")
         for bundle in Bundle.allBundles {
@@ -147,7 +164,9 @@ public final class MCPApprovalTool: @unchecked Sendable {
                 }
             }
 
-            if let moduleBundle = bundle.url(forResource: "ApprovalMCPServer", withExtension: nil) {
+            // Try looking in Resources subdirectory first
+            if let moduleBundle = bundle.url(forResource: "ApprovalMCPServer", withExtension: nil, subdirectory: "Resources") {
+                debugInfo.append("      ✅ FOUND in Resources subdirectory!")
             let modulePath = moduleBundle.path
 
             // The resource might not have executable permissions when copied from Bundle.module
@@ -166,6 +185,8 @@ public final class MCPApprovalTool: @unchecked Sendable {
                     // For now, always use the existing copy
                     // In the future, we could check modification dates to update if needed
                     print("MCPApprovalTool: Using cached approval server at: \(destinationPath.path)")
+                    debugInfo.append("      Using cached copy at: \(destinationPath.path)")
+                    lastSearchDebugInfo = debugInfo.joined(separator: "\n")
                     return destinationPath.path
                 }
 
@@ -181,12 +202,61 @@ public final class MCPApprovalTool: @unchecked Sendable {
                 return destinationPath.path
             } catch {
                 print("MCPApprovalTool: Error extracting approval server: \(error)")
+                debugInfo.append("      ❌ Error extracting: \(error)")
                 // Fall back to using the bundle path directly (might work on some systems)
                 if FileManager.default.fileExists(atPath: modulePath) {
                     print("MCPApprovalTool: Falling back to bundle resource at: \(modulePath)")
+                    lastSearchDebugInfo = debugInfo.joined(separator: "\n")
                     return modulePath
                 }
             }
+            } else if let moduleBundle = bundle.url(forResource: "ApprovalMCPServer", withExtension: nil) {
+                debugInfo.append("      Found in root (not Resources subdirectory)")
+            let modulePath = moduleBundle.path
+
+            // The resource might not have executable permissions when copied from Bundle.module
+            // We need to extract it to a location where we can set executable permissions
+            let appSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+            let appName = Bundle.main.bundleIdentifier ?? "ClaudeCodeUI"
+            let destinationDir = appSupportURL.appendingPathComponent(appName)
+            let destinationPath = destinationDir.appendingPathComponent("ApprovalMCPServer")
+
+            do {
+                // Create directory if it doesn't exist
+                try FileManager.default.createDirectory(at: destinationDir, withIntermediateDirectories: true)
+
+                // Check if we already have a copy and if it's up to date
+                if FileManager.default.fileExists(atPath: destinationPath.path) {
+                    // For now, always use the existing copy
+                    // In the future, we could check modification dates to update if needed
+                    print("MCPApprovalTool: Using cached approval server at: \(destinationPath.path)")
+                    debugInfo.append("      Using cached copy at: \(destinationPath.path)")
+                    lastSearchDebugInfo = debugInfo.joined(separator: "\n")
+                    return destinationPath.path
+                }
+
+                // Copy the binary to Application Support
+                try FileManager.default.copyItem(at: moduleBundle, to: destinationPath)
+
+                // Make it executable
+                try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: destinationPath.path)
+
+                debugInfo.append("      ✅ FOUND and extracted to: \(destinationPath.path)")
+                lastSearchDebugInfo = debugInfo.joined(separator: "\n")
+                print("MCPApprovalTool: Extracted approval server from package to: \(destinationPath.path)")
+                return destinationPath.path
+            } catch {
+                print("MCPApprovalTool: Error extracting approval server: \(error)")
+                debugInfo.append("      ❌ Error extracting: \(error)")
+                // Fall back to using the bundle path directly (might work on some systems)
+                if FileManager.default.fileExists(atPath: modulePath) {
+                    print("MCPApprovalTool: Falling back to bundle resource at: \(modulePath)")
+                    lastSearchDebugInfo = debugInfo.joined(separator: "\n")
+                    return modulePath
+                }
+            }
+            } else {
+                debugInfo.append("      ❌ ApprovalMCPServer not found in this bundle")
             }
         }
 

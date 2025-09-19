@@ -139,7 +139,7 @@ let package = Package(
             ],
             resources: [
                 .process("Assets.xcassets"),
-                .copy("Resources/ApprovalMCPServer")
+                .process("Resources")
             ],
             swiftSettings: [
                 .swiftLanguageMode(.v5)
