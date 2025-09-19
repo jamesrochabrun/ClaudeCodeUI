@@ -91,6 +91,11 @@ struct ApprovalServerExtractor {
       if bundle.bundleURL.path.contains("ClaudeCode") {
         bundles.append(bundle)
       }
+      // Also check SPM-generated bundle names
+      if bundle.bundleURL.lastPathComponent == "ClaudeCodeUI_ClaudeCodeCore.bundle" {
+        bundles.append(bundle)
+        print("[ApprovalServerExtractor] Found SPM bundle: \(bundle.bundleURL.path)")
+      }
     }
 
     // Also check frameworks

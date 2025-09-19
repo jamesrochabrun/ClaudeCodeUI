@@ -15,8 +15,17 @@ public struct BundleHelper {
             return bundle
         }
 
+        // Check for SPM-generated bundle name
+        if let bundle = Bundle(identifier: "ClaudeCodeUI_ClaudeCodeCore") {
+            return bundle
+        }
+
         // Look through all bundles for one containing our resources
         for bundle in Bundle.allBundles {
+            // Check for SPM-generated bundle by name
+            if bundle.bundleURL.lastPathComponent == "ClaudeCodeUI_ClaudeCodeCore.bundle" {
+                return bundle
+            }
             // Check if this bundle has our resource
             if bundle.url(forResource: "ApprovalMCPServer", withExtension: nil, subdirectory: "Resources") != nil {
                 return bundle
