@@ -80,8 +80,27 @@ public final class MCPApprovalTool: @unchecked Sendable {
         }
 
         // Check for Swift Package resource (for SPM integration)
-        // When ClaudeCodeCore is used as a package dependency, resources are in Bundle.module
-        if let moduleBundle = Bundle(for: MCPApprovalTool.self).url(forResource: "ApprovalMCPServer", withExtension: nil) {
+        // Try to find the resource using different bundle lookup methods
+        var bundles: [Bundle] = [
+            Bundle(for: MCPApprovalTool.self),
+            Bundle(for: CustomPermissionService.self)
+        ]
+
+        // Also check if Bundle.module exists (Swift Package context)
+        #if SWIFT_PACKAGE
+        bundles.append(Bundle.module)
+        #endif
+
+        // Also check all loaded bundles for the resource
+        for bundle in Bundle.allBundles {
+            if bundle.bundleIdentifier?.contains("ClaudeCode") == true {
+                bundles.append(bundle)
+            }
+        }
+
+        for bundle in bundles {
+            print("MCPApprovalTool: Checking bundle: \(bundle.bundleURL.path)")
+            if let moduleBundle = bundle.url(forResource: "ApprovalMCPServer", withExtension: nil) {
             let modulePath = moduleBundle.path
 
             // The resource might not have executable permissions when copied from Bundle.module
@@ -118,6 +137,7 @@ public final class MCPApprovalTool: @unchecked Sendable {
                     print("MCPApprovalTool: Falling back to bundle resource at: \(modulePath)")
                     return modulePath
                 }
+            }
             }
         }
 
