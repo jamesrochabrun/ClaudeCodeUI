@@ -114,14 +114,8 @@ public final class MCPApprovalTool: @unchecked Sendable {
             debugInfo.append("   - ClaudeCodeCore bundle NOT FOUND via BundleHelper")
         }
 
-        // Try the resource bundle directly
-        #if SWIFT_PACKAGE
-        let resourceBundle = Bundle.module
-        bundles.append(resourceBundle)
-        debugInfo.append("   - Swift Package Bundle.module: \(resourceBundle.bundleURL.path)")
-        #else
-        debugInfo.append("   - Not built as Swift Package (no Bundle.module)")
-        #endif
+        // Add bundle debug info
+        debugInfo.append("\n" + BundleHelper.getBundleDebugInfo())
 
         // Also check all loaded bundles for the resource
         debugInfo.append("\n3. Checking all loaded bundles containing 'ClaudeCode':")
