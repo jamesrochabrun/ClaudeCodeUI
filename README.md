@@ -48,6 +48,23 @@ dependencies: [
 ]
 ```
 
+#### Important: ApprovalMCPServer for Package Consumers
+
+When using ClaudeCodeUI as a package dependency, you need to build and provide the ApprovalMCPServer separately for security reasons:
+
+1. **Add the ApprovalMCPServer dependency**:
+   ```swift
+   dependencies: [
+       .package(url: "https://github.com/jamesrochabrun/ClaudeCodeUI", from: "1.0.0"),
+       .package(url: "https://github.com/jamesrochabrun/ClaudeCodeApprovalServer",
+                .exact("1.0.0")) // Pin version for security
+   ]
+   ```
+
+2. **Build the server in your build phase** (see [Package Integration Guide](PackageIntegrationGuide.md) for details)
+
+This build-from-source approach ensures maximum security by allowing you to audit and compile the approval server yourself.
+
 ## Requirements
 
 - macOS 14.0+
@@ -336,7 +353,10 @@ cd ClaudeCodeUI
 open ClaudeCodeUI.xcodeproj
 
 # Build and run
+# The ApprovalMCPServer will be automatically downloaded and built from source during the build process
 ```
+
+**Note**: The build process automatically downloads and compiles the [ApprovalMCPServer](https://github.com/jamesrochabrun/ClaudeCodeApprovalServer) from source for security.
 
 ## Support
 

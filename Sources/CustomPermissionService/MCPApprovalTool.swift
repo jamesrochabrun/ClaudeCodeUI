@@ -18,22 +18,29 @@ extension ProcessInfo {
 public final class MCPApprovalTool: @unchecked Sendable {
     private let permissionService: CustomPermissionService
     private let toolName: String
-    
+    private let serverProvider: ApprovalServerProvider
+
     /// Initialize the MCP approval tool
     /// - Parameters:
     ///   - permissionService: The permission service to handle approval requests
     ///   - toolName: The name of the MCP tool (typically "approval_prompt")
-    public init(permissionService: CustomPermissionService, toolName: String = "approval_prompt") {
+    ///   - serverProvider: Provider for the approval server executable path
+    public init(
+        permissionService: CustomPermissionService,
+        toolName: String = "approval_prompt",
+        serverProvider: ApprovalServerProvider? = nil
+    ) {
         self.permissionService = permissionService
         self.toolName = toolName
+        self.serverProvider = serverProvider ?? BundleApprovalServerProvider()
     }
     
     /// Configure the MCP approval tool with ClaudeCodeSDK options
     /// This method should be called when setting up ClaudeCodeOptions for MCP integration
     /// - Parameter options: The ClaudeCodeOptions to configure
     public func configure(options: inout ClaudeCodeOptions) {
-        // Try to get the approval server path
-        guard let approvalServerPath = getApprovalServerExecutablePath() else {
+        // Try to get the approval server path from the provider
+        guard let approvalServerPath = serverProvider.approvalServerPath() else {
             print("[MCPApprovalTool] Approval server not available - skipping configuration")
             return
         }
@@ -68,27 +75,11 @@ public final class MCPApprovalTool: @unchecked Sendable {
         print("[MCPApprovalTool] Final allowed tools: \(options.allowedTools ?? [])")
     }
     
-    /// Get the path to the compiled Swift MCP approval server executable
-    /// This locates our ApprovalMCPServer binary that handles approval requests
-    private func getApprovalServerExecutablePath() -> String? {
-        // Check if it's in the app bundle (for packaged apps)
-        if let bundlePath = Bundle.main.path(forResource: "ApprovalMCPServer", ofType: nil) {
-            if FileManager.default.fileExists(atPath: bundlePath) {
-                print("MCPApprovalTool: Found bundled approval server at: \(bundlePath)")
-                return bundlePath
-            }
-        }
-
-        // Not found in bundle
-        print("MCPApprovalTool: ApprovalMCPServer not found in app bundle")
-        print("MCPApprovalTool: The approval server feature will be disabled")
-        return nil
-    }
     
     /// Create a custom MCP configuration for the approval tool
     /// - Returns: MCP configuration dictionary
     public func createMCPConfiguration() -> [String: Any] {
-        guard let approvalServerPath = getApprovalServerExecutablePath() else {
+        guard let approvalServerPath = serverProvider.approvalServerPath() else {
             // Return empty config if server not available
             return ["mcpServers": [:]]
         }

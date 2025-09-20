@@ -114,7 +114,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7B3764EE2DE3D2B400F32C87 /* Build configuration list for PBXNativeTarget "ClaudeCodeUI" */;
 			buildPhases = (
-				7BAD7B012E57F1230048BD28 /* Build ApprovalMCPServer */,
 				7B3764C82DE3D2B200F32C87 /* Sources */,
 				7B3764C92DE3D2B200F32C87 /* Frameworks */,
 				7B3764CA2DE3D2B200F32C87 /* Resources */,
@@ -251,32 +250,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		7BAD7B012E57F1230048BD28 /* Build ApprovalMCPServer */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PROJECT_DIR}/Scripts/build-approval-server.sh",
-				"${PROJECT_DIR}/modules/ApprovalMCPServer/Package.swift",
-				"${PROJECT_DIR}/modules/ApprovalMCPServer/.build/arm64-apple-macosx/release/ApprovalMCPServer",
-				"${PROJECT_DIR}/modules/ApprovalMCPServer/.build/release/ApprovalMCPServer",
-			);
-			name = "Build ApprovalMCPServer";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources/ApprovalMCPServer",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "#!/bin/bash\n# Build and bundle ApprovalMCPServer\n\nset -e\n\n# Get the project directory\nPROJECT_DIR=\"${PROJECT_DIR:-$(pwd)}\"\nAPPROVAL_SERVER_DIR=\"${PROJECT_DIR}/modules/ApprovalMCPServer\"\nRESOURCES_DIR=\"${BUILT_PRODUCTS_DIR}/${CONTENTS_FOLDER_PATH}/Resources\"\n\necho \"Preparing ApprovalMCPServer for bundling...\"\n\n# Check if the approval server directory exists\nif [ ! -d \"${APPROVAL_SERVER_DIR}\" ]; then\n    echo \"Error: ApprovalMCPServer directory not found at ${APPROVAL_SERVER_DIR}\"\n    exit 1\nfi\n\n# Determine architecture\nARCH=$(uname -m)\nBUILT_EXECUTABLE=\"${APPROVAL_SERVER_DIR}/.build/${ARCH}-apple-macosx/release/ApprovalMCPServer\"\nALT_EXECUTABLE=\"${APPROVAL_SERVER_DIR}/.build/release/ApprovalMCPServer\"\n\n# Check if we already have a built binary\nif [ -f \"${BUILT_EXECUTABLE}\" ] || [ -f \"${ALT_EXECUTABLE}\" ]; then\n    echo \"Found existing ApprovalMCPServer binary\"\n    if [ -f \"${ALT_EXECUTABLE}\" ] && [ ! -f \"${BUILT_EXECUTABLE}\" ]; then\n        BUILT_EXECUTABLE=\"${ALT_EXECUTABLE}\"\n    fi\nelse\n    # Try to build if no binary exists\n    echo \"Building ApprovalMCPServer in release mode...\"\n    \n    # Save current directory\n    ORIGINAL_DIR=$(pwd)\n    \n    # Build outside of sandbox by using a separate swift invocation\n    cd \"${APPROVAL_SERVER_DIR}\"\n    \n    # Clean any stale build artifacts first\n    rm -rf .build/workspace-state.json .build/release.yaml 2>/dev/null || true\n    \n    # Build with explicit configuration\n    if swift build -c release 2>&1; then\n        echo \"Build completed successfully\"\n    else\n        echo \"Warning: Build failed, checking for pre-existing binary...\"\n    fi\n    \n    cd \"${ORIGINAL_DIR}\"\n    \n    # Check again for the executable\n    if [ ! -f \"${BUILT_EXECUTABLE}\" ]; then\n        if [ -f \"${ALT_EXECUTABLE}\" ]; then\n            BUILT_EXECUTABLE=\"${ALT_EXECUTABLE}\"\n        else\n            echo \"Error: Could not build or find ApprovalMCPServer binary\"\n            echo \"Please build it manually: cd modules/ApprovalMCPServer && swift build -c release\"\n            exit 1\n        fi\n    fi\nfi\n\necho \"ApprovalMCPServer binary found at: ${BUILT_EXECUTABLE}\"\n\n# Strip debug symbols to reduce size (if not already stripped)\nif file \"${BUILT_EXECUTABLE}\" | grep -q \"not stripped\"; then\n    echo \"Stripping debug symbols to reduce size...\"\n    strip \"${BUILT_EXECUTABLE}\" || true\nfi\n\n# Copy to app bundle\nif [ -n \"${BUILT_PRODUCTS_DIR}\" ] && [ -n \"${CONTENTS_FOLDER_PATH}\" ]; then\n    mkdir -p \"${RESOURCES_DIR}\"\n    cp \"${BUILT_EXECUTABLE}\" \"${RESOURCES_DIR}/ApprovalMCPServer\"\n    echo \"Bundled ApprovalMCPServer into app (size: $(du -h \"${RESOURCES_DIR}/ApprovalMCPServer\" | cut -f1))\"\nelse\n    echo \"Warning: Bundle environment variables not set, cannot copy to app bundle\"\nfi\n";
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		7B3764C82DE3D2B200F32C87 /* Sources */ = {
