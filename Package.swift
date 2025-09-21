@@ -20,7 +20,7 @@ let package = Package(
         .package(url: "https://github.com/jamesrochabrun/ClaudeCodeSDK", from: "1.1.4"),
         .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic", from: "2.1.7"),
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.3.0"),
-        .package(url: "https://github.com/jamesrochabrun/Down", branch: "fix/external-cmark-dependency"),
+        .package(url: "https://github.com/jamesrochabrun/Down", exact: "1.0.0"),
         .package(url: "https://github.com/appstefan/highlightswift", from: "1.1.0"),
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk", from: "0.9.0"),
         .package(url: "https://github.com/stephencelis/SQLite.swift", from: "0.15.3"),

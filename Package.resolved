@@ -1,5 +1,5 @@
 {
-  "originHash" : "6f1d66a307ad0924538996f938721718919b73b4acc08c0fccd253b3b02dd670",
+  "originHash" : "5131a9e120f6277efd3aaa68ad11dc95b167e68b02cc94486433ff627a831f46",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/jamesrochabrun/Down",
       "state" : {
-        "branch" : "fix/external-cmark-dependency",
-        "revision" : "e1f17ec54dd5a272a15a1f784a4b77f2faf1eb8b"
+        "revision" : "e1f17ec54dd5a272a15a1f784a4b77f2faf1eb8b",
+        "version" : "1.0.0"
       }
     },
     {
