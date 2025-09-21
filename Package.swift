@@ -24,9 +24,6 @@ let package = Package(
         .package(url: "https://github.com/appstefan/highlightswift", from: "1.1.0"),
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk", from: "0.9.0"),
         .package(url: "https://github.com/stephencelis/SQLite.swift", from: "0.15.3"),
-
-        // Keep ApprovalMCPServer as local package since it's a separate executable
-        .package(path: "modules/ApprovalMCPServer"),
     ],
     targets: [
         // Foundation modules (no dependencies)
