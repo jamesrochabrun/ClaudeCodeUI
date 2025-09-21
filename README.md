@@ -1,10 +1,10 @@
 # ClaudeCodeUI
 
-A beautiful, native macOS application and Swift Package providing a graphical interface for Claude Code conversations. Use it as a standalone app or integrate it directly into your own macOS applications.
+A beautiful, native macOS Swift Package providing a graphical interface for Claude Code conversations. Integrate it directly into your own macOS applications.
 
 ⚠️ **Note**: This is not an official Anthropic product.
 
-[**Download Latest Release (v1.4.6)**](https://github.com/jamesrochabrun/ClaudeCodeUI/releases/download/v1.4.6/ClaudeCodeUI.dmg) 
+ 
 
 ## Features
 
@@ -18,19 +18,9 @@ A beautiful, native macOS application and Swift Package providing a graphical in
 - 🛠️ **Tool Integration** - Full support for Claude's tool use capabilities
 - 🔧 **MCP Support** - Model Context Protocol server integration
 
-## Installation Options
+## Installation
 
-### Option 1: Download the Standalone App (Easiest)
-
-[**Download ClaudeCodeUI.dmg**](https://github.com/jamesrochabrun/ClaudeCodeUI/releases/download/v1.3.9/ClaudeCodeUI_v1.3.9.dmg)
-
-1. Download the DMG file
-2. Open it and drag ClaudeCodeUI to your Applications folder
-3. Launch the app and start chatting with Claude
-
-### Option 2: Use as a Swift Package (For Developers)
-
-Integrate ClaudeCodeUI directly into your macOS app:
+Integrate ClaudeCodeUI into your macOS app:
 
 #### Swift Package Manager
 
@@ -340,23 +330,18 @@ If MCP servers aren't working:
 3. Check `~/.claude/mcp_settings.json` for syntax errors
 4. Enable debug logging to see detailed errors
 
-## Building from Source
+## Development
 
-If you want to build the standalone app yourself:
+To contribute to or modify the package:
 
 ```bash
 # Clone the repository
 git clone https://github.com/jamesrochabrun/ClaudeCodeUI.git
 cd ClaudeCodeUI
 
-# Open in Xcode
-open ClaudeCodeUI.xcodeproj
-
-# Build and run
-# The ApprovalMCPServer will be automatically downloaded and built from source during the build process
+# Open Package.swift in Xcode
+open Package.swift
 ```
-
-**Note**: The build process automatically downloads and compiles the [ApprovalMCPServer](https://github.com/jamesrochabrun/ClaudeCodeApprovalServer) from source for security.
 
 ## Support
 
