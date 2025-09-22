@@ -513,28 +513,32 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
   
   /// Reconcile tools when new tools are discovered
   public func reconcileTools(with discoveryService: MCPToolsDiscoveryService) {
-    ClaudeCodeLogger.shared.preferences("Starting tool reconciliation")
-    
+    ClaudeCodeLogger.shared.preferences("Starting tool reconciliation (triggered by hash change)")
+
     // Create discovered tools structure
     let discovered = DiscoveredTools.from(discoveryService: discoveryService)
-    
+
+    // Log what we're reconciling
+    let totalTools = discovered.claudeCodeTools.count + discovered.mcpServerTools.values.flatMap { $0 }.count
+    ClaudeCodeLogger.shared.preferences("Reconciling \(totalTools) discovered tools with stored preferences")
+
     // Reconcile with existing preferences
     let reconciled = reconciler.reconcile(
       discoveredTools: discovered,
       storedPreferences: persistentPreferences
     )
-    
+
     // Update from reconciled preferences
     self.persistentPreferences = reconciled
-    
+
     // Update current state from reconciled preferences
     self.allowedTools = buildAllowedToolsList(from: reconciled.toolPreferences)
     self.mcpServerTools = buildMCPServerTools(from: reconciled.toolPreferences)
     self.selectedMCPTools = buildSelectedMCPTools(from: reconciled.toolPreferences)
-    
+
     // Save reconciled state
     persistentManager.savePreferences(reconciled)
-    
-    ClaudeCodeLogger.shared.preferences("Tool reconciliation completed")
+
+    ClaudeCodeLogger.shared.preferences("Tool reconciliation completed and saved to disk")
   }
 }

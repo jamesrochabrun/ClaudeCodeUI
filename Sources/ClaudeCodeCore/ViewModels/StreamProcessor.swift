@@ -254,15 +254,21 @@ final class StreamProcessor {
     // Parse and store discovered tools if available
     let tools = initMessage.tools
     if !tools.isEmpty {
-      let mcpServers = initMessage.mcpServers.map { (name: $0.name, status: $0.status) }
-      MCPToolsDiscoveryService.shared.parseToolsFromInitMessage(tools: tools, mcpServers: mcpServers)
-      
-      // Reconcile discovered tools with stored preferences
-      if let preferences = globalPreferences {
-        preferences.reconcileTools(with: MCPToolsDiscoveryService.shared)
+      // Only process if tools have changed since last discovery
+      if MCPToolsDiscoveryService.shared.shouldUpdateTools(from: tools) {
+        let mcpServers = initMessage.mcpServers.map { (name: $0.name, status: $0.status) }
+        MCPToolsDiscoveryService.shared.parseToolsFromInitMessage(tools: tools, mcpServers: mcpServers)
+
+        // Reconcile discovered tools with stored preferences
+        if let preferences = globalPreferences {
+          preferences.reconcileTools(with: MCPToolsDiscoveryService.shared)
+        }
+
+        logger.info("Discovered tools from init message: \(tools.count) tools (hash changed)")
+      } else {
+        // Tools haven't changed, skip expensive operations
+        logger.debug("Tools unchanged (hash match), skipping reconciliation")
       }
-      
-      logger.info("Discovered tools from init message: \(tools.count) tools")
     }
     
     // Check if Claude is giving us a different session ID than what we have
