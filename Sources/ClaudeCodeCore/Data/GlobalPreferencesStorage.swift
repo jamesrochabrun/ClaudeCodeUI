@@ -59,6 +59,13 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
   
   public var claudeCommand: String {
     didSet {
+      // Validate and sanitize the command
+      let trimmed = claudeCommand.trimmingCharacters(in: .whitespacesAndNewlines)
+      if trimmed.isEmpty || trimmed == "`" || trimmed.contains("`") {
+        // Reset to default if invalid
+        claudeCommand = "claude"
+        ClaudeCodeLogger.shared.preferences("Invalid claude command detected, resetting to 'claude'")
+      }
       saveToPersistentStorage()
     }
   }
@@ -134,7 +141,14 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       let general = persistent.generalPreferences
       self.systemPrompt = general.systemPrompt
       self.appendSystemPrompt = general.appendSystemPrompt
-      self.claudeCommand = general.claudeCommand
+      // Validate claude command from storage
+      let storedCommand = general.claudeCommand.trimmingCharacters(in: .whitespacesAndNewlines)
+      if storedCommand.isEmpty || storedCommand == "`" || storedCommand.contains("`") {
+        self.claudeCommand = "claude"
+        ClaudeCodeLogger.shared.preferences("Loaded invalid claude command from storage: '\(general.claudeCommand)', using default 'claude'")
+      } else {
+        self.claudeCommand = general.claudeCommand
+      }
       self.claudePath = general.claudePath
       self.defaultWorkingDirectory = general.defaultWorkingDirectory
       self.autoApproveLowRisk = general.autoApproveLowRisk
@@ -281,7 +295,14 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       let general = restored.generalPreferences
       self.systemPrompt = general.systemPrompt
       self.appendSystemPrompt = general.appendSystemPrompt
-      self.claudeCommand = general.claudeCommand
+      // Validate restored claude command
+      let restoredCommand = general.claudeCommand.trimmingCharacters(in: .whitespacesAndNewlines)
+      if restoredCommand.isEmpty || restoredCommand == "`" || restoredCommand.contains("`") {
+        self.claudeCommand = "claude"
+        ClaudeCodeLogger.shared.preferences("Restored invalid claude command: '\(general.claudeCommand)', using default 'claude'")
+      } else {
+        self.claudeCommand = general.claudeCommand
+      }
       self.claudePath = general.claudePath
       self.defaultWorkingDirectory = general.defaultWorkingDirectory
       self.autoApproveLowRisk = general.autoApproveLowRisk
