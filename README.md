@@ -2,6 +2,8 @@
 
 A beautiful, native macOS Swift Package providing a graphical interface for Claude Code conversations. Integrate it directly into your own macOS applications.
 
+Example App that uses this package can be downloaded [here](https://github.com/jamesrochabrun/Olive/releases/download/v1.0.0/Olive-1.0.0.dmg)
+
 ⚠️ **Note**: This is not an official Anthropic product.
 
  
