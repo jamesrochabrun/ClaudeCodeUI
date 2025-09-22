@@ -137,7 +137,65 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       }
     }
   }
-  
+
+  /// Appends a single message to an existing session without deleting existing messages
+  /// More efficient for incremental saves during streaming
+  public func appendMessage(sessionId: String, message: ChatMessage) async throws {
+    try await initializeDatabaseIfNeeded()
+
+    // Check if message already exists (avoid duplicates)
+    let existingMessage = messagesTable.filter(
+      messageIdColumn == message.id.uuidString &&
+      messageSessionIdColumn == sessionId
+    )
+
+    if try database.pluck(existingMessage) != nil {
+      // Message already exists, update it instead
+      let update = existingMessage.update(
+        messageContentColumn <- message.content,
+        messageIsCompleteColumn <- message.isComplete,
+        messageIsErrorColumn <- message.isError,
+        messageWasCancelledColumn <- message.wasCancelled
+      )
+      try database.run(update)
+      return
+    }
+
+    // Insert new message
+    let insertMessage = messagesTable.insert(
+      messageIdColumn <- message.id.uuidString,
+      messageSessionIdColumn <- sessionId,
+      messageContentColumn <- message.content,
+      messageRoleColumn <- message.role.rawValue,
+      messageTimestampColumn <- message.timestamp,
+      messageTypeColumn <- message.messageType.rawValue,
+      messageToolNameColumn <- message.toolName,
+      messageToolInputDataColumn <- try? JSONEncoder().encode(message.toolInputData).base64EncodedString(),
+      messageIsErrorColumn <- message.isError,
+      messageIsCompleteColumn <- message.isComplete,
+      messageWasCancelledColumn <- message.wasCancelled,
+      messageTaskGroupIdColumn <- message.taskGroupId?.uuidString,
+      messageIsTaskContainerColumn <- message.isTaskContainer
+    )
+
+    try database.run(insertMessage)
+
+    // Insert attachments if any
+    if let attachments = message.attachments {
+      for (index, attachment) in attachments.enumerated() {
+        let insertAttachment = attachmentsTable.insert(
+          attachmentIdColumn <- "\(message.id.uuidString)_\(index)",
+          attachmentMessageIdColumn <- message.id.uuidString,
+          attachmentFileNameColumn <- attachment.fileName,
+          attachmentFilePathColumn <- attachment.filePath,
+          attachmentFileTypeColumn <- attachment.type
+        )
+
+        try database.run(insertAttachment)
+      }
+    }
+  }
+
   public func updateSessionId(oldId: String, newId: String) async throws {
     try await initializeDatabaseIfNeeded()
 

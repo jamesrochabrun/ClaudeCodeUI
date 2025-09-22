@@ -77,9 +77,12 @@ public protocol SessionStorageProtocol {
   /// Deletes all sessions
   func deleteAllSessions() async throws
   
-  /// Updates messages for a session
+  /// Updates messages for a session (replaces all messages)
   func updateSessionMessages(id: String, messages: [ChatMessage]) async throws
-  
+
+  /// Appends a single message to a session (incremental save)
+  func appendMessage(sessionId: String, message: ChatMessage) async throws
+
   /// Updates the session ID (when Claude returns a new ID for the same conversation)
   func updateSessionId(oldId: String, newId: String) async throws
 }
@@ -119,7 +122,11 @@ public actor NoOpSessionStorage: SessionStorageProtocol {
   public func updateSessionMessages(id: String, messages: [ChatMessage]) async throws {
     // No-op: Don't store messages
   }
-  
+
+  public func appendMessage(sessionId: String, message: ChatMessage) async throws {
+    // No-op: Don't store messages
+  }
+
   public func updateSessionId(oldId: String, newId: String) async throws {
     // No-op: No session to update
   }

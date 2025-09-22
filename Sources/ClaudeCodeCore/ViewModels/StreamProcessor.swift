@@ -356,15 +356,13 @@ final class StreamProcessor {
     for content in message.message.content {
       switch content {
       case .text(let textContent, _):
-        // Only add content if it's not already in the buffer (prevents duplicate chunks)
-        if !state.contentBuffer.contains(textContent) {
+        // Append text content to buffer - streaming chunks should always be sequential
+        if !textContent.isEmpty {
           state.contentBuffer += textContent
           contentChanged = true
-        } else {
-          continue
         }
-        
-        // Create/update assistant message only if content changed
+
+        // Create/update assistant message if we have content
         if !textContent.isEmpty {
           // Always use the same message ID throughout the streaming session
           // This ensures all content goes into a single message bubble

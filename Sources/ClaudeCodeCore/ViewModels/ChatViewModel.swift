@@ -347,9 +347,9 @@ public final class ChatViewModel {
   
   /// Starts a new session without affecting the current session
   public func startNewSession() {
-    // Save current session messages before starting new
+    // Save current session messages before starting new (full save for session switch)
     Task {
-      await saveCurrentSessionMessages()
+      await saveCurrentSessionMessages(fullSave: true)
 
       // After saving, clear the UI to prepare for new session
       await MainActor.run {
@@ -375,22 +375,47 @@ public final class ChatViewModel {
   }
   
   /// Saves the current session's messages to storage
-  private func saveCurrentSessionMessages() async {
+  /// - Parameter fullSave: If true, replaces all messages. If false, only saves recent unsaved messages.
+  private func saveCurrentSessionMessages(fullSave: Bool = false) async {
     // Only save if we're managing sessions
     guard shouldManageSessions, let sessionId = currentSessionId else {
       return
     }
 
     let messages = messageStore.getAllMessages()
-    do {
-      try await sessionStorage.updateSessionMessages(id: sessionId, messages: messages)
-      if isDebugEnabled {
-        let log = "Saved \(messages.count) messages for current session \(sessionId)"
-        logger.debug("\(log)")
+
+    // For incremental saves during streaming, only save the last few messages
+    // This avoids rewriting the entire message history on every stream completion
+    if !fullSave && messages.count > 0 {
+      // Get only the most recent messages (last 5 or so) for incremental save
+      // These typically include the user message, assistant response, and any tool messages
+      let recentMessages = messages.suffix(min(5, messages.count))
+
+      do {
+        for message in recentMessages {
+          try await sessionStorage.appendMessage(sessionId: sessionId, message: message)
+        }
+        if isDebugEnabled {
+          let log = "Incrementally saved \(recentMessages.count) recent messages for session \(sessionId)"
+          logger.debug("\(log)")
+        }
+      } catch {
+        // If incremental save fails, fall back to full save
+        ClaudeCodeLogger.shared.chat("Incremental save failed, falling back to full save: \(error)")
+        await saveCurrentSessionMessages(fullSave: true)
       }
-    } catch {
-      ClaudeCodeLogger.shared.chat("saveCurrentSessionMessages - ERROR: Failed to save messages: \(error)")
-      logger.error("Failed to save messages for session \(sessionId): \(error)")
+    } else {
+      // Full save - replace all messages (used for session switches, app close, etc.)
+      do {
+        try await sessionStorage.updateSessionMessages(id: sessionId, messages: messages)
+        if isDebugEnabled {
+          let log = "Full save: \(messages.count) messages for session \(sessionId)"
+          logger.debug("\(log)")
+        }
+      } catch {
+        ClaudeCodeLogger.shared.chat("saveCurrentSessionMessages - ERROR: Failed to save messages: \(error)")
+        logger.error("Failed to save messages for session \(sessionId): \(error)")
+      }
     }
   }
   
@@ -596,18 +621,9 @@ public final class ChatViewModel {
       try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 second
     }
     
-    // Save current session messages before switching
-    if let currentId = currentSessionId {
-      let currentMessages = messageStore.getAllMessages()
-      do {
-        try await sessionStorage.updateSessionMessages(id: currentId, messages: currentMessages)
-        if isDebugEnabled {
-          let log = "Saved \(currentMessages.count) messages for session \(currentId)"
-          logger.debug("\(log)")
-        }
-      } catch {
-        logger.error("Failed to save messages for session \(currentId): \(error)")
-      }
+    // Save current session messages before switching (full save for session switch)
+    if currentSessionId != nil {
+      await saveCurrentSessionMessages(fullSave: true)
     }
     
     // Clear current conversation
