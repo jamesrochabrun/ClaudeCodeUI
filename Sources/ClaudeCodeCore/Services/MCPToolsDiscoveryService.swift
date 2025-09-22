@@ -22,7 +22,13 @@ public final class MCPToolsDiscoveryService {
   
   /// Storage for Claude Code built-in tools
   private(set) var claudeCodeTools: [String] = []
-  
+
+  /// Hash of last discovered tools to detect changes
+  private var lastDiscoveredToolsHash: String?
+
+  /// Track if initial discovery has been performed
+  private var hasPerformedInitialDiscovery = false
+
   private init() {}
   
   /// Parse and store tools from the system init message
@@ -108,5 +114,36 @@ public final class MCPToolsDiscoveryService {
   /// Check if tools have been discovered
   public var hasDiscoveredTools: Bool {
     !mcpServerTools.isEmpty
+  }
+
+  /// Compute a deterministic hash of the tools list
+  private func computeToolsHash(from tools: [String]) -> String {
+    // Sort tools for deterministic hash regardless of order
+    let sortedTools = tools.sorted().joined(separator: "|")
+    return String(sortedTools.hashValue)
+  }
+
+  /// Check if tools have changed since last discovery
+  /// - Parameter tools: The new list of tools from init message
+  /// - Returns: true if tools have changed and should be processed
+  public func shouldUpdateTools(from tools: [String]) -> Bool {
+    let currentHash = computeToolsHash(from: tools)
+    let hasChanged = currentHash != lastDiscoveredToolsHash
+
+    if hasChanged {
+      lastDiscoveredToolsHash = currentHash
+      hasPerformedInitialDiscovery = true
+    }
+
+    return hasChanged
+  }
+
+  /// Reset discovery state to force re-discovery on next init
+  public func resetDiscoveryState() {
+    lastDiscoveredToolsHash = nil
+    hasPerformedInitialDiscovery = false
+    mcpServerTools.removeAll()
+    claudeCodeTools.removeAll()
+    logger.info("Reset tool discovery state - will re-discover on next init")
   }
 }
