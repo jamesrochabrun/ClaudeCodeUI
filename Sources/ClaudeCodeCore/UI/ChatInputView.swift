@@ -36,6 +36,7 @@ struct ChatInputView: View {
   @State private var fileSearchViewModel: FileSearchViewModel? = nil
   @State private var fileSearchAnchor: CGPoint = .zero
   @State private var isUpdatingFileSearch = false
+  @State private var permissionModeToast: String? = nil
   
   private let processor = AttachmentProcessor()
   
@@ -103,10 +104,15 @@ struct ChatInputView: View {
             .padding(.horizontal, 8)
             .padding(.top, 4)
         }
-        HStack {
+        HStack(alignment: .bottom) {
           attachmentButton
           textEditor
-          actionButton
+          VStack(spacing: 4) {
+            actionButton
+            PermissionModeButton(mode: $viewModel.permissionMode) { newMode in
+              showPermissionModeToast(newMode)
+            }
+          }
         }
       }
       .background(Color(NSColor.controlBackgroundColor))
@@ -118,6 +124,7 @@ struct ChatInputView: View {
     .animation(.easeInOut(duration: 0.2), value: showingFileSearch)
     .animation(.easeInOut(duration: 0.2), value: xcodeObservationViewModel.workspaceModel.activeFile?.name)
     .animation(.easeInOut(duration: 0.2), value: contextManager.context.codeSelections.count)
+    .animation(.easeInOut(duration: 0.15), value: viewModel.permissionMode)
     .onChange(of: viewModel.projectPath) { oldValue, newValue in
       if !newValue.isEmpty && newValue != oldValue {
         fileSearchViewModel?.updateProjectPath(newValue)
@@ -149,8 +156,27 @@ struct ChatInputView: View {
     ) { result in
       handleFileImport(result)
     }
+    .overlay(alignment: .top) {
+      if let toast = permissionModeToast {
+        Text(toast)
+          .font(.caption)
+          .padding(.horizontal, 12)
+          .padding(.vertical, 6)
+          .background(Color.accentColor.opacity(0.9))
+          .foregroundColor(.white)
+          .cornerRadius(6)
+          .transition(.move(edge: .top).combined(with: .opacity))
+          .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+              withAnimation {
+                permissionModeToast = nil
+              }
+            }
+          }
+      }
+    }
   }
-  
+
   // MARK: - Computed Properties
 }
 
@@ -300,6 +326,15 @@ extension ChatInputView {
   
   /// Handle keyboard events
   private func handleKeyPress(_ key: KeyPress) -> KeyPress.Result {
+    // Check for Cmd+Shift to cycle permission modes (any key with both modifiers)
+    if key.modifiers == [.command, .shift] {
+      // Toggle permission mode
+      let newMode = viewModel.permissionMode.nextMode
+      viewModel.permissionMode = newMode
+      showPermissionModeToast(newMode)
+      return .handled
+    }
+
     // When file search is showing, handle navigation keys
     if showingFileSearch {
       switch key.key {
@@ -834,6 +869,12 @@ extension ChatInputView {
     showingFileSearch = false
     fileSearchRange = nil
     fileSearchViewModel?.clearSearch()
+  }
+
+  private func showPermissionModeToast(_ mode: PermissionMode) {
+    withAnimation(.easeInOut(duration: 0.2)) {
+      permissionModeToast = "Permission Mode: \(mode.displayName)"
+    }
   }
 }
 
