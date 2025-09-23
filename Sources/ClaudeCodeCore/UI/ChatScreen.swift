@@ -139,6 +139,7 @@ public struct ChatScreen: View {
         permissionsService: permissionsService,
         triggerFocus: $triggerTextEditorFocus)
     }
+    .overlay(planApprovalOverlay)
     .overlay(approvalToastOverlay)
     .overlay(
       errorToastOverlay
@@ -219,6 +220,12 @@ public struct ChatScreen: View {
     }
   }
   
+  @ViewBuilder
+  private var planApprovalOverlay: some View {
+    PlanApprovalToast(planApproval: $viewModel.planApprovalData)
+      .zIndex(998) // Below error toast but above approval toast
+  }
+
   @ViewBuilder
   private var approvalToastOverlay: some View {
     if let permissionService = customPermissionService as? DefaultCustomPermissionService {

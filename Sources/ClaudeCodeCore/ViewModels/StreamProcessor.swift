@@ -401,9 +401,16 @@ final class StreamProcessor {
         
       case .toolUse(let toolUse):
         ClaudeCodeLogger.shared.stream("Handling toolUse: \(toolUse.name)")
+
+        // Check for ExitPlanMode tool
+        if toolUse.name == "ExitPlanMode" || toolUse.name == "exit_plan_mode" {
+          handleExitPlanMode(toolUse, state: state)
+          return
+        }
+
         // Mark that we've processed a tool use
         state.hasProcessedToolUse = true
-        
+
         // Check if this is a Task tool starting
         let isTaskTool = toolUse.name == "Task"
         if isTaskTool {
@@ -559,5 +566,48 @@ final class StreamProcessor {
       }
     }
     return false
+  }
+
+  private func handleExitPlanMode(_ toolUse: MessageResponse.Content.ToolUse, state: StreamState) {
+    ClaudeCodeLogger.shared.stream("Handling ExitPlanMode tool")
+
+    // Extract the plan content from tool parameters
+    var parameters: [String: String] = [:]
+    var planContent = ""
+
+    // Process the input dictionary to extract plan content
+    for (key, dynamicContent) in toolUse.input {
+      if key == "plan" {
+        planContent = formatter.format(dynamicContent)
+        parameters[key] = planContent
+      }
+    }
+
+    // Get reference to ChatViewModel to show plan approval
+    if let getter = getParentViewModel, let viewModel = getter() {
+      Task { @MainActor in
+        viewModel.handlePlanApproval(planContent: planContent, toolUseId: toolUse.id)
+      }
+    }
+
+    // Create a tool message for the UI using the same pattern as other tools
+    let toolMessage = MessageFactory.toolUseMessage(
+      toolName: "ExitPlanMode",
+      input: planContent.isEmpty ? "Plan approval requested" : planContent,
+      toolInputData: ToolInputData(parameters: parameters, rawParameters: nil),
+      taskGroupId: state.currentTaskGroupId,
+      isTaskContainer: false
+    )
+    messageStore.addMessage(toolMessage)
+
+    // Mark that we processed a tool use
+    state.hasProcessedToolUse = true
+  }
+
+  // Callback to get parent view model - needs to be set during initialization
+  private var getParentViewModel: (() -> ChatViewModel?)?
+
+  func setParentViewModel(_ getter: @escaping () -> ChatViewModel?) {
+    self.getParentViewModel = getter
   }
 }
