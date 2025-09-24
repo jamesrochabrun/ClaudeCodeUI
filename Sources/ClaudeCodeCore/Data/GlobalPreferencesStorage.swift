@@ -44,6 +44,12 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       saveToPersistentStorage()
     }
   }
+
+  public var disallowedTools: [String] {
+    didSet {
+      saveToPersistentStorage()
+    }
+  }
   
   public var mcpConfigPath: String {
     didSet {
@@ -151,11 +157,13 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       
       // Initialize tool-related properties temporarily
       self.allowedTools = []
+      self.disallowedTools = []
       self.mcpServerTools = [:]
       self.selectedMCPTools = [:]
-      
-      // Now load tool preferences and convert to allowed tools list
+
+      // Now load tool preferences and convert to allowed/disallowed tools list
       self.allowedTools = buildAllowedToolsList(from: persistent.toolPreferences)
+      self.disallowedTools = buildDisallowedToolsList(from: persistent.toolPreferences)
       self.mcpServerTools = buildMCPServerTools(from: persistent.toolPreferences)
       self.selectedMCPTools = buildSelectedMCPTools(from: persistent.toolPreferences)
       
@@ -196,9 +204,11 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
         // SAFETY: When corrupted, don't auto-approve ANY tools
         ClaudeCodeLogger.shared.preferences("WARNING: Due to corruption, no tools will be auto-approved for safety")
         self.allowedTools = []
+        self.disallowedTools = []
       } else {
         // Normal defaults - only safe read-only tools
         self.allowedTools = ["LS", "Read", "Glob", "Grep", "WebSearch", "TodoWrite", "exit_plan_mode"]
+        self.disallowedTools = []
       }
       
       // Use Claude's default location
@@ -292,6 +302,7 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       
       // Restore tool preferences
       self.allowedTools = buildAllowedToolsList(from: restored.toolPreferences)
+      self.disallowedTools = buildDisallowedToolsList(from: restored.toolPreferences)
       self.mcpServerTools = buildMCPServerTools(from: restored.toolPreferences)
       self.selectedMCPTools = buildSelectedMCPTools(from: restored.toolPreferences)
       
@@ -312,6 +323,7 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     appendSystemPrompt = ""
     // Only allow safe read-only tools by default - risky tools require explicit approval
     allowedTools = ["LS", "Read", "Glob", "Grep", "WebSearch", "TodoWrite", "exit_plan_mode"]
+    disallowedTools = []
     // Reset to Claude's default location
     let homeURL = FileManager.default.homeDirectoryForCurrentUser
     mcpConfigPath = homeURL
@@ -420,20 +432,39 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
   /// Build allowed tools list from tool preferences
   private func buildAllowedToolsList(from toolPrefs: ToolPreferencesContainer) -> [String] {
     var allowed: [String] = []
-    
+
     // Add allowed Claude Code tools
     for (toolName, pref) in toolPrefs.claudeCode where pref.isAllowed {
       allowed.append(toolName)
     }
-    
+
     // Add allowed MCP tools with full name
     for (serverName, tools) in toolPrefs.mcpServers {
       for (toolName, pref) in tools where pref.isAllowed {
         allowed.append("mcp__\(serverName)__\(toolName)")
       }
     }
-    
+
     return allowed
+  }
+
+  /// Build disallowed tools list from tool preferences
+  private func buildDisallowedToolsList(from toolPrefs: ToolPreferencesContainer) -> [String] {
+    var disallowed: [String] = []
+
+    // Add disallowed Claude Code tools
+    for (toolName, pref) in toolPrefs.claudeCode where !pref.isAllowed {
+      disallowed.append(toolName)
+    }
+
+    // Add disallowed MCP tools with full name
+    for (serverName, tools) in toolPrefs.mcpServers {
+      for (toolName, pref) in tools where !pref.isAllowed {
+        disallowed.append("mcp__\(serverName)__\(toolName)")
+      }
+    }
+
+    return disallowed
   }
   
   /// Build MCP server tools dictionary from tool preferences

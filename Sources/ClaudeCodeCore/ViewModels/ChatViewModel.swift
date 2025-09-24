@@ -894,6 +894,7 @@ public final class ChatViewModel {
 
     // Configure chat options with global preferences
     options.allowedTools = allowedTools
+    options.disallowedTools = globalPreferences.disallowedTools
 
     // Apply user-defined system prompt if provided
     if !globalPreferences.systemPrompt.isEmpty {
