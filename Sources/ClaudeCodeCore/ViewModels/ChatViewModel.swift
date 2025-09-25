@@ -480,7 +480,7 @@ public final class ChatViewModel {
         }
       } else {
         // Path no longer exists
-        handleMissingPath(sessionPath, sessionId: sessionId)
+        handleInvalidPath(sessionPath, sessionId: sessionId)
       }
     } else {
       // No stored path for this session
@@ -1095,26 +1095,6 @@ public final class ChatViewModel {
 
     // Create a generic execution failed error since we don't have invalidPath
     let error = ClaudeCodeError.executionFailed("Invalid path: \(path)")
-
-    errorInfo = ErrorInfo(
-      error: error,
-      severity: .warning,
-      context: "Directory Not Found",
-      recoverySuggestion: errorMessage,
-      operation: .sessionManagement
-    )
-  }
-
-  /// Handles the case when a session's stored path no longer exists
-  private func handleMissingPath(_ path: String, sessionId: String) {
-    claudeClient.configuration.workingDirectory = nil
-    projectPath = ""
-
-    let errorMessage = "The directory '\(path)' no longer exists. Please select a new working directory."
-    logger.warning("\(errorMessage)")
-
-    // Create a generic execution failed error
-    let error = ClaudeCodeError.executionFailed("Missing path: \(path)")
 
     errorInfo = ErrorInfo(
       error: error,
