@@ -557,12 +557,21 @@ public final class ChatViewModel {
     // If deleting the current session, clear the chat interface and working directory
     if currentSessionId == id {
       clearConversation()
-      // Clear the working directory as well
-      settingsStorage.clearProjectPath()
-      claudeClient.configuration.workingDirectory = nil
-      projectPath = ""
+
+      // Apply default working directory if available
+      let defaultDirectory = globalPreferences.defaultWorkingDirectory
+      if !defaultDirectory.isEmpty {
+        claudeClient.configuration.workingDirectory = defaultDirectory
+        projectPath = defaultDirectory
+        settingsStorage.setProjectPath(defaultDirectory)
+      } else {
+        // Only clear if no default is set
+        settingsStorage.clearProjectPath()
+        claudeClient.configuration.workingDirectory = nil
+        projectPath = ""
+      }
     }
-    
+
     // Delete from storage
     await sessionManager.deleteSession(id: id)
   }
