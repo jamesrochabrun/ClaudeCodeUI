@@ -38,7 +38,9 @@ struct SessionRow: View {
             SessionMetadata(
               messageCount: session.messages.count,
               lastAccessedAt: session.lastAccessedAt,
-              workingDirectory: session.workingDirectory
+              workingDirectory: session.workingDirectory,
+              branchName: session.branchName,
+              isWorktree: session.isWorktree
             )
           }
           Spacer()

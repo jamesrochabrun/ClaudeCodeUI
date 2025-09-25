@@ -31,10 +31,27 @@ final class SessionManager {
   func startNewSession(id: String, firstMessage: String, workingDirectory: String? = nil) {
     currentSessionId = id
 
-    // Save to storage
+    // Save to storage with worktree detection
     Task {
       do {
-        try await sessionStorage.saveSession(id: id, firstMessage: firstMessage, workingDirectory: workingDirectory)
+        // Detect worktree information if working directory is provided
+        var branchName: String? = nil
+        var isWorktree = false
+
+        if let dir = workingDirectory {
+          if let worktreeInfo = await GitWorktreeDetector.detectWorktreeInfo(for: dir) {
+            branchName = worktreeInfo.branch
+            isWorktree = worktreeInfo.isWorktree
+          }
+        }
+
+        try await sessionStorage.saveSession(
+          id: id,
+          firstMessage: firstMessage,
+          workingDirectory: workingDirectory,
+          branchName: branchName,
+          isWorktree: isWorktree
+        )
         // Refresh sessions list
         await fetchSessions()
       } catch {

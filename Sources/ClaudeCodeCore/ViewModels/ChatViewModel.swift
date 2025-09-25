@@ -460,13 +460,27 @@ public final class ChatViewModel {
     
     // Load and set the session's stored path
     if let sessionPath = settingsStorage.getProjectPath(forSessionId: sessionId) {
-      // Update ClaudeClient configuration
-      claudeClient.configuration.workingDirectory = sessionPath
-      // Update the observable project path
-      projectPath = sessionPath
-      if isDebugEnabled {
-        let log = "Loaded path '\(sessionPath)' for selected session '\(sessionId)'"
-        logger.debug("\(log)")
+      // Validate the path still exists (important for worktrees that might be deleted)
+      if FileManager.default.fileExists(atPath: sessionPath) {
+        // If this is a worktree, validate it's still valid
+        let isValidPath = await validateWorktreePathIfNeeded(sessionPath)
+
+        if isValidPath {
+          // Update ClaudeClient configuration
+          claudeClient.configuration.workingDirectory = sessionPath
+          // Update the observable project path
+          projectPath = sessionPath
+          if isDebugEnabled {
+            let log = "Loaded path '\(sessionPath)' for selected session '\(sessionId)'"
+            logger.debug("\(log)")
+          }
+        } else {
+          // Worktree no longer exists or is invalid
+          handleInvalidWorktreePath(sessionPath, sessionId: sessionId)
+        }
+      } else {
+        // Path no longer exists
+        handleMissingPath(sessionPath, sessionId: sessionId)
       }
     } else {
       // No stored path for this session
@@ -1067,6 +1081,55 @@ public final class ChatViewModel {
     if let currentMessageId = currentMessageId {
       messageStore.removeMessage(id: currentMessageId)
     }
+  }
+
+  // MARK: - Worktree Support Helpers
+
+  /// Validates if a path is a valid worktree (if it's a worktree)
+  private func validateWorktreePathIfNeeded(_ path: String) async -> Bool {
+    // Check if this path is a worktree
+    if let worktreeInfo = await GitWorktreeDetector.detectWorktreeInfo(for: path) {
+      // If it's a worktree, validate it still exists
+      if worktreeInfo.isWorktree {
+        return GitWorktreeDetector.validateWorktree(at: path)
+      }
+    }
+    // For non-worktree paths or regular git repos, just check the directory exists
+    return FileManager.default.fileExists(atPath: path)
+  }
+
+  /// Handles the case when a worktree path is no longer valid
+  private func handleInvalidWorktreePath(_ path: String, sessionId: String) {
+    claudeClient.configuration.workingDirectory = nil
+    projectPath = ""
+
+    let errorMessage = "The worktree at '\(path)' no longer exists. It may have been deleted. Please select a new working directory."
+    logger.warning("\(errorMessage)")
+
+    errorInfo = ErrorInfo(
+      error: ClaudeCodeError.invalidPath(path),
+      severity: .warning,
+      context: "Worktree Not Found",
+      recoverySuggestion: errorMessage,
+      operation: .sessionManagement
+    )
+  }
+
+  /// Handles the case when a session's stored path no longer exists
+  private func handleMissingPath(_ path: String, sessionId: String) {
+    claudeClient.configuration.workingDirectory = nil
+    projectPath = ""
+
+    let errorMessage = "The directory '\(path)' no longer exists. Please select a new working directory."
+    logger.warning("\(errorMessage)")
+
+    errorInfo = ErrorInfo(
+      error: ClaudeCodeError.invalidPath(path),
+      severity: .warning,
+      context: "Directory Not Found",
+      recoverySuggestion: errorMessage,
+      operation: .sessionManagement
+    )
   }
 }
 

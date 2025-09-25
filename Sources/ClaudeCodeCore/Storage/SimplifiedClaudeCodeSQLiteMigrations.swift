@@ -69,10 +69,11 @@ public actor SimplifiedClaudeCodeSQLiteMigrationManager {
 
   /// Current schema version - increment this when adding new migrations
   /// Version 1: Initial schema with sessions, messages, and attachments tables
+  /// Version 2: Add git worktree support (branch_name, is_worktree columns)
   ///
   /// WHEN ADDING MIGRATIONS: Update this to the new version number
   /// See MIGRATION_GUIDE.md for instructions
-  public static let CURRENT_SCHEMA_VERSION = 1
+  public static let CURRENT_SCHEMA_VERSION = 2
 
   private let database: Connection
   private let databasePath: String
@@ -147,11 +148,10 @@ public actor SimplifiedClaudeCodeSQLiteMigrationManager {
   private func getMigrations(from currentVersion: Int, to targetVersion: Int) -> [DatabaseMigration] {
     var migrations: [DatabaseMigration] = []
 
-    // TODO: Register your migrations here when schema changes are needed
-    // Example:
-    // if currentVersion < 2 {
-    //   migrations.append(MigrationV2_YourFeatureName())
-    // }
+    // Register migrations
+    if currentVersion < 2 {
+      migrations.append(MigrationV2_AddWorktreeSupport())
+    }
     // if currentVersion < 3 {
     //   migrations.append(MigrationV3_AnotherFeature())
     // }
@@ -263,12 +263,37 @@ public actor SimplifiedClaudeCodeSQLiteMigrationManager {
   }
 }
 
+// MARK: - Actual Migrations
+
+// Migration to add git worktree support
+struct MigrationV2_AddWorktreeSupport: DatabaseMigration {
+  var version: Int { 2 }
+  var description: String { "Add git worktree support (branch_name, is_worktree columns)" }
+
+  func migrate(database: Connection) async throws {
+    // Wrap migration in transaction for atomicity
+    try database.transaction {
+      // Add branch_name column (nullable for backwards compatibility)
+      try database.execute("""
+        ALTER TABLE sessions
+        ADD COLUMN branch_name TEXT DEFAULT NULL
+      """)
+
+      // Add is_worktree column with default false
+      try database.execute("""
+        ALTER TABLE sessions
+        ADD COLUMN is_worktree INTEGER DEFAULT 0
+      """)
+    }
+  }
+}
+
 // MARK: - Example Migrations
 
 // Example migration for adding a new field (for future use)
 // BEST PRACTICE: Include version update in the same transaction when possible
-struct MigrationV2_AddUserPreferences: DatabaseMigration {
-  var version: Int { 2 }
+struct MigrationV3_AddUserPreferences: DatabaseMigration {
+  var version: Int { 3 }
   var description: String { "Add user_preferences field to sessions table" }
 
   func migrate(database: Connection) async throws {
@@ -287,8 +312,8 @@ struct MigrationV2_AddUserPreferences: DatabaseMigration {
 }
 
 // Example migration for adding an index (for future use)
-struct MigrationV3_AddIndexes: DatabaseMigration {
-  var version: Int { 3 }
+struct MigrationV4_AddIndexes: DatabaseMigration {
+  var version: Int { 4 }
   var description: String { "Add indexes for better query performance" }
 
   func migrate(database: Connection) async throws {
@@ -308,8 +333,8 @@ struct MigrationV3_AddIndexes: DatabaseMigration {
 }
 
 // Example migration for data transformation (for future use)
-struct MigrationV4_TransformData: DatabaseMigration {
-  var version: Int { 4 }
+struct MigrationV5_TransformData: DatabaseMigration {
+  var version: Int { 5 }
   var description: String { "Transform legacy data format" }
 
   func migrate(database: Connection) async throws {
