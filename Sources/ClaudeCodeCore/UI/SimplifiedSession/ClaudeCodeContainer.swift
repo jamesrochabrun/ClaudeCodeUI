@@ -117,6 +117,13 @@ public struct ClaudeCodeContainer: View {
     // This ensures we respect both injected config AND user preferences
     config.command = globalPrefs.claudeCommand
 
+    // If the configuration has disallowedTools set, merge them with preferences
+    if let configDisallowedTools = config.disallowedTools, !configDisallowedTools.isEmpty {
+      // Merge configuration's disallowed tools with preferences
+      let combinedDisallowedTools = Set(configDisallowedTools).union(Set(globalPrefs.disallowedTools))
+      globalPrefs.disallowedTools = Array(combinedDisallowedTools)
+    }
+
     let claudeClient = ClaudeCodeClient(configuration: config)
     
     let viewModel = ClaudeCodeCore.ChatViewModel(
