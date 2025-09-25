@@ -346,13 +346,13 @@ struct GlobalSettingsView: View {
         }
       }
       VStack(alignment: .leading, spacing: 4) {
-        Text("⚠️ Only use this if you see 'Claude not installed' errors")
+        Text("⚠️ Only use this if you see '\(preferences.claudeCommand.capitalized) not installed' errors")
           .font(.caption)
           .foregroundColor(.orange)
-        Text("Run 'which claude' in Terminal and paste the output here")
+        Text("Run 'which \(preferences.claudeCommand)' in Terminal and paste the output here")
           .font(.caption)
           .foregroundColor(.secondary)
-        Text("Example: /Users/you/.nvm/versions/node/v22.16.0/bin/claude")
+        Text("Example: /Users/you/.nvm/versions/node/v22.16.0/bin/\(preferences.claudeCommand)")
           .font(.caption)
           .foregroundColor(.secondary.opacity(0.7))
       }
