@@ -234,7 +234,7 @@ public struct ClaudeCodeContainer: View {
       }
     } message: {
       if let session = sessionToDelete {
-        Text("Are you sure you want to delete the session \"\(session.firstUserMessage)\"? This action cannot be undone.")
+        Text("Are you sure you want to delete the session \"\(session.firstUserMessage.truncateIntelligently(to: 100))\"? This action cannot be undone.")
       }
     }
   }

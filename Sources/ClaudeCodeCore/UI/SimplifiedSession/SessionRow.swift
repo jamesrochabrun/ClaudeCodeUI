@@ -22,7 +22,7 @@ struct SessionRow: View {
         HStack {
           VStack(alignment: .leading, spacing: 4) {
             HStack {
-              Text(session.firstUserMessage)
+              Text(session.firstUserMessage.truncateIntelligently(to: 100))
                 .font(.headline)
                 .foregroundColor(.primary)
                 .lineLimit(1)
