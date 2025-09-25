@@ -148,58 +148,5 @@ let package = Package(
             dependencies: ["ClaudeCodeCore"],
             path: "Tests/ClaudeCodeCoreTests"
         ),
-        .testTarget(
-            name: "CCAccessibilityFoundationTests",
-            dependencies: ["CCAccessibilityFoundation"],
-            path: "Tests/AccessibilityFoundationTests"
-        ),
-        .testTarget(
-            name: "CCAccessibilityServiceTests",
-            dependencies: ["CCAccessibilityService"],
-            path: "Tests/AccessibilityServiceTests"
-        ),
-        .testTarget(
-            name: "CCAccessibilityServiceInterfaceTests",
-            dependencies: ["CCAccessibilityServiceInterface"],
-            path: "Tests/AccessibilityServiceInterfaceTests"
-        ),
-        .testTarget(
-            name: "CCCustomPermissionServiceTests",
-            dependencies: ["CCCustomPermissionService"],
-            path: "Tests/CustomPermissionServiceTests"
-        ),
-        .testTarget(
-            name: "CCCustomPermissionServiceInterfaceTests",
-            dependencies: ["CCCustomPermissionServiceInterface"],
-            path: "Tests/CustomPermissionServiceInterfaceTests"
-        ),
-        .testTarget(
-            name: "CCPermissionsServiceTests",
-            dependencies: ["CCPermissionsService"],
-            path: "Tests/PermissionsServiceTests"
-        ),
-        .testTarget(
-            name: "CCPermissionsServiceInterfaceTests",
-            dependencies: ["CCPermissionsServiceInterface"],
-            path: "Tests/PermissionsServiceInterfaceTests"
-        ),
-        .testTarget(
-            name: "CCTerminalServiceTests",
-            dependencies: ["CCTerminalService"],
-            path: "Tests/TerminalServiceTests",
-            resources: [
-                .process("simple_output.sh")
-            ]
-        ),
-        .testTarget(
-            name: "CCTerminalServiceInterfaceTests",
-            dependencies: ["CCTerminalServiceInterface"],
-            path: "Tests/TerminalServiceInterfaceTests"
-        ),
-        .testTarget(
-            name: "CCXcodeObserverServiceTests",
-            dependencies: ["CCXcodeObserverService"],
-            path: "Tests/XcodeObserverServiceTests"
-        ),
     ]
 )

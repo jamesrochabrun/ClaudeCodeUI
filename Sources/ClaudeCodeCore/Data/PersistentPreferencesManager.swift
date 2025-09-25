@@ -274,7 +274,7 @@ public struct PersistentPreferences: Codable {
   public let lastUpdated: Date
   public var toolPreferences: ToolPreferencesContainer
   public var generalPreferences: GeneralPreferences
-  
+
   public init(
     version: String = "1.0",
     lastUpdated: Date = Date(),
@@ -285,6 +285,24 @@ public struct PersistentPreferences: Codable {
     self.lastUpdated = lastUpdated
     self.toolPreferences = toolPreferences
     self.generalPreferences = generalPreferences
+  }
+
+  // Custom Decodable implementation for backward compatibility
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+    // Decode with defaults for missing fields
+    self.version = try container.decodeIfPresent(String.self, forKey: .version) ?? "1.0"
+    self.lastUpdated = try container.decodeIfPresent(Date.self, forKey: .lastUpdated) ?? Date()
+    self.toolPreferences = try container.decodeIfPresent(ToolPreferencesContainer.self, forKey: .toolPreferences) ?? ToolPreferencesContainer()
+    self.generalPreferences = try container.decodeIfPresent(GeneralPreferences.self, forKey: .generalPreferences) ?? GeneralPreferences()
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case version
+    case lastUpdated
+    case toolPreferences
+    case generalPreferences
   }
 }
 
@@ -318,7 +336,7 @@ public struct GeneralPreferences: Codable {
   public var permissionTimeoutEnabled: Bool
   public var maxConcurrentPermissionRequests: Int
   public var disallowedTools: [String]
-  
+
   public init(
     autoApproveLowRisk: Bool = false,
     claudeCommand: String = "claude",
@@ -343,5 +361,39 @@ public struct GeneralPreferences: Codable {
     self.permissionTimeoutEnabled = permissionTimeoutEnabled
     self.maxConcurrentPermissionRequests = maxConcurrentPermissionRequests
     self.disallowedTools = disallowedTools
+  }
+
+  // Custom Decodable implementation for backward compatibility
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+    // Decode all properties with appropriate defaults for missing fields
+    self.autoApproveLowRisk = try container.decodeIfPresent(Bool.self, forKey: .autoApproveLowRisk) ?? false
+    self.claudeCommand = try container.decodeIfPresent(String.self, forKey: .claudeCommand) ?? "claude"
+    self.claudePath = try container.decodeIfPresent(String.self, forKey: .claudePath) ?? ""
+    self.defaultWorkingDirectory = try container.decodeIfPresent(String.self, forKey: .defaultWorkingDirectory) ?? ""
+    self.appendSystemPrompt = try container.decodeIfPresent(String.self, forKey: .appendSystemPrompt) ?? ""
+    self.systemPrompt = try container.decodeIfPresent(String.self, forKey: .systemPrompt) ?? ""
+    self.showDetailedPermissionInfo = try container.decodeIfPresent(Bool.self, forKey: .showDetailedPermissionInfo) ?? true
+    self.permissionRequestTimeout = try container.decodeIfPresent(TimeInterval.self, forKey: .permissionRequestTimeout) ?? 3600.0
+    self.permissionTimeoutEnabled = try container.decodeIfPresent(Bool.self, forKey: .permissionTimeoutEnabled) ?? false
+    self.maxConcurrentPermissionRequests = try container.decodeIfPresent(Int.self, forKey: .maxConcurrentPermissionRequests) ?? 5
+
+    // The new field that caused the regression - now safely optional
+    self.disallowedTools = try container.decodeIfPresent([String].self, forKey: .disallowedTools) ?? []
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case autoApproveLowRisk
+    case claudeCommand
+    case claudePath
+    case defaultWorkingDirectory
+    case appendSystemPrompt
+    case systemPrompt
+    case showDetailedPermissionInfo
+    case permissionRequestTimeout
+    case permissionTimeoutEnabled
+    case maxConcurrentPermissionRequests
+    case disallowedTools
   }
 }

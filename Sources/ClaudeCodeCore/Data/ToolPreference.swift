@@ -43,6 +43,30 @@ public struct ToolPreference: Codable, Equatable {
     self.lastModified = lastModified
   }
 
+  // Custom Decodable implementation for backward compatibility
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+    // Required field - this one should always exist
+    self.isAllowed = try container.decode(Bool.self, forKey: .isAllowed)
+
+    // Optional fields with sensible defaults for backward compatibility
+    self.lastSeen = try container.decodeIfPresent(Date.self, forKey: .lastSeen) ?? Date()
+    self.notes = try container.decodeIfPresent(String.self, forKey: .notes)
+    self.previousNames = try container.decodeIfPresent([String].self, forKey: .previousNames) ?? []
+    self.createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
+    self.lastModified = try container.decodeIfPresent(Date.self, forKey: .lastModified) ?? Date()
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case isAllowed
+    case lastSeen
+    case notes
+    case previousNames
+    case createdAt
+    case lastModified
+  }
+
   /// Update the tool as seen with current timestamp
   public mutating func markAsSeen() {
     lastSeen = Date()

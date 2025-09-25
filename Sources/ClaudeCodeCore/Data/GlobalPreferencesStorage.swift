@@ -518,7 +518,8 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
         showDetailedPermissionInfo: showDetailedPermissionInfo,
         permissionRequestTimeout: permissionRequestTimeout,
         permissionTimeoutEnabled: permissionTimeoutEnabled,
-        maxConcurrentPermissionRequests: maxConcurrentPermissionRequests
+        maxConcurrentPermissionRequests: maxConcurrentPermissionRequests,
+        disallowedTools: disallowedTools
       )
     )
     
