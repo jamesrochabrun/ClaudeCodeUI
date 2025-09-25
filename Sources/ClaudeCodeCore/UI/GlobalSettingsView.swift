@@ -211,6 +211,19 @@ struct GlobalSettingsView: View {
         resetSection
       }
       .formStyle(.grouped)
+
+      Divider()
+
+      // Version footer
+      HStack {
+        Spacer()
+        Text(VersionProvider.formattedVersion)
+          .font(.caption)
+          .foregroundColor(.secondary)
+      }
+      .padding(.horizontal)
+      .padding(.vertical, 8)
+      .background(Color(NSColor.windowBackgroundColor))
     }
   }
   
