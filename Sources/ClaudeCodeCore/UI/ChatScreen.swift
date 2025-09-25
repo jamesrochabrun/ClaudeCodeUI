@@ -116,6 +116,9 @@ public struct ChatScreen: View {
   /// Used for visual feedback on the copy button
   @State private var isCopied = false
 
+  /// Controls the visibility of the delete confirmation dialog
+  @State private var showDeleteConfirmation = false
+
   /// Global preferences storage for observing default working directory changes
   @Environment(GlobalPreferencesStorage.self) var globalPreferences
 
@@ -165,6 +168,18 @@ public struct ChatScreen: View {
     }
     .sheet(item: $artifact) { artifact in
       ArtifactView(artifact: artifact)
+    }
+    .alert("Delete Session", isPresented: $showDeleteConfirmation) {
+      Button("Cancel", role: .cancel) { }
+      Button("Delete", role: .destructive) {
+        clearChat()
+      }
+    } message: {
+      if viewModel.activeSessionId != nil {
+        Text("Are you sure you want to delete this session? This action cannot be undone.")
+      } else {
+        Text("Are you sure you want to clear the conversation? This action cannot be undone.")
+      }
     }
     .onChange(of: keyboardManager.capturedText, keyboardTextChanged)
     .onChange(of: keyboardManager.shouldFocusTextEditor, focusTextEditorChanged)
@@ -296,7 +311,9 @@ public struct ChatScreen: View {
   }
   
   private var clearChatButton: some View {
-    Button(action: clearChat) {
+    Button(action: {
+      showDeleteConfirmation = true
+    }) {
       Image(systemName: "trash")
         .font(.title2)
     }
@@ -368,7 +385,15 @@ public struct ChatScreen: View {
   }
   
   private func clearChat() {
-    viewModel.clearConversation()
+    Task {
+      // If we have an active session, properly delete it from database
+      if let sessionId = viewModel.activeSessionId {
+        await viewModel.deleteSession(id: sessionId)
+      } else {
+        // No saved session, just clear the UI
+        viewModel.clearConversation()
+      }
+    }
   }
   
   private func copyToClipboard(_ text: String) {
