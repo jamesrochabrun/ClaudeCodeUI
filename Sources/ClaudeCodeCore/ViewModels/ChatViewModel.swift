@@ -448,24 +448,24 @@ public final class ChatViewModel {
   /// Selects an existing session (without resuming)
   public func selectSession(id: String) {
     guard let sessionId = sessions.first(where: { $0.id == id })?.id else { return }
-    
+
     // Notify settings storage of session change
     onSessionChange?(sessionId)
-    
+
     // Clear current messages
     messageStore.clear()
-    
+
     // Set the session ID
     sessionManager.selectSession(id: sessionId)
-    
+
     // Load and set the session's stored path
     if let sessionPath = settingsStorage.getProjectPath(forSessionId: sessionId) {
       // Validate the path still exists (important for worktrees that might be deleted)
       if FileManager.default.fileExists(atPath: sessionPath) {
-        // If this is a worktree, validate it's still valid
-        let isValidPath = await validateWorktreePathIfNeeded(sessionPath)
-
-        if isValidPath {
+        // For worktree validation, we'll do a simplified check without async
+        // Just validate that the .git file/directory exists
+        let gitPath = (sessionPath as NSString).appendingPathComponent(".git")
+        if FileManager.default.fileExists(atPath: gitPath) {
           // Update ClaudeClient configuration
           claudeClient.configuration.workingDirectory = sessionPath
           // Update the observable project path
@@ -475,8 +475,8 @@ public final class ChatViewModel {
             logger.debug("\(log)")
           }
         } else {
-          // Worktree no longer exists or is invalid
-          handleInvalidWorktreePath(sessionPath, sessionId: sessionId)
+          // Git directory no longer exists
+          handleInvalidPath(sessionPath, sessionId: sessionId)
         }
       } else {
         // Path no longer exists
@@ -1085,31 +1085,21 @@ public final class ChatViewModel {
 
   // MARK: - Worktree Support Helpers
 
-  /// Validates if a path is a valid worktree (if it's a worktree)
-  private func validateWorktreePathIfNeeded(_ path: String) async -> Bool {
-    // Check if this path is a worktree
-    if let worktreeInfo = await GitWorktreeDetector.detectWorktreeInfo(for: path) {
-      // If it's a worktree, validate it still exists
-      if worktreeInfo.isWorktree {
-        return GitWorktreeDetector.validateWorktree(at: path)
-      }
-    }
-    // For non-worktree paths or regular git repos, just check the directory exists
-    return FileManager.default.fileExists(atPath: path)
-  }
-
-  /// Handles the case when a worktree path is no longer valid
-  private func handleInvalidWorktreePath(_ path: String, sessionId: String) {
+  /// Handles the case when a path is no longer valid
+  private func handleInvalidPath(_ path: String, sessionId: String) {
     claudeClient.configuration.workingDirectory = nil
     projectPath = ""
 
-    let errorMessage = "The worktree at '\(path)' no longer exists. It may have been deleted. Please select a new working directory."
+    let errorMessage = "The directory '\(path)' no longer exists or is invalid. Please select a new working directory."
     logger.warning("\(errorMessage)")
 
+    // Create a generic execution failed error since we don't have invalidPath
+    let error = ClaudeCodeError.executionFailed("Invalid path: \(path)")
+
     errorInfo = ErrorInfo(
-      error: ClaudeCodeError.invalidPath(path),
+      error: error,
       severity: .warning,
-      context: "Worktree Not Found",
+      context: "Directory Not Found",
       recoverySuggestion: errorMessage,
       operation: .sessionManagement
     )
@@ -1123,8 +1113,11 @@ public final class ChatViewModel {
     let errorMessage = "The directory '\(path)' no longer exists. Please select a new working directory."
     logger.warning("\(errorMessage)")
 
+    // Create a generic execution failed error
+    let error = ClaudeCodeError.executionFailed("Missing path: \(path)")
+
     errorInfo = ErrorInfo(
-      error: ClaudeCodeError.invalidPath(path),
+      error: error,
       severity: .warning,
       context: "Directory Not Found",
       recoverySuggestion: errorMessage,
