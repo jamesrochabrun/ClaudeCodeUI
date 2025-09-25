@@ -14,7 +14,7 @@ final class PersistentPreferencesTests: XCTestCase {
   var manager: PersistentPreferencesManager!
 
   override func setUp() async throws {
-    await super.setUp()
+    try! await super.setUp()
     manager = PersistentPreferencesManager.shared
     // Clean up any existing preferences for testing
     manager.deleteAllPreferences()
@@ -23,7 +23,7 @@ final class PersistentPreferencesTests: XCTestCase {
   override func tearDown() async throws {
     // Clean up after tests
     manager.deleteAllPreferences()
-    await super.tearDown()
+    try await super.tearDown()
   }
 
   func testSaveAndLoadPreferences() async throws {
@@ -84,7 +84,7 @@ final class PersistentPreferencesTests: XCTestCase {
     manager.savePreferences(preferences)
 
     // Create a new manager instance (simulating app restart)
-    let newManager = PersistentPreferencesManager()
+    let newManager = PersistentPreferencesManager.shared
 
     // Load preferences with new manager
     let loaded = newManager.loadPreferences()
