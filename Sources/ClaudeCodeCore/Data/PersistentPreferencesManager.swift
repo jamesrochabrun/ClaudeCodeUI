@@ -317,6 +317,7 @@ public struct GeneralPreferences: Codable {
   public var permissionRequestTimeout: TimeInterval
   public var permissionTimeoutEnabled: Bool
   public var maxConcurrentPermissionRequests: Int
+  public var disallowedTools: [String]
   
   public init(
     autoApproveLowRisk: Bool = false,
@@ -328,7 +329,8 @@ public struct GeneralPreferences: Codable {
     showDetailedPermissionInfo: Bool = true,
     permissionRequestTimeout: TimeInterval = 3600.0,
     permissionTimeoutEnabled: Bool = false,
-    maxConcurrentPermissionRequests: Int = 5
+    maxConcurrentPermissionRequests: Int = 5,
+    disallowedTools: [String] = []
   ) {
     self.autoApproveLowRisk = autoApproveLowRisk
     self.claudeCommand = claudeCommand
@@ -340,5 +342,6 @@ public struct GeneralPreferences: Codable {
     self.permissionRequestTimeout = permissionRequestTimeout
     self.permissionTimeoutEnabled = permissionTimeoutEnabled
     self.maxConcurrentPermissionRequests = maxConcurrentPermissionRequests
+    self.disallowedTools = disallowedTools
   }
 }

@@ -148,6 +148,7 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       self.permissionRequestTimeout = general.permissionRequestTimeout
       self.permissionTimeoutEnabled = general.permissionTimeoutEnabled
       self.maxConcurrentPermissionRequests = general.maxConcurrentPermissionRequests
+      self.disallowedTools = general.disallowedTools
       
       // MCP config path - default to Claude's standard location
       let homeURL = FileManager.default.homeDirectoryForCurrentUser
@@ -161,9 +162,9 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       self.mcpServerTools = [:]
       self.selectedMCPTools = [:]
 
-      // Now load tool preferences and convert to allowed/disallowed tools list
+      // Now load tool preferences and convert to allowed tools list
       self.allowedTools = buildAllowedToolsList(from: persistent.toolPreferences)
-      self.disallowedTools = buildDisallowedToolsList(from: persistent.toolPreferences)
+      // disallowedTools already loaded from general preferences above
       self.mcpServerTools = buildMCPServerTools(from: persistent.toolPreferences)
       self.selectedMCPTools = buildSelectedMCPTools(from: persistent.toolPreferences)
       
@@ -299,10 +300,11 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       self.permissionRequestTimeout = general.permissionRequestTimeout
       self.permissionTimeoutEnabled = general.permissionTimeoutEnabled
       self.maxConcurrentPermissionRequests = general.maxConcurrentPermissionRequests
+      self.disallowedTools = general.disallowedTools
       
       // Restore tool preferences
       self.allowedTools = buildAllowedToolsList(from: restored.toolPreferences)
-      self.disallowedTools = buildDisallowedToolsList(from: restored.toolPreferences)
+      // disallowedTools already loaded from general preferences above
       self.mcpServerTools = buildMCPServerTools(from: restored.toolPreferences)
       self.selectedMCPTools = buildSelectedMCPTools(from: restored.toolPreferences)
       
@@ -420,7 +422,8 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
         showDetailedPermissionInfo: showDetailedPermissionInfo,
         permissionRequestTimeout: permissionRequestTimeout,
         permissionTimeoutEnabled: permissionTimeoutEnabled,
-        maxConcurrentPermissionRequests: maxConcurrentPermissionRequests
+        maxConcurrentPermissionRequests: maxConcurrentPermissionRequests,
+        disallowedTools: disallowedTools
       )
     )
     
@@ -448,24 +451,6 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     return allowed
   }
 
-  /// Build disallowed tools list from tool preferences
-  private func buildDisallowedToolsList(from toolPrefs: ToolPreferencesContainer) -> [String] {
-    var disallowed: [String] = []
-
-    // Add disallowed Claude Code tools
-    for (toolName, pref) in toolPrefs.claudeCode where !pref.isAllowed {
-      disallowed.append(toolName)
-    }
-
-    // Add disallowed MCP tools with full name
-    for (serverName, tools) in toolPrefs.mcpServers {
-      for (toolName, pref) in tools where !pref.isAllowed {
-        disallowed.append("mcp__\(serverName)__\(toolName)")
-      }
-    }
-
-    return disallowed
-  }
   
   /// Build MCP server tools dictionary from tool preferences
   private func buildMCPServerTools(from toolPrefs: ToolPreferencesContainer) -> [String: [String]] {

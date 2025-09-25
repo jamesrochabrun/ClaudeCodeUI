@@ -16,7 +16,8 @@ final class DisallowedToolsTests: XCTestCase {
     // Test that GlobalPreferencesStorage has disallowedTools property
     let globalPrefs = GlobalPreferencesStorage()
     XCTAssertNotNil(globalPrefs.disallowedTools)
-    XCTAssertTrue(globalPrefs.disallowedTools.isEmpty || globalPrefs.disallowedTools.count >= 0)
+    // Should be empty by default (no tools disallowed initially)
+    XCTAssertTrue(globalPrefs.disallowedTools.isEmpty)
   }
 
   func testDisallowedToolsSavedToPersistence() {
