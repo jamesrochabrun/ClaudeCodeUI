@@ -123,7 +123,7 @@ struct WelcomeRow: View {
                     HStack(spacing: 8) {
                       Image(systemName: worktree.isWorktree ? "arrow.triangle.branch" : "arrow.branch")
                         .font(.caption)
-                        .foregroundColor(worktree.isWorktree ? .orange : .blue)
+                        .foregroundColor(worktree.path == path ? (worktree.isWorktree ? .orange : .blue) : .secondary)
 
                       VStack(alignment: .leading, spacing: 2) {
                         Text(worktree.branch ?? "unknown")
