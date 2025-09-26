@@ -155,7 +155,18 @@ private struct WorktreeListView: View {
       ForEach(worktrees, id: \.path) { worktree in
         WorktreeListItem(
           worktree: worktree,
-          isSelected: worktree.path == currentPath,
+          isSelected: {
+            let currentClean = currentPath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            let worktreeClean = worktree.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+
+            // Exact match
+            if currentClean == worktreeClean {
+              return true
+            }
+
+            // Check if current is subdirectory (with separator to avoid prefix collision)
+            return currentClean.hasPrefix(worktreeClean + "/")
+          }(),
           onSelect: {
             onWorktreeSelected(worktree.path)
           }
