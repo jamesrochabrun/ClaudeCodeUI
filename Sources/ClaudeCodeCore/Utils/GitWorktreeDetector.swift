@@ -34,6 +34,8 @@ public struct GitWorktreeInfo: Sendable {
 /// Utility for detecting and analyzing git worktrees
 @MainActor
 public class GitWorktreeDetector {
+  /// Maximum time to wait for git commands (in seconds)
+  private static let gitCommandTimeout: TimeInterval = 3.0
 
   /// Detects git worktree information for the given directory
   public static func detectWorktreeInfo(for directoryPath: String) async -> GitWorktreeInfo? {
@@ -89,7 +91,23 @@ public class GitWorktreeDetector {
 
     do {
       try process.run()
+
+      // Add timeout to prevent hanging
+      let timeoutTask = Task {
+        try await Task.sleep(nanoseconds: UInt64(gitCommandTimeout * 1_000_000_000))
+        if process.isRunning {
+          process.terminate()
+          print("Git branch command timed out after \(gitCommandTimeout) seconds")
+        }
+      }
+
       process.waitUntilExit()
+      timeoutTask.cancel()
+
+      // Check if process was terminated due to timeout
+      if process.terminationStatus == SIGTERM {
+        return nil
+      }
 
       let data = pipe.fileHandleForReading.readDataToEndOfFile()
       let output = String(data: data, encoding: .utf8)?
@@ -139,7 +157,24 @@ public class GitWorktreeDetector {
 
     do {
       try process.run()
+
+      // Add timeout to prevent hanging
+      let timeoutTask = Task {
+        try await Task.sleep(nanoseconds: UInt64(gitCommandTimeout * 1_000_000_000))
+        if process.isRunning {
+          process.terminate()
+          print("Git worktree list command timed out after \(gitCommandTimeout) seconds")
+        }
+      }
+
       process.waitUntilExit()
+      timeoutTask.cancel()
+
+      // Check if process was terminated due to timeout
+      if process.terminationStatus == SIGTERM {
+        print("Git worktree list timed out for path: \(repoPath)")
+        return []
+      }
 
       let data = pipe.fileHandleForReading.readDataToEndOfFile()
       guard let output = String(data: data, encoding: .utf8) else {

@@ -32,6 +32,7 @@ struct SessionsListView: View {
               onTap: { onRestoreSession(session) },
               onDelete: { onDeleteSession(session) },
             )
+            .listRowSeparator(.hidden)
           }
         }
       }

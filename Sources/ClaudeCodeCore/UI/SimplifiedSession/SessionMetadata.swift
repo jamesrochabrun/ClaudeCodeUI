@@ -35,7 +35,7 @@ struct SessionMetadata: View {
           Text(branch)
             .font(.caption)
         }
-        .foregroundColor(isWorktree ? Color.brandPrimary : Color.brandSecondary)
+        .foregroundColor(isWorktree ? Color.brandSecondary : Color.brandPrimary)
       }
 
       if let dir = workingDirectory, !dir.isEmpty {

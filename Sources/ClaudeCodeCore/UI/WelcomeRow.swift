@@ -136,8 +136,10 @@ private struct WorktreeListItem: View {
       }
       .padding(.horizontal, 8)
       .padding(.vertical, 4)
+      .frame(maxWidth: .infinity, alignment: .leading)
       .background(isSelected ? Color.brandPrimary.opacity(0.8) : Color.clear)
       .clipShape(RoundedRectangle(cornerRadius: 4, style: .circular))
+      .contentShape(RoundedRectangle(cornerRadius: 4, style: .circular))
     }
     .buttonStyle(.plain)
   }
@@ -176,10 +178,12 @@ struct WelcomeRow: View {
   let toolTip: String?
   let onSettingsTapped: () -> Void
   let onWorktreeSelected: ((String) -> Void)?
-  
+
   @State private var availableWorktrees: [GitWorktreeInfo] = []
   @State private var isExpanded = false
   @State private var isLoadingWorktrees = false
+  @State private var showInvalidPathAlert = false
+  @State private var invalidPathMessage = ""
   
   // Custom color
   init(
@@ -224,8 +228,17 @@ struct WelcomeRow: View {
               worktrees: availableWorktrees,
               currentPath: path.replacingOccurrences(of: "cwd: ", with: ""),
               onWorktreeSelected: { selectedPath in
-                onWorktreeSelected?(selectedPath)
-                isExpanded = false
+                // Validate worktree path exists before switching
+                if FileManager.default.fileExists(atPath: selectedPath) {
+                  onWorktreeSelected?(selectedPath)
+                  isExpanded = false
+                } else {
+                  // Show alert for invalid path
+                  invalidPathMessage = "The worktree at '\(URL(fileURLWithPath: selectedPath).lastPathComponent)' no longer exists. It may have been removed or moved."
+                  showInvalidPathAlert = true
+                  // Refresh worktree list to remove stale entries
+                  detectWorktrees()
+                }
               }
             )
           }
@@ -244,6 +257,11 @@ struct WelcomeRow: View {
     }
     .onChange(of: path) { _, _ in
       detectWorktrees()
+    }
+    .alert("Worktree Not Found", isPresented: $showInvalidPathAlert) {
+      Button("OK", role: .cancel) { }
+    } message: {
+      Text(invalidPathMessage)
     }
   }
   
