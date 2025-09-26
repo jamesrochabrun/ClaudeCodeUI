@@ -111,11 +111,6 @@ extension ChatScreen {
             viewModel.claudeClient.configuration.workingDirectory = worktreePath
             viewModel.projectPath = worktreePath
             viewModel.settingsStorage.setProjectPath(worktreePath)
-
-            // Optional: Show feedback that the directory changed
-            if viewModel.isDebugEnabled {
-              viewModel.logger.debug("Switched to worktree: \(worktreePath)")
-            }
           }
         )
         .listRowSeparator(.hidden)
