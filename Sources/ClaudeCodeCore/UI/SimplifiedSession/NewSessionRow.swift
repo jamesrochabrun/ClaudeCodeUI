@@ -21,7 +21,7 @@ struct NewSessionRow: View {
     }) {
       HStack {
         Image(systemName: "plus.circle.fill")
-          .foregroundColor(.blue)
+          .foregroundColor(.brandPrimary)
           .font(.title3)
 
         VStack(alignment: .leading, spacing: 4) {
