@@ -137,7 +137,7 @@ private struct WorktreeListItem: View {
       .padding(.horizontal, 8)
       .padding(.vertical, 4)
       .background(isSelected ? Color.brandPrimary.opacity(0.8) : Color.clear)
-      .cornerRadius(4)
+      .clipShape(RoundedRectangle(cornerRadius: 4, style: .circular))
     }
     .buttonStyle(.plain)
   }
@@ -160,11 +160,10 @@ private struct WorktreeListView: View {
         )
       }
     }
-    .padding(.top, 4)
+    .padding(.vertical, 8)
     .padding(.horizontal, 8)
     .background(Color.brandSecondary.opacity(0.2))
-    .cornerRadius(12)
-    .frame(maxHeight: 300)
+    .clipShape(RoundedRectangle(cornerRadius: 4, style: .circular))
   }
 }
 
@@ -216,9 +215,7 @@ struct WelcomeRow: View {
             isExpanded: isExpanded,
             onEditTapped: onSettingsTapped,
             onToggleExpanded: {
-              withAnimation {
-                isExpanded.toggle()
-              }
+              isExpanded.toggle()
             }
           )
 
