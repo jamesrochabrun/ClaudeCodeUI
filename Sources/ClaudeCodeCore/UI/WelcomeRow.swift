@@ -162,9 +162,9 @@ private struct WorktreeListView: View {
     }
     .padding(.top, 4)
     .padding(.horizontal, 8)
-    .background(Color.gray.opacity(0.05))
-    .cornerRadius(4)
-    .frame(maxHeight: 150)
+    .background(Color.brandSecondary.opacity(0.2))
+    .cornerRadius(12)
+    .frame(maxHeight: 300)
   }
 }
 
