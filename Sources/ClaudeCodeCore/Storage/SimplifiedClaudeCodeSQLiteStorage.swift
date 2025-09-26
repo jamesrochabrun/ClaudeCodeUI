@@ -11,7 +11,7 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
 
   public init() {}
 
-  public func saveSession(id: String, firstMessage: String, workingDirectory: String?) async throws {
+  public func saveSession(id: String, firstMessage: String, workingDirectory: String?, branchName: String?, isWorktree: Bool) async throws {
     try await initializeDatabaseIfNeeded()
 
     let insert = sessionsTable.insert(
@@ -19,7 +19,9 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       createdAtColumn <- Date(),
       firstUserMessageColumn <- firstMessage,
       lastAccessedAtColumn <- Date(),
-      workingDirectoryColumn <- workingDirectory
+      workingDirectoryColumn <- workingDirectory,
+      branchNameColumn <- branchName,
+      isWorktreeColumn <- isWorktree
     )
 
     try database.run(insert)
@@ -42,7 +44,9 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
         firstUserMessage: sessionRow[firstUserMessageColumn],
         lastAccessedAt: sessionRow[lastAccessedAtColumn],
         messages: messages,
-        workingDirectory: sessionRow[workingDirectoryColumn]
+        workingDirectory: sessionRow[workingDirectoryColumn],
+        branchName: sessionRow[branchNameColumn],
+        isWorktree: sessionRow[isWorktreeColumn]
       )
       
       storedSessions.append(storedSession)
@@ -66,7 +70,9 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       firstUserMessage: sessionRow[firstUserMessageColumn],
       lastAccessedAt: sessionRow[lastAccessedAtColumn],
       messages: messages,
-      workingDirectory: sessionRow[workingDirectoryColumn]
+      workingDirectory: sessionRow[workingDirectoryColumn],
+      branchName: sessionRow[branchNameColumn],
+      isWorktree: sessionRow[isWorktreeColumn]
     )
     return storedSession
   }
@@ -158,7 +164,9 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       createdAtColumn <- oldSessionRow[createdAtColumn],
       firstUserMessageColumn <- oldSessionRow[firstUserMessageColumn],
       lastAccessedAtColumn <- Date(),
-      workingDirectoryColumn <- oldSessionRow[workingDirectoryColumn]
+      workingDirectoryColumn <- oldSessionRow[workingDirectoryColumn],
+      branchNameColumn <- oldSessionRow[branchNameColumn],
+      isWorktreeColumn <- oldSessionRow[isWorktreeColumn]
     )
     try database.run(insertNewSession)
 
@@ -186,6 +194,8 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
   private let firstUserMessageColumn = Expression<String>("first_user_message")
   private let lastAccessedAtColumn = Expression<Date>("last_accessed_at")
   private let workingDirectoryColumn = Expression<String?>("working_directory")
+  private let branchNameColumn = Expression<String?>("branch_name")
+  private let isWorktreeColumn = Expression<Bool>("is_worktree")
   
   // Message columns
   private let messageIdColumn = Expression<String>("id")
@@ -266,6 +276,8 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       table.column(firstUserMessageColumn)
       table.column(lastAccessedAtColumn)
       table.column(workingDirectoryColumn)
+      table.column(branchNameColumn)
+      table.column(isWorktreeColumn, defaultValue: false)
     })
     
     // Create messages table

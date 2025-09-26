@@ -105,6 +105,12 @@ extension ChatScreen {
           onSettingsTapped: {
             settingsTypeToShow = .session
             showingSettings = true
+          },
+          onWorktreeSelected: { worktreePath in
+            // Update the current session's working directory to the selected worktree
+            viewModel.claudeClient.configuration.workingDirectory = worktreePath
+            viewModel.projectPath = worktreePath
+            viewModel.settingsStorage.setProjectPath(worktreePath)
           }
         )
         .listRowSeparator(.hidden)

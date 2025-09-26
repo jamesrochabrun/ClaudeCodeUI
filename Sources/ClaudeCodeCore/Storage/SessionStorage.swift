@@ -17,6 +17,10 @@ public struct StoredSession: Codable, Identifiable, Sendable {
   public var messages: [ChatMessage]
   /// Working directory for this session
   public let workingDirectory: String?
+  /// Git branch name associated with this session
+  public let branchName: String?
+  /// Whether this session is in a git worktree
+  public let isWorktree: Bool
 
   /// Creates a new StoredSession instance.
   /// - Parameters:
@@ -26,13 +30,17 @@ public struct StoredSession: Codable, Identifiable, Sendable {
   ///   - lastAccessedAt: When the session was last accessed
   ///   - messages: Complete message history for this session
   ///   - workingDirectory: Working directory for this session
+  ///   - branchName: Git branch name for this session
+  ///   - isWorktree: Whether this session is in a git worktree
   public init(
     id: String,
     createdAt: Date,
     firstUserMessage: String,
     lastAccessedAt: Date,
     messages: [ChatMessage] = [],
-    workingDirectory: String? = nil
+    workingDirectory: String? = nil,
+    branchName: String? = nil,
+    isWorktree: Bool = false
   ) {
     self.id = id
     self.createdAt = createdAt
@@ -40,6 +48,8 @@ public struct StoredSession: Codable, Identifiable, Sendable {
     self.lastAccessedAt = lastAccessedAt
     self.messages = messages
     self.workingDirectory = workingDirectory
+    self.branchName = branchName
+    self.isWorktree = isWorktree
   }
   
   /// Computed title based on first user message
@@ -60,7 +70,7 @@ public struct StoredSession: Codable, Identifiable, Sendable {
 /// Protocol for session storage management
 public protocol SessionStorageProtocol {
   /// Saves a new session
-  func saveSession(id: String, firstMessage: String, workingDirectory: String?) async throws
+  func saveSession(id: String, firstMessage: String, workingDirectory: String?, branchName: String?, isWorktree: Bool) async throws
   
   /// Retrieves all stored sessions
   func getAllSessions() async throws -> [StoredSession]
@@ -90,7 +100,7 @@ public actor NoOpSessionStorage: SessionStorageProtocol {
   
   public init() {}
   
-  public func saveSession(id: String, firstMessage: String, workingDirectory: String?) async throws {
+  public func saveSession(id: String, firstMessage: String, workingDirectory: String?, branchName: String?, isWorktree: Bool) async throws {
     // No-op: Don't save anything
   }
   

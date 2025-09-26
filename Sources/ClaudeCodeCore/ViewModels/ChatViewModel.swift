@@ -448,25 +448,39 @@ public final class ChatViewModel {
   /// Selects an existing session (without resuming)
   public func selectSession(id: String) {
     guard let sessionId = sessions.first(where: { $0.id == id })?.id else { return }
-    
+
     // Notify settings storage of session change
     onSessionChange?(sessionId)
-    
+
     // Clear current messages
     messageStore.clear()
-    
+
     // Set the session ID
     sessionManager.selectSession(id: sessionId)
-    
+
     // Load and set the session's stored path
     if let sessionPath = settingsStorage.getProjectPath(forSessionId: sessionId) {
-      // Update ClaudeClient configuration
-      claudeClient.configuration.workingDirectory = sessionPath
-      // Update the observable project path
-      projectPath = sessionPath
-      if isDebugEnabled {
-        let log = "Loaded path '\(sessionPath)' for selected session '\(sessionId)'"
-        logger.debug("\(log)")
+      // Validate the path still exists (important for worktrees that might be deleted)
+      if FileManager.default.fileExists(atPath: sessionPath) {
+        // For worktree validation, we'll do a simplified check without async
+        // Just validate that the .git file/directory exists
+        let gitPath = (sessionPath as NSString).appendingPathComponent(".git")
+        if FileManager.default.fileExists(atPath: gitPath) {
+          // Update ClaudeClient configuration
+          claudeClient.configuration.workingDirectory = sessionPath
+          // Update the observable project path
+          projectPath = sessionPath
+          if isDebugEnabled {
+            let log = "Loaded path '\(sessionPath)' for selected session '\(sessionId)'"
+            logger.debug("\(log)")
+          }
+        } else {
+          // Git directory no longer exists
+          handleInvalidPath(sessionPath, sessionId: sessionId)
+        }
+      } else {
+        // Path no longer exists
+        handleInvalidPath(sessionPath, sessionId: sessionId)
       }
     } else {
       // No stored path for this session
@@ -1067,6 +1081,28 @@ public final class ChatViewModel {
     if let currentMessageId = currentMessageId {
       messageStore.removeMessage(id: currentMessageId)
     }
+  }
+
+  // MARK: - Worktree Support Helpers
+
+  /// Handles the case when a path is no longer valid
+  private func handleInvalidPath(_ path: String, sessionId: String) {
+    claudeClient.configuration.workingDirectory = nil
+    projectPath = ""
+
+    let errorMessage = "The directory '\(path)' no longer exists or is invalid. Please select a new working directory."
+    logger.warning("\(errorMessage)")
+
+    // Create a generic execution failed error since we don't have invalidPath
+    let error = ClaudeCodeError.executionFailed("Invalid path: \(path)")
+
+    errorInfo = ErrorInfo(
+      error: error,
+      severity: .warning,
+      context: "Directory Not Found",
+      recoverySuggestion: errorMessage,
+      operation: .sessionManagement
+    )
   }
 }
 
