@@ -25,6 +25,8 @@ final class StreamProcessor {
   
   // Track active continuation for proper cleanup
   private var activeContinuation: CheckedContinuation<Void, Never>?
+  // Flag to track if continuation has been resumed (protected by MainActor)
+  private var continuationResumed = false
   
   // Track pending session ID during streaming (only commit on success)
   private var pendingSessionId: String?
@@ -61,15 +63,17 @@ final class StreamProcessor {
       // Discarding pending session ID since stream was cancelled
       pendingSessionId = nil
     }
-    
+
     // Cancel all active subscriptions
     cancellables.forEach { $0.cancel() }
     cancellables.removeAll()
-    
+
     // Resume any active continuation to prevent leaks
+    guard !continuationResumed else { return }
     if let continuation = activeContinuation {
-      continuation.resume()
+      continuationResumed = true
       activeContinuation = nil
+      continuation.resume()
     }
   }
   
@@ -81,10 +85,13 @@ final class StreamProcessor {
     onTokenUsageUpdate: ((Int, Int) -> Void)? = nil,
     onCostUpdate: ((Double) -> Void)? = nil
   ) async {
+    // Reset the continuation resumed flag for this new stream
+    continuationResumed = false
+
     await withCheckedContinuation { continuation in
       // Store the continuation for cancellation handling
       self.activeContinuation = continuation
-      
+
       let state = StreamState()
       
       // Set up a timeout to detect if no data is received
@@ -96,23 +103,25 @@ final class StreamProcessor {
         try? await Task.sleep(nanoseconds: 25_000_000_000) // 25 seconds
         if !hasReceivedData && !Task.isCancelled {
           guard let self = self else { return }
-          self.logger.error("Stream timeout - no data received within 5 seconds")
+          self.logger.error("Stream timeout - no data received within 25 seconds")
           
           // Cancel the stream subscription to prevent completion handler from running
           subscription?.cancel()
           self.cancellables.removeAll()
-          
+
           // Clear any pending session ID since the stream timed out
           if let pending = self.pendingSessionId {
             ClaudeCodeLogger.shared.stream("Timeout occurred - discarding pending session ID: \(pending)")
             self.pendingSessionId = nil
           }
-          
-          // Clear the active continuation reference before resuming
+
+          // Resume continuation safely
+          guard !self.continuationResumed else { return }
+          self.continuationResumed = true
           self.activeContinuation = nil
-          
+
           // Call error handler and resume continuation
-          onError?(ClaudeCodeError.timeout(5.0))
+          onError?(ClaudeCodeError.timeout(25.0))
           continuation.resume()
         }
       }
@@ -123,6 +132,7 @@ final class StreamProcessor {
           receiveCompletion: { [weak self] completion in
             timeoutTask?.cancel() // Cancel timeout on completion
             guard let self = self else {
+              // Self is nil, just resume the continuation
               continuation.resume()
               return
             }
@@ -198,11 +208,13 @@ final class StreamProcessor {
               // Call the error handler if provided
               onError?(error)
             }
-            
-            // Clear the active continuation reference
+
+            // Resume continuation safely
+            guard !self.continuationResumed else { return }
+            self.continuationResumed = true
             self.activeContinuation = nil
             continuation.resume()
-            
+
             // Clean up the subscription
             self.cancellables.removeAll()
           },
