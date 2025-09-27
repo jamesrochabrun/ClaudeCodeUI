@@ -345,6 +345,18 @@ cd ClaudeCodeUI
 open Package.swift
 ```
 
+### Architecture
+
+<img width="938" height="748" alt="Image" src="https://github.com/user-attachments/assets/6ff53c3b-46ab-4800-b018-355cb02f97ca" />
+
+### Session Management Flow
+
+<img width="978" height="721" alt="Image" src="https://github.com/user-attachments/assets/1ce19cd4-d954-4ffa-9968-9cdf597f278b" />
+
+### Key Components
+
+<img width="1028" height="667" alt="Image" src="https://github.com/user-attachments/assets/4413ca3e-407a-4a4a-9412-2c81f2a44efa" />
+
 ## Support
 
 For issues, questions, or contributions, please visit the [GitHub repository](https://github.com/jamesrochabrun/ClaudeCodeUI).
