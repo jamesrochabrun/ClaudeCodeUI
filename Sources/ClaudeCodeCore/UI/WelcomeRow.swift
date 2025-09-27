@@ -65,6 +65,8 @@ private struct WorkingDirectoryHeader: View {
   let path: String
   let worktreeCount: Int
   let isExpanded: Bool
+  let hasMessages: Bool
+  let selectedWorktree: GitWorktreeInfo?
   let onEditTapped: () -> Void
   let onToggleExpanded: () -> Void
 
@@ -80,18 +82,26 @@ private struct WorkingDirectoryHeader: View {
       }
       .buttonStyle(.plain)
       .foregroundColor(.secondary)
-      .help("Change working directory")
+      .disabled(hasMessages)
+      .opacity(hasMessages ? 0.5 : 1.0)
+      .help(hasMessages ? "Cannot change directory while session is active" : "Change working directory")
 
       if worktreeCount > 1 {
         Spacer()
-        Button(action: onToggleExpanded) {
+        Button(action: {
+          if !hasMessages {
+            onToggleExpanded()
+          }
+        }) {
           HStack(spacing: 4) {
             Image(systemName: "arrow.triangle.branch")
               .font(.caption)
-            Text("\(worktreeCount) worktrees")
+            Text(hasMessages && selectedWorktree != nil ? (selectedWorktree!.branch ?? "unknown") : "\(worktreeCount) worktrees")
               .font(.system(.caption, design: .monospaced))
-            Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-              .font(.caption2)
+            if !hasMessages {
+              Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                .font(.caption2)
+            }
           }
           .foregroundColor(.brandPrimary)
           .padding(.horizontal, 8)
@@ -100,6 +110,9 @@ private struct WorkingDirectoryHeader: View {
           .cornerRadius(4)
         }
         .buttonStyle(.plain)
+        .disabled(hasMessages)
+        .opacity(hasMessages ? 0.8 : 1.0)
+        .help(hasMessages ? "Worktree locked for this session" : "Select a different worktree")
       }
     }
   }
@@ -187,6 +200,7 @@ struct WelcomeRow: View {
   let showSettingsButton: Bool
   let appName: String
   let toolTip: String?
+  let hasMessages: Bool
   let onSettingsTapped: () -> Void
   let onWorktreeSelected: ((String) -> Void)?
 
@@ -202,6 +216,7 @@ struct WelcomeRow: View {
     showSettingsButton: Bool = false,
     appName: String = "Claude Code UI",
     toolTip: String? = nil,
+    hasMessages: Bool = false,
     onSettingsTapped: @escaping () -> Void = {},
     onWorktreeSelected: ((String) -> Void)? = nil
   ) {
@@ -209,6 +224,7 @@ struct WelcomeRow: View {
     self.showSettingsButton = showSettingsButton
     self.appName = appName
     self.toolTip = toolTip
+    self.hasMessages = hasMessages
     self.onSettingsTapped = onSettingsTapped
     self.onWorktreeSelected = onWorktreeSelected
   }
@@ -228,13 +244,22 @@ struct WelcomeRow: View {
             path: path,
             worktreeCount: availableWorktrees.count,
             isExpanded: isExpanded,
+            hasMessages: hasMessages,
+            selectedWorktree: availableWorktrees.first(where: { worktree in
+              let cleanPath = path.replacingOccurrences(of: "cwd: ", with: "")
+              let currentClean = cleanPath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+              let worktreeClean = worktree.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+              return currentClean == worktreeClean || currentClean.hasPrefix(worktreeClean + "/")
+            }),
             onEditTapped: onSettingsTapped,
             onToggleExpanded: {
-              isExpanded.toggle()
+              if !hasMessages {
+                isExpanded.toggle()
+              }
             }
           )
 
-          if isExpanded && availableWorktrees.count > 1 {
+          if isExpanded && availableWorktrees.count > 1 && !hasMessages {
             WorktreeListView(
               worktrees: availableWorktrees,
               currentPath: path.replacingOccurrences(of: "cwd: ", with: ""),
@@ -372,6 +397,13 @@ struct WelcomeRow: View {
             path: currentPath,
             worktreeCount: mockWorktrees.count,
             isExpanded: isExpanded,
+            hasMessages: false,
+            selectedWorktree: mockWorktrees.first(where: { worktree in
+              let cleanPath = currentPath.replacingOccurrences(of: "cwd: ", with: "")
+              let currentClean = cleanPath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+              let worktreeClean = worktree.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+              return currentClean == worktreeClean || currentClean.hasPrefix(worktreeClean + "/")
+            }),
             onEditTapped: { print("Edit tapped") },
             onToggleExpanded: { isExpanded.toggle() }
           )
