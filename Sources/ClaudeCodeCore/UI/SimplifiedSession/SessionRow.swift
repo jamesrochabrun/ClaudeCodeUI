@@ -46,6 +46,7 @@ struct SessionRow: View {
           Spacer()
         }
         .padding(10)
+        .contentShape(Rectangle())
       }
       .buttonStyle(.plain)
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -62,7 +63,6 @@ struct SessionRow: View {
       RoundedRectangle(cornerRadius: 6)
         .stroke(isCurrentSession ? Color.brandPrimary : Color.clear, lineWidth: isCurrentSession ? 1 : 0)
     )
-    .contentShape(Rectangle())
   }
   
   @Environment(\.colorScheme) private var colorScheme
