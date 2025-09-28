@@ -8,6 +8,9 @@
 import SwiftUI
 import ClaudeCodeSDK
 import CCPermissionsServiceInterface
+import CCXcodeObserverServiceInterface
+import CCAccessibilityFoundation
+import Combine
 import UniformTypeIdentifiers
 
 struct ChatInputView: View {
@@ -36,7 +39,6 @@ struct ChatInputView: View {
   @State private var fileSearchViewModel: FileSearchViewModel? = nil
   @State private var fileSearchAnchor: CGPoint = .zero
   @State private var isUpdatingFileSearch = false
-  @State private var permissionModeToast: String? = nil
   
   private let processor = AttachmentProcessor()
   
@@ -107,13 +109,9 @@ struct ChatInputView: View {
         HStack(alignment: .bottom) {
           attachmentButton
           textEditor
-          VStack(spacing: 4) {
-            actionButton
-            PermissionModeButton(mode: $viewModel.permissionMode) { newMode in
-              showPermissionModeToast(newMode)
-            }
-          }
+          actionButton
         }
+        PermissionModeButton(mode: $viewModel.permissionMode)
       }
       .background(Color(NSColor.controlBackgroundColor))
       .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -155,25 +153,6 @@ struct ChatInputView: View {
       allowsMultipleSelection: true
     ) { result in
       handleFileImport(result)
-    }
-    .overlay(alignment: .top) {
-      if let toast = permissionModeToast {
-        Text(toast)
-          .font(.caption)
-          .padding(.horizontal, 12)
-          .padding(.vertical, 6)
-          .background(Color.accentColor.opacity(0.9))
-          .foregroundColor(.white)
-          .cornerRadius(6)
-          .transition(.move(edge: .top).combined(with: .opacity))
-          .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-              withAnimation {
-                permissionModeToast = nil
-              }
-            }
-          }
-      }
     }
   }
 
@@ -331,7 +310,6 @@ extension ChatInputView {
       // Toggle permission mode
       let newMode = viewModel.permissionMode.nextMode
       viewModel.permissionMode = newMode
-      showPermissionModeToast(newMode)
       return .handled
     }
 
@@ -869,12 +847,6 @@ extension ChatInputView {
     showingFileSearch = false
     fileSearchRange = nil
     fileSearchViewModel?.clearSearch()
-  }
-
-  private func showPermissionModeToast(_ mode: PermissionMode) {
-    withAnimation(.easeInOut(duration: 0.2)) {
-      permissionModeToast = "Permission Mode: \(mode.displayName)"
-    }
   }
 }
 

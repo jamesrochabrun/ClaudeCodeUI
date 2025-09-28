@@ -24,7 +24,7 @@ extension ClaudeCodeSDK.PermissionMode {
       return "Bypass Permissions"
     }
   }
-
+  
   /// Short description of what the mode does
   public var description: String {
     switch self {
@@ -38,7 +38,7 @@ extension ClaudeCodeSDK.PermissionMode {
       return "No permission prompts"
     }
   }
-
+  
   /// Icon name for the mode
   public var iconName: String {
     switch self {
@@ -52,7 +52,7 @@ extension ClaudeCodeSDK.PermissionMode {
       return "shield.slash"
     }
   }
-
+  
   /// Color name for the mode indicator
   public var colorName: String {
     switch self {
@@ -66,7 +66,7 @@ extension ClaudeCodeSDK.PermissionMode {
       return "orange"
     }
   }
-
+  
   /// Returns the next mode in the cycle for keyboard shortcut toggling
   public var nextMode: ClaudeCodeSDK.PermissionMode {
     let allCases: [ClaudeCodeSDK.PermissionMode] = [.default, .plan, .acceptEdits, .bypassPermissions]
@@ -80,18 +80,18 @@ extension ClaudeCodeSDK.PermissionMode {
 public struct PermissionModeIndicator: View {
   let mode: ClaudeCodeSDK.PermissionMode
   let isCompact: Bool
-
+  
   public init(mode: ClaudeCodeSDK.PermissionMode, isCompact: Bool = false) {
     self.mode = mode
     self.isCompact = isCompact
   }
-
+  
   public var body: some View {
     HStack(spacing: 4) {
       Image(systemName: mode.iconName)
         .font(.system(size: isCompact ? 10 : 11))
         .foregroundColor(modeColor)
-
+      
       if !isCompact {
         Text(mode.displayName)
           .font(.system(size: 11))
@@ -108,7 +108,7 @@ public struct PermissionModeIndicator: View {
     )
     .help(mode.description)
   }
-
+  
   private var modeColor: Color {
     switch mode {
     case .default:
@@ -126,13 +126,13 @@ public struct PermissionModeIndicator: View {
 /// A button that shows the current permission mode and allows cycling through modes
 public struct PermissionModeButton: View {
   @Binding var mode: ClaudeCodeSDK.PermissionMode
-  let onModeChange: ((ClaudeCodeSDK.PermissionMode) -> Void)?
-
-  public init(mode: Binding<ClaudeCodeSDK.PermissionMode>, onModeChange: ((ClaudeCodeSDK.PermissionMode) -> Void)? = nil) {
-    self._mode = mode
-    self.onModeChange = onModeChange
+  
+  public init(
+    mode: Binding<ClaudeCodeSDK.PermissionMode>)
+  {
+    _mode = mode
   }
-
+  
   public var body: some View {
     Button(action: toggleMode) {
       PermissionModeIndicator(mode: mode)
@@ -140,11 +140,10 @@ public struct PermissionModeButton: View {
     .buttonStyle(.plain)
     .help("Permission Mode: \(mode.description)\n⌘⇧ to cycle modes")
   }
-
+  
   private func toggleMode() {
     let newMode = mode.nextMode
     mode = newMode
-    onModeChange?(newMode)
   }
 }
 
@@ -157,9 +156,9 @@ public struct PermissionModeButton: View {
         PermissionModeIndicator(mode: mode, isCompact: true)
       }
     }
-
+    
     Divider()
-
+    
     PermissionModeButton(mode: .constant(.default))
   }
   .padding()
