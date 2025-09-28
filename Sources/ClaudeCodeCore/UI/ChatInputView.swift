@@ -97,27 +97,29 @@ struct ChatInputView: View {
       }
       
       // Main input area
-      VStack(alignment: .leading, spacing: 2) {
-        if shouldShowContextBar {
-          contextBar
+      VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 2) {
+          if shouldShowContextBar {
+            contextBar
+          }
+          if !attachments.isEmpty {
+            AttachmentListView(attachments: $attachments)
+              .padding(.horizontal, 8)
+              .padding(.top, 4)
+          }
+          HStack(alignment: .bottom) {
+            attachmentButton
+            textEditor
+            actionButton
+          }
         }
-        if !attachments.isEmpty {
-          AttachmentListView(attachments: $attachments)
-            .padding(.horizontal, 8)
-            .padding(.top, 4)
-        }
-        HStack(alignment: .bottom) {
-          attachmentButton
-          textEditor
-          actionButton
-        }
+        .background(Color(NSColor.controlBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(inputBorder)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 12)
         PermissionModeButton(mode: $viewModel.permissionMode)
       }
-      .background(Color(NSColor.controlBackgroundColor))
-      .clipShape(RoundedRectangle(cornerRadius: 12))
-      .overlay(inputBorder)
-      .padding(.horizontal, 12)
-      .padding(.bottom, 12)
     }
     .animation(.easeInOut(duration: 0.2), value: showingFileSearch)
     .animation(.easeInOut(duration: 0.2), value: xcodeObservationViewModel.workspaceModel.activeFile?.name)
