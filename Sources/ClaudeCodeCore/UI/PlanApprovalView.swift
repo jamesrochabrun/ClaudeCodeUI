@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Down
+import AppKit
 
 /// A view that displays a plan for approval when exiting plan mode
 public struct PlanApprovalView: View {
@@ -48,9 +49,12 @@ public struct PlanApprovalView: View {
       HStack {
         Text(" Here is Claude's plan:  ")
           .font(.system(size: 14, weight: .medium))
-        
+
         Spacer()
-        
+
+        // Copy button with feedback
+        CopyButton(textToCopy: planContent)
+
         Button(action: {
           withAnimation(.easeInOut(duration: 0.2)) {
             isExpanded.toggle()
@@ -61,7 +65,7 @@ public struct PlanApprovalView: View {
             .foregroundColor(.secondary)
         }
         .buttonStyle(.plain)
-        
+
         Button(action: onDismiss) {
           Image(systemName: "xmark.circle.fill")
             .font(.system(size: 16))
@@ -206,6 +210,7 @@ public struct PlanApprovalView: View {
     ? Color(white: 0.25)
     : Color(white: 0.85)
   }
+
 }
 
 /// A view that renders plan content with proper formatting
