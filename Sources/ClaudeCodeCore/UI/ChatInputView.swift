@@ -112,14 +112,15 @@ struct ChatInputView: View {
             textEditor
             actionButton
           }
+          .border(.red)
         }
         .background(Color(NSColor.controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(inputBorder)
-        .padding(.horizontal, 12)
-        .padding(.bottom, 12)
         PermissionModeButton(mode: $viewModel.permissionMode)
       }
+      .padding(.horizontal, 12)
+      .padding(.bottom, 12)
     }
     .animation(.easeInOut(duration: 0.2), value: showingFileSearch)
     .animation(.easeInOut(duration: 0.2), value: xcodeObservationViewModel.workspaceModel.activeFile?.name)
