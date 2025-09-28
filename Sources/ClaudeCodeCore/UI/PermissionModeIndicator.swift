@@ -11,15 +11,18 @@ import ClaudeCodeSDK
 // MARK: - Extensions for ClaudeCodeSDK.PermissionMode
 
 extension ClaudeCodeSDK.PermissionMode {
+  
+  var tip: String { "(shift+tab to cycle)" }
+  
   /// Human-readable display name for the mode
   public var displayName: String {
     switch self {
     case .default:
       return "Default"
     case .plan:
-      return "Plan"
+      return "plan mode on \(tip)"
     case .acceptEdits:
-      return "Accept Edits"
+      return "accept Edits on \(tip)"
     case .bypassPermissions:
       return "Bypass Permissions"
     }
@@ -47,26 +50,12 @@ extension ClaudeCodeSDK.PermissionMode {
     case .plan:
       return "doc.plaintext"
     case .acceptEdits:
-      return "checkmark.shield"
+      return "forward.fill"
     case .bypassPermissions:
       return "shield.slash"
     }
   }
-  
-  /// Color name for the mode indicator
-  public var colorName: String {
-    switch self {
-    case .default:
-      return "gray"
-    case .plan:
-      return "blue"
-    case .acceptEdits:
-      return "green"
-    case .bypassPermissions:
-      return "orange"
-    }
-  }
-  
+
   /// Returns the next mode in the cycle for keyboard shortcut toggling
   public var nextMode: ClaudeCodeSDK.PermissionMode {
     let allCases: [ClaudeCodeSDK.PermissionMode] = [.default, .plan, .acceptEdits, .bypassPermissions]
@@ -114,9 +103,9 @@ public struct PermissionModeIndicator: View {
     case .default:
       return .gray
     case .plan:
-      return .blue
+      return .teal
     case .acceptEdits:
-      return .green
+      return .purple
     case .bypassPermissions:
       return .orange
     }

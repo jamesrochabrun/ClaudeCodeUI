@@ -107,12 +107,11 @@ struct ChatInputView: View {
               .padding(.horizontal, 8)
               .padding(.top, 4)
           }
-          HStack(alignment: .bottom) {
+          HStack(alignment: .center) {
             attachmentButton
             textEditor
             actionButton
           }
-          .border(.red)
         }
         .background(Color(NSColor.controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 12))
