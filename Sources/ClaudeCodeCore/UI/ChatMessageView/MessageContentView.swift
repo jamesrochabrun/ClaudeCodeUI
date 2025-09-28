@@ -223,7 +223,7 @@ struct MessageContentView: View {
     Group {
       // Check for ExitPlanMode tool - render inline approval UI
       if message.messageType == .toolUse,
-         message.toolName == "ExitPlanMode",
+         (message.toolName == "exit_plan_mode" || message.toolName == "ExitPlanMode"),
          let viewModel = viewModel,
          let planContent = message.toolInputData?.parameters["plan"] {
         InlinePlanApprovalView(

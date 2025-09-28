@@ -168,7 +168,7 @@ public enum ClaudeCodeTool: String, ToolType, CaseIterable {
   
   public var defaultExpandedState: Bool {
     switch self {
-    case .edit, .multiEdit, .write, .todoWrite:
+    case .edit, .multiEdit, .write, .todoWrite, .exitPlanMode:
       return true  // These tools should be expanded by default to show their content
     default:
       return false

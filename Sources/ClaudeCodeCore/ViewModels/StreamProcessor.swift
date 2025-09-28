@@ -30,7 +30,10 @@ final class StreamProcessor {
   
   // Track pending session ID during streaming (only commit on success)
   private var pendingSessionId: String?
-  
+
+  // Track if we just processed an ExitPlanMode tool to skip its result
+  private var skipNextToolResult = false
+
   /// Gets the currently active session ID (pending or current)
   /// Returns the pending session ID if streaming is in progress, otherwise the current session ID
   var activeSessionId: String? {
@@ -492,6 +495,13 @@ final class StreamProcessor {
         messageStore.addMessage(toolMessage)
         
       case .toolResult(let toolResult):
+        // Check if we should skip this tool result (for ExitPlanMode)
+        if skipNextToolResult {
+          ClaudeCodeLogger.shared.stream("Skipping tool result for ExitPlanMode")
+          skipNextToolResult = false
+          break  // Skip creating a message for this result
+        }
+
         ClaudeCodeLogger.shared.stream("Handling toolResult")
         let resultMessage = MessageFactory.toolResultMessage(
           content: toolResult.content,
@@ -588,7 +598,7 @@ final class StreamProcessor {
 
     // Create a tool message for the UI using the same pattern as other tools
     let toolMessage = MessageFactory.toolUseMessage(
-      toolName: "ExitPlanMode",
+      toolName: toolUse.name,  // Use the actual name from the API
       input: planContent.isEmpty ? "Plan approval requested" : planContent,
       toolInputData: ToolInputData(parameters: parameters, rawParameters: nil),
       taskGroupId: state.currentTaskGroupId,
@@ -598,6 +608,10 @@ final class StreamProcessor {
 
     // Mark that we processed a tool use
     state.hasProcessedToolUse = true
+
+    // Set flag to skip the next tool result (which will be for this ExitPlanMode)
+    skipNextToolResult = true
+    ClaudeCodeLogger.shared.stream("Setting flag to skip next tool result for ExitPlanMode")
   }
 
   // Callback to get parent view model - needs to be set during initialization
