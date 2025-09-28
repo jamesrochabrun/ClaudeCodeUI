@@ -583,12 +583,8 @@ final class StreamProcessor {
       }
     }
 
-    // Get reference to ChatViewModel to show plan approval
-    if let getter = getParentViewModel, let viewModel = getter() {
-      Task { @MainActor in
-        viewModel.handlePlanApproval(planContent: planContent, toolUseId: toolUse.id)
-      }
-    }
+    // Plan approval is now handled inline in the message UI
+    // No need to trigger a separate toast overlay
 
     // Create a tool message for the UI using the same pattern as other tools
     let toolMessage = MessageFactory.toolUseMessage(

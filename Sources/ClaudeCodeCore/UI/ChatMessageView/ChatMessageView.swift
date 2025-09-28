@@ -229,7 +229,8 @@ struct ChatMessageView: View {
       maxWidth: size.width,
       terminalService: terminalService,
       projectPath: settingsStorage.projectPath,
-      onApprovalAction: onApprovalAction
+      onApprovalAction: onApprovalAction,
+      viewModel: viewModel
     )
   }
   

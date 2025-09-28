@@ -63,8 +63,7 @@ public final class ChatViewModel {
   // Track expansion states for each message to persist across view recreations
   var messageExpansionStates: [UUID: Bool] = [:]
 
-  /// Plan approval data for plan mode
-  public var planApprovalData: PlanApprovalData?
+  // Plan approval is now handled inline via InlinePlanApprovalView
 
   /// Sessions loading state
   public var isLoadingSessions: Bool {
@@ -1123,47 +1122,9 @@ public final class ChatViewModel {
 
   // MARK: - Plan Approval
 
-  /// Handles plan approval from ExitPlanMode tool
-  public func handlePlanApproval(planContent: String, toolUseId: String) {
-    // Create plan approval data
-    planApprovalData = PlanApprovalData(
-      planContent: planContent,
-      onApprove: { [weak self] in
-        // Switch to default mode and continue
-        self?.permissionMode = .default
-        self?.sendPlanApprovalResponse(approved: true, toolUseId: toolUseId)
-      },
-      onApproveWithAutoAccept: { [weak self] in
-        // Switch to acceptEdits mode for this turn
-        self?.permissionMode = .acceptEdits
-        self?.sendPlanApprovalResponse(approved: true, toolUseId: toolUseId)
-      },
-      onDeny: { [weak self] feedback in
-        // Switch to default mode and send feedback
-        self?.permissionMode = .default
-        self?.sendPlanDenialResponse(feedback: feedback, toolUseId: toolUseId)
-      }
-    )
-  }
-
-  /// Sends approval response after plan is approved
-  private func sendPlanApprovalResponse(approved: Bool, toolUseId: String) {
-    // Clear the plan approval data
-    planApprovalData = nil
-
-    // Send continuation message
-    let message = "Plan approved, continuing..."
-    sendMessage(message)
-  }
-
-  /// Sends denial response with optional feedback
-  private func sendPlanDenialResponse(feedback: String?, toolUseId: String) {
-    // Clear the plan approval data
-    planApprovalData = nil
-
-    // Send feedback message
-    let message = feedback ?? "Plan denied. Please provide an alternative approach."
-    sendMessage(message)
+  /// Updates the plan approval status for a specific message
+  public func updatePlanApprovalStatus(messageId: UUID, status: PlanApprovalStatus) {
+    messageStore.updatePlanApprovalStatus(id: messageId, status: status)
   }
 }
 

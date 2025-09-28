@@ -99,10 +99,23 @@ final class MessageStore {
   /// - Note: This sets wasCancelled to true and isComplete to true
   func markMessageAsCancelled(id: UUID) {
     guard let index = messages.firstIndex(where: { $0.id == id }) else { return }
-    
+
     var updatedMessage = messages[index]
     updatedMessage.wasCancelled = true
     updatedMessage.isComplete = true
+    messages[index] = updatedMessage
+  }
+
+  /// Updates the plan approval status for a message
+  /// - Parameters:
+  ///   - id: The UUID of the message to update
+  ///   - status: The new PlanApprovalStatus
+  /// - Note: Used for tracking approval/denial of ExitPlanMode tool messages
+  func updatePlanApprovalStatus(id: UUID, status: PlanApprovalStatus) {
+    guard let index = messages.firstIndex(where: { $0.id == id }) else { return }
+
+    var updatedMessage = messages[index]
+    updatedMessage.planApprovalStatus = status
     messages[index] = updatedMessage
   }
 }
