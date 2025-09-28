@@ -18,13 +18,13 @@ extension ClaudeCodeSDK.PermissionMode {
   public var displayName: String {
     switch self {
     case .default:
-      return "Default"
+      return "default \(tip)"
     case .plan:
       return "plan mode on \(tip)"
     case .acceptEdits:
-      return "accept Edits on \(tip)"
+      return "accept edits on \(tip)"
     case .bypassPermissions:
-      return "Bypass Permissions"
+      return "bypass permissions \(tip)"
     }
   }
   

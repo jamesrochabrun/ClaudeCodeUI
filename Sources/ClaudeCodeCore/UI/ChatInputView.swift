@@ -307,8 +307,8 @@ extension ChatInputView {
   
   /// Handle keyboard events
   private func handleKeyPress(_ key: KeyPress) -> KeyPress.Result {
-    // Check for Cmd+Shift to cycle permission modes (any key with both modifiers)
-    if key.modifiers == [.command, .shift] {
+    // Check for tab+shift to cycle permission modes (any key with both modifiers)
+    if key.modifiers == [.shift] && key.key == .tab {
       // Toggle permission mode
       let newMode = viewModel.permissionMode.nextMode
       viewModel.permissionMode = newMode
