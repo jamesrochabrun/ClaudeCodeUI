@@ -73,6 +73,11 @@ struct ChatMessageView: View {
       if let toolName = message.toolName,
          let tool = ToolRegistry.shared.tool(for: toolName) {
         defaultExpanded = tool.defaultExpandedState
+
+        // Special case for ExitPlanMode - always expand
+        if toolName.lowercased() == "exitplanmode" || toolName == "exit_plan_mode" {
+          defaultExpanded = true
+        }
       }
       
       // Thinking messages should also be expanded by default
@@ -205,12 +210,19 @@ struct ChatMessageView: View {
             .frame(maxWidth: .infinity)
         }
         
-        ScrollView {
+        // For ExitPlanMode, don't use ScrollView to show full content with action buttons
+        if message.toolName == "ExitPlanMode" || message.toolName == "exit_plan_mode" {
           messageContentView
             .frame(maxWidth: .infinity, alignment: .leading)
+            .background(contentBackgroundColor)
+        } else {
+          ScrollView {
+            messageContentView
+              .frame(maxWidth: .infinity, alignment: .leading)
+          }
+          .frame(maxHeight: 400)
+          .background(contentBackgroundColor)
         }
-        .frame(maxHeight: 400)
-        .background(contentBackgroundColor)
       }
     }
   }
@@ -229,7 +241,8 @@ struct ChatMessageView: View {
       maxWidth: size.width,
       terminalService: terminalService,
       projectPath: settingsStorage.projectPath,
-      onApprovalAction: onApprovalAction
+      onApprovalAction: onApprovalAction,
+      viewModel: viewModel
     )
   }
   

@@ -8,6 +8,9 @@
 import SwiftUI
 import ClaudeCodeSDK
 import CCPermissionsServiceInterface
+import CCXcodeObserverServiceInterface
+import CCAccessibilityFoundation
+import Combine
 import UniformTypeIdentifiers
 
 struct ChatInputView: View {
@@ -94,30 +97,34 @@ struct ChatInputView: View {
       }
       
       // Main input area
-      VStack(alignment: .leading, spacing: 2) {
-        if shouldShowContextBar {
-          contextBar
+      VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 2) {
+          if shouldShowContextBar {
+            contextBar
+          }
+          if !attachments.isEmpty {
+            AttachmentListView(attachments: $attachments)
+              .padding(.horizontal, 8)
+              .padding(.top, 4)
+          }
+          HStack(alignment: .center) {
+            attachmentButton
+            textEditor
+            actionButton
+          }
         }
-        if !attachments.isEmpty {
-          AttachmentListView(attachments: $attachments)
-            .padding(.horizontal, 8)
-            .padding(.top, 4)
-        }
-        HStack {
-          attachmentButton
-          textEditor
-          actionButton
-        }
+        .background(Color(NSColor.controlBackgroundColor))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(inputBorder)
+        PermissionModeButton(mode: $viewModel.permissionMode)
       }
-      .background(Color(NSColor.controlBackgroundColor))
-      .clipShape(RoundedRectangle(cornerRadius: 12))
-      .overlay(inputBorder)
       .padding(.horizontal, 12)
       .padding(.bottom, 12)
     }
     .animation(.easeInOut(duration: 0.2), value: showingFileSearch)
     .animation(.easeInOut(duration: 0.2), value: xcodeObservationViewModel.workspaceModel.activeFile?.name)
     .animation(.easeInOut(duration: 0.2), value: contextManager.context.codeSelections.count)
+    .animation(.easeInOut(duration: 0.15), value: viewModel.permissionMode)
     .onChange(of: viewModel.projectPath) { oldValue, newValue in
       if !newValue.isEmpty && newValue != oldValue {
         fileSearchViewModel?.updateProjectPath(newValue)
@@ -150,7 +157,7 @@ struct ChatInputView: View {
       handleFileImport(result)
     }
   }
-  
+
   // MARK: - Computed Properties
 }
 

@@ -30,7 +30,10 @@ final class StreamProcessor {
   
   // Track pending session ID during streaming (only commit on success)
   private var pendingSessionId: String?
-  
+
+  // Track if we just processed an ExitPlanMode tool to skip its result
+  private var skipNextToolResult = false
+
   /// Gets the currently active session ID (pending or current)
   /// Returns the pending session ID if streaming is in progress, otherwise the current session ID
   var activeSessionId: String? {
@@ -401,9 +404,16 @@ final class StreamProcessor {
         
       case .toolUse(let toolUse):
         ClaudeCodeLogger.shared.stream("Handling toolUse: \(toolUse.name)")
+
+        // Check for ExitPlanMode tool
+        if toolUse.name == "ExitPlanMode" || toolUse.name == "exit_plan_mode" {
+          handleExitPlanMode(toolUse, state: state)
+          return
+        }
+
         // Mark that we've processed a tool use
         state.hasProcessedToolUse = true
-        
+
         // Check if this is a Task tool starting
         let isTaskTool = toolUse.name == "Task"
         if isTaskTool {
@@ -485,6 +495,26 @@ final class StreamProcessor {
         messageStore.addMessage(toolMessage)
         
       case .toolResult(let toolResult):
+        // Check if we should skip this tool result (for ExitPlanMode)
+        if skipNextToolResult {
+          ClaudeCodeLogger.shared.stream("Skipping tool result for ExitPlanMode")
+          skipNextToolResult = false
+          break  // Skip creating a message for this result
+        }
+
+        // Also check if this is the "Exit plan mode?" result that we want to skip
+        var shouldSkip = false
+        if case .string(let content) = toolResult.content {
+          if content.lowercased().contains("exit plan mode") || content == "Exit plan mode?" {
+            ClaudeCodeLogger.shared.stream("Skipping ExitPlanMode tool result based on content: \(content)")
+            shouldSkip = true
+          }
+        }
+
+        if shouldSkip {
+          break  // Skip creating a message for this result
+        }
+
         ClaudeCodeLogger.shared.stream("Handling toolResult")
         let resultMessage = MessageFactory.toolResultMessage(
           content: toolResult.content,
@@ -515,6 +545,26 @@ final class StreamProcessor {
         logger.debug("User text content: \(textContent)")
         
       case .toolResult(let toolResult):
+        // Check if we should skip this tool result (for ExitPlanMode)
+        if skipNextToolResult {
+          ClaudeCodeLogger.shared.stream("Skipping tool result for ExitPlanMode (in user message)")
+          skipNextToolResult = false
+          break  // Skip creating a message for this result
+        }
+
+        // Also check if this is the "Exit plan mode?" result that we want to skip
+        var shouldSkip = false
+        if case .string(let content) = toolResult.content {
+          if content.lowercased().contains("exit plan mode") || content == "Exit plan mode?" {
+            ClaudeCodeLogger.shared.stream("Skipping ExitPlanMode tool result based on content (user): \(content)")
+            shouldSkip = true
+          }
+        }
+
+        if shouldSkip {
+          break  // Skip creating a message for this result
+        }
+
         let resultMessage = MessageFactory.toolResultMessage(
           content: toolResult.content,
           isError: toolResult.isError == true,
@@ -559,5 +609,48 @@ final class StreamProcessor {
       }
     }
     return false
+  }
+
+  private func handleExitPlanMode(_ toolUse: MessageResponse.Content.ToolUse, state: StreamState) {
+    ClaudeCodeLogger.shared.stream("Handling ExitPlanMode tool")
+
+    // Extract the plan content from tool parameters
+    var parameters: [String: String] = [:]
+    var planContent = ""
+
+    // Process the input dictionary to extract plan content
+    for (key, dynamicContent) in toolUse.input {
+      if key == "plan" {
+        planContent = formatter.format(dynamicContent)
+        parameters[key] = planContent
+      }
+    }
+
+    // Plan approval is now handled inline in the message UI
+    // No need to trigger a separate toast overlay
+
+    // Create a tool message for the UI using the same pattern as other tools
+    let toolMessage = MessageFactory.toolUseMessage(
+      toolName: toolUse.name,  // Use the actual name from the API
+      input: planContent.isEmpty ? "Plan approval requested" : planContent,
+      toolInputData: ToolInputData(parameters: parameters, rawParameters: nil),
+      taskGroupId: state.currentTaskGroupId,
+      isTaskContainer: false
+    )
+    messageStore.addMessage(toolMessage)
+
+    // Mark that we processed a tool use
+    state.hasProcessedToolUse = true
+
+    // Set flag to skip the next tool result (which will be for this ExitPlanMode)
+    skipNextToolResult = true
+    ClaudeCodeLogger.shared.stream("Setting flag to skip next tool result for ExitPlanMode")
+  }
+
+  // Callback to get parent view model - needs to be set during initialization
+  private var getParentViewModel: (() -> ChatViewModel?)?
+
+  func setParentViewModel(_ getter: @escaping () -> ChatViewModel?) {
+    self.getParentViewModel = getter
   }
 }

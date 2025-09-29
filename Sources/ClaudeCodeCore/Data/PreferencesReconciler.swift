@@ -279,7 +279,7 @@ public final class PreferencesReconciler {
     // Safe tools that can be allowed by default
     let safeTools = [
       "Read", "Grep", "Glob", "LS", "WebSearch",
-      "TodoWrite", "ExitPlanMode", "exit_plan_mode"
+      "TodoWrite", "ExitPlanMode"
     ]
     
     // Check if it's a known safe tool

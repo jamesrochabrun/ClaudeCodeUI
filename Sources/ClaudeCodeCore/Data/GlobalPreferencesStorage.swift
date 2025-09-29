@@ -208,7 +208,7 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
         self.disallowedTools = []
       } else {
         // Normal defaults - only safe read-only tools
-        self.allowedTools = ["LS", "Read", "Glob", "Grep", "WebSearch", "TodoWrite", "exit_plan_mode"]
+        self.allowedTools = ["LS", "Read", "Glob", "Grep", "WebSearch", "TodoWrite", "ExitPlanMode"]
         self.disallowedTools = []
       }
       
@@ -324,7 +324,7 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     systemPrompt = ""
     appendSystemPrompt = ""
     // Only allow safe read-only tools by default - risky tools require explicit approval
-    allowedTools = ["LS", "Read", "Glob", "Grep", "WebSearch", "TodoWrite", "exit_plan_mode"]
+    allowedTools = ["LS", "Read", "Glob", "Grep", "WebSearch", "TodoWrite", "ExitPlanMode"]
     disallowedTools = []
     // Reset to Claude's default location
     let homeURL = FileManager.default.homeDirectoryForCurrentUser

@@ -61,17 +61,12 @@ struct CodeBlockContentView: View {
           .help("View Mermaid Diagram")
         }
         
-        // Copy button
+        // Copy button with feedback
         if let copyableContent = code.copyableContent {
-          Button(action: {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(copyableContent, forType: .string)
-          }) {
-            Image(systemName: "doc.on.doc")
-              .font(.system(size: iconSizes))
-          }
-          .buttonStyle(.plain)
-          .help("Copy code")
+          CopyButton(
+            textToCopy: copyableContent,
+            iconSize: iconSizes
+          )
         }
         
         // Loading indicator for incomplete code blocks

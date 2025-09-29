@@ -58,6 +58,10 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
   /// Whether this message is a Task tool that contains other tool executions
   /// - Note: Only true for the initial Task tool message that starts a group
   public var isTaskContainer: Bool
+
+  /// The approval status for plan messages (ExitPlanMode tool)
+  /// - Note: Used to track whether a plan has been approved, denied, or approved with auto-accept
+  public var planApprovalStatus: PlanApprovalStatus?
   
   public init(
     id: UUID = UUID(),
@@ -73,7 +77,8 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
     attachments: [StoredAttachment]? = nil,
     wasCancelled: Bool = false,
     taskGroupId: UUID? = nil,
-    isTaskContainer: Bool = false
+    isTaskContainer: Bool = false,
+    planApprovalStatus: PlanApprovalStatus? = nil
   ) {
     self.id = id
     self.role = role
@@ -89,6 +94,7 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
     self.wasCancelled = wasCancelled
     self.taskGroupId = taskGroupId
     self.isTaskContainer = isTaskContainer
+    self.planApprovalStatus = planApprovalStatus
   }
   
   public static func == (lhs: ChatMessage, rhs: ChatMessage) -> Bool {
@@ -103,7 +109,8 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
     lhs.attachments == rhs.attachments &&
     lhs.wasCancelled == rhs.wasCancelled &&
     lhs.taskGroupId == rhs.taskGroupId &&
-    lhs.isTaskContainer == rhs.isTaskContainer
+    lhs.isTaskContainer == rhs.isTaskContainer &&
+    lhs.planApprovalStatus == rhs.planApprovalStatus
   }
 }
 
@@ -218,6 +225,13 @@ public struct ToolInputData: Equatable, Codable {
     
     return result
   }
+}
+
+/// Status of plan approval for ExitPlanMode tool messages
+public enum PlanApprovalStatus: String, Codable {
+  case approved
+  case approvedWithAutoAccept
+  case denied
 }
 
 /// Simplified attachment data for storage

@@ -62,7 +62,9 @@ public final class ChatViewModel {
   
   // Track expansion states for each message to persist across view recreations
   var messageExpansionStates: [UUID: Bool] = [:]
-  
+
+  // Plan approval is now handled inline via InlinePlanApprovalView
+
   /// Sessions loading state
   public var isLoadingSessions: Bool {
     sessionManager.isLoadingSessions
@@ -125,7 +127,10 @@ public final class ChatViewModel {
   
   /// Tracks whether a session has started (first message sent)
   public private(set) var hasSessionStarted: Bool = false
-  
+
+  /// Current permission mode for this chat session (runtime state only, not persisted)
+  public var permissionMode: ClaudeCodeSDK.PermissionMode = .default
+
   /// Check if debug logging is enabled from the Claude client configuration
   var isDebugEnabled: Bool {
     claudeClient.configuration.enableDebugLogging
@@ -180,7 +185,12 @@ public final class ChatViewModel {
     self.sessionManager.setErrorHandler { [weak self] error, operation in
       self?.handleError(error, operation: operation)
     }
-    
+
+    // Set up parent reference for StreamProcessor
+    self.streamProcessor.setParentViewModel { [weak self] in
+      return self
+    }
+
     // Only load sessions if we're managing them (e.g., when used with RootView)
     // Skip loading when using ChatScreen directly to avoid wasteful operations
     if shouldManageSessions {
@@ -188,7 +198,7 @@ public final class ChatViewModel {
         await loadSessions()
       }
     }
-    
+
     // Initialize project path
     self.projectPath = settingsStorage.projectPath
   }
@@ -955,8 +965,13 @@ public final class ChatViewModel {
       mcpHelper.configureOptions(&options)
     }
     
+    // Set the permission mode for this chat session
+    options.permissionMode = permissionMode
+
     if isDebugEnabled {
       logger.debug("Custom permission service integration configured")
+      let log = "Permission mode: \(self.permissionMode.rawValue)"
+      logger.debug("\(log)")
       let finalToolsLog = "Final allowed tools: \(options.allowedTools ?? [])"
       logger.debug("\(finalToolsLog)")
     }
@@ -1103,6 +1118,13 @@ public final class ChatViewModel {
       recoverySuggestion: errorMessage,
       operation: .sessionManagement
     )
+  }
+
+  // MARK: - Plan Approval
+
+  /// Updates the plan approval status for a specific message
+  public func updatePlanApprovalStatus(messageId: UUID, status: PlanApprovalStatus) {
+    messageStore.updatePlanApprovalStatus(id: messageId, status: status)
   }
 }
 

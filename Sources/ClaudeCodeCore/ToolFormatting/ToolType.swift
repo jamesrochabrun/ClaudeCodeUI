@@ -58,7 +58,7 @@ public enum ClaudeCodeTool: String, ToolType, CaseIterable {
   case glob = "Glob"
   case grep = "Grep"
   case ls = "LS"
-  case exitPlanMode = "exit_plan_mode"
+  case exitPlanMode = "ExitPlanMode"
   case read = "Read"
   case edit = "Edit"
   case multiEdit = "MultiEdit"
@@ -168,7 +168,7 @@ public enum ClaudeCodeTool: String, ToolType, CaseIterable {
   
   public var defaultExpandedState: Bool {
     switch self {
-    case .edit, .multiEdit, .write, .todoWrite:
+    case .edit, .multiEdit, .write, .todoWrite, .exitPlanMode:
       return true  // These tools should be expanded by default to show their content
     default:
       return false
@@ -222,6 +222,11 @@ public final class ToolRegistry {
     // Register all standard tools
     for tool in ClaudeCodeTool.allCases {
       register(tool)
+    }
+
+    // Also register exit_plan_mode variant for backwards compatibility
+    if let exitPlanTool = ClaudeCodeTool.allCases.first(where: { $0 == .exitPlanMode }) {
+      tools["exit_plan_mode"] = exitPlanTool  // Map snake_case to the same tool
     }
   }
   

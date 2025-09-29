@@ -99,6 +99,9 @@ struct MessageContentView: View {
   
   /// Optional callback when approval/denial action occurs
   let onApprovalAction: (() -> Void)?
+
+  /// View model for handling approval actions
+  let viewModel: ChatViewModel?
   
   /// Current color scheme for adaptive styling.
   /// Used to adjust text colors and font weights for optimal readability
@@ -126,6 +129,7 @@ struct MessageContentView: View {
   ///   - terminalService: Service for executing commands in diff views
   ///   - projectPath: Optional project directory path for file operations
   ///   - onApprovalAction: Optional callback invoked when user approves/denies tool actions
+  ///   - viewModel: Optional view model for handling approval actions
   init(
     message: ChatMessage,
     textFormatter: TextFormatter,
@@ -135,7 +139,8 @@ struct MessageContentView: View {
     maxWidth: CGFloat,
     terminalService: TerminalService,
     projectPath: String?,
-    onApprovalAction: (() -> Void)? = nil
+    onApprovalAction: (() -> Void)? = nil,
+    viewModel: ChatViewModel? = nil
   ) {
     self.message = message
     self.textFormatter = textFormatter
@@ -146,6 +151,7 @@ struct MessageContentView: View {
     self.terminalService = terminalService
     self.projectPath = projectPath
     self.onApprovalAction = onApprovalAction
+    self.viewModel = viewModel
   }
   
   /// Determines if the message type should be displayed in a collapsible format.
@@ -215,10 +221,24 @@ struct MessageContentView: View {
   @ViewBuilder
   private var collapsibleContent: some View {
     Group {
-      // Check if this is an Edit or MultiEdit tool message with diff data
+      // Check for ExitPlanMode tool - render inline approval UI
       if message.messageType == .toolUse,
+         (message.toolName == "exit_plan_mode" || message.toolName == "ExitPlanMode"),
+         let viewModel = viewModel,
+         let planContent = message.toolInputData?.parameters["plan"] {
+        InlinePlanApprovalView(
+          messageId: message.id,
+          planContent: planContent,
+          viewModel: viewModel,
+          isResolved: message.planApprovalStatus != nil,
+          approvalStatus: message.planApprovalStatus
+        )
+        .padding(.horizontal, horizontalPadding)
+      }
+      // Check if this is an Edit or MultiEdit tool message with diff data
+      else if message.messageType == .toolUse,
          let rawParams = message.toolInputData?.rawParameters {
-        
+
         switch EditTool(rawValue: message.toolName ?? "") {
         case .edit:
           editToolContent(rawParams: rawParams)
