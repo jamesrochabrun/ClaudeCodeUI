@@ -139,6 +139,15 @@ public struct ChatScreen: View {
         permissionsService: permissionsService,
         triggerFocus: $triggerTextEditorFocus)
     }
+    .onKeyPress { key in
+      // Check for Shift+Tab to cycle permission modes
+      if key.modifiers == [.shift] && key.key.character == "\u{19}" {
+        let newMode = viewModel.permissionMode.nextMode
+        viewModel.permissionMode = newMode
+        return .handled
+      }
+      return .ignored
+    }
     .overlay(approvalToastOverlay)
     .overlay(
       errorToastOverlay

@@ -307,16 +307,6 @@ extension ChatInputView {
   
   /// Handle keyboard events
   private func handleKeyPress(_ key: KeyPress) -> KeyPress.Result {
-    
-    print("zizou \(key)")
-    // Check for tab+shift to cycle permission modes (any key with both modifiers)
-    if key.modifiers == [.shift] && key.key.character == "\u{19}" {
-      // Toggle permission mode
-      let newMode = viewModel.permissionMode.nextMode
-      viewModel.permissionMode = newMode
-      return .handled
-    }
-
     // When file search is showing, handle navigation keys
     if showingFileSearch {
       switch key.key {
