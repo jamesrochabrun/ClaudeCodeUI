@@ -32,7 +32,8 @@ final class PersistentPreferencesTests: XCTestCase {
       claudeCode: [
         "Bash": ToolPreference(isAllowed: true),
         "Read": ToolPreference(isAllowed: true),
-        "Write": ToolPreference(isAllowed: false)
+        "Write": ToolPreference(isAllowed: false),
+        "ExitPlanMode": ToolPreference(isAllowed: true)
       ],
       mcpServers: [
         "approval_server": [

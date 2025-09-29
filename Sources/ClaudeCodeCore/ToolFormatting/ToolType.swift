@@ -58,7 +58,7 @@ public enum ClaudeCodeTool: String, ToolType, CaseIterable {
   case glob = "Glob"
   case grep = "Grep"
   case ls = "LS"
-  case exitPlanMode = "exit_plan_mode"
+  case exitPlanMode = "ExitPlanMode"
   case read = "Read"
   case edit = "Edit"
   case multiEdit = "MultiEdit"
@@ -224,10 +224,9 @@ public final class ToolRegistry {
       register(tool)
     }
 
-    // Also register ExitPlanMode with both common variants
+    // Also register exit_plan_mode variant for backwards compatibility
     if let exitPlanTool = ClaudeCodeTool.allCases.first(where: { $0 == .exitPlanMode }) {
-      tools["ExitPlanMode"] = exitPlanTool
-      tools["exit_plan_mode"] = exitPlanTool
+      tools["exit_plan_mode"] = exitPlanTool  // Map snake_case to the same tool
     }
   }
   
