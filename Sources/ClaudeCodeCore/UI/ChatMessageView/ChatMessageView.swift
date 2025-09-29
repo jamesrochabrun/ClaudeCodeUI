@@ -73,6 +73,11 @@ struct ChatMessageView: View {
       if let toolName = message.toolName,
          let tool = ToolRegistry.shared.tool(for: toolName) {
         defaultExpanded = tool.defaultExpandedState
+
+        // Special case for ExitPlanMode - always expand
+        if toolName.lowercased() == "exitplanmode" || toolName == "exit_plan_mode" {
+          defaultExpanded = true
+        }
       }
       
       // Thinking messages should also be expanded by default

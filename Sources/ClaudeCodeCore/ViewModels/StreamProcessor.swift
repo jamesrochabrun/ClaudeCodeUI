@@ -502,6 +502,19 @@ final class StreamProcessor {
           break  // Skip creating a message for this result
         }
 
+        // Also check if this is the "Exit plan mode?" result that we want to skip
+        var shouldSkip = false
+        if case .string(let content) = toolResult.content {
+          if content.lowercased().contains("exit plan mode") || content == "Exit plan mode?" {
+            ClaudeCodeLogger.shared.stream("Skipping ExitPlanMode tool result based on content: \(content)")
+            shouldSkip = true
+          }
+        }
+
+        if shouldSkip {
+          break  // Skip creating a message for this result
+        }
+
         ClaudeCodeLogger.shared.stream("Handling toolResult")
         let resultMessage = MessageFactory.toolResultMessage(
           content: toolResult.content,
@@ -532,6 +545,26 @@ final class StreamProcessor {
         logger.debug("User text content: \(textContent)")
         
       case .toolResult(let toolResult):
+        // Check if we should skip this tool result (for ExitPlanMode)
+        if skipNextToolResult {
+          ClaudeCodeLogger.shared.stream("Skipping tool result for ExitPlanMode (in user message)")
+          skipNextToolResult = false
+          break  // Skip creating a message for this result
+        }
+
+        // Also check if this is the "Exit plan mode?" result that we want to skip
+        var shouldSkip = false
+        if case .string(let content) = toolResult.content {
+          if content.lowercased().contains("exit plan mode") || content == "Exit plan mode?" {
+            ClaudeCodeLogger.shared.stream("Skipping ExitPlanMode tool result based on content (user): \(content)")
+            shouldSkip = true
+          }
+        }
+
+        if shouldSkip {
+          break  // Skip creating a message for this result
+        }
+
         let resultMessage = MessageFactory.toolResultMessage(
           content: toolResult.content,
           isError: toolResult.isError == true,

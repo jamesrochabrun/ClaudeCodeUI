@@ -223,6 +223,12 @@ public final class ToolRegistry {
     for tool in ClaudeCodeTool.allCases {
       register(tool)
     }
+
+    // Also register ExitPlanMode with both common variants
+    if let exitPlanTool = ClaudeCodeTool.allCases.first(where: { $0 == .exitPlanMode }) {
+      tools["ExitPlanMode"] = exitPlanTool
+      tools["exit_plan_mode"] = exitPlanTool
+    }
   }
   
   /// Register a tool in the registry
