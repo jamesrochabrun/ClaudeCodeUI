@@ -81,18 +81,15 @@ public struct InlinePlanApprovalView: View {
         .frame(height: 1)
 
       if isExpanded {
-        // Plan content with proper formatting
-        ScrollView {
-          VStack(alignment: .leading, spacing: 0) {
-            PlanContentView(
-              textFormatter: textFormatter,
-              fontSize: 13,
-              colorScheme: colorScheme
-            )
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
+        // Plan content with proper formatting - no scroll, show full content
+        VStack(alignment: .leading, spacing: 0) {
+          PlanContentView(
+            textFormatter: textFormatter,
+            fontSize: 13,
+            colorScheme: colorScheme
+          )
         }
-        .frame(maxHeight: 350)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(contentBackground)
 
         // Only show actions if not resolved
