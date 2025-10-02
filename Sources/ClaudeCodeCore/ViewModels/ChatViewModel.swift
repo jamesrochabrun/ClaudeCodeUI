@@ -135,8 +135,92 @@ public final class ChatViewModel {
   var isDebugEnabled: Bool {
     claudeClient.configuration.enableDebugLogging
   }
-  
-  
+
+  /// Returns a terminal command that can be copied and pasted to reproduce the last execution
+  var terminalReproductionCommand: String? {
+    guard let commandInfo = claudeClient.lastExecutedCommandInfo else {
+      return nil
+    }
+
+    var parts: [String] = []
+
+    // Add working directory change if present
+    if let workingDir = commandInfo.workingDirectory {
+      let escapedPath = workingDir
+        .replacingOccurrences(of: "\\", with: "\\\\")
+        .replacingOccurrences(of: "\"", with: "\\\"")
+      parts.append("cd \"\(escapedPath)\"")
+    }
+
+    // Add stdin content if present
+    if let stdin = commandInfo.stdinContent, !stdin.isEmpty {
+      let escapedStdin = stdin
+        .replacingOccurrences(of: "\\", with: "\\\\")
+        .replacingOccurrences(of: "\"", with: "\\\"")
+        .replacingOccurrences(of: "$", with: "\\$")
+        .replacingOccurrences(of: "`", with: "\\`")
+      parts.append("echo \"\(escapedStdin)\" | \(commandInfo.commandString)")
+    } else {
+      parts.append(commandInfo.commandString)
+    }
+
+    return parts.joined(separator: " && ")
+  }
+
+  /// Returns a complete debug report with all command execution details
+  var fullDebugReport: String? {
+    guard let commandInfo = claudeClient.lastExecutedCommandInfo else {
+      return nil
+    }
+
+    var report = """
+    === CLAUDE CODE DEBUG REPORT ===
+
+    TERMINAL REPRODUCTION COMMAND:
+    \(terminalReproductionCommand ?? "N/A")
+
+    COMMAND DETAILS:
+    Command: \(commandInfo.commandString)
+    Working Directory: \(commandInfo.workingDirectory ?? "None")
+    Stdin Content: \(commandInfo.stdinContent ?? "None")
+    Executed At: \(commandInfo.executedAt)
+    Method: \(commandInfo.method.rawValue)
+    Output Format: \(commandInfo.outputFormat.rawValue)
+
+    SHELL CONFIGURATION:
+    Shell Executable: \(commandInfo.shellExecutable)
+    Shell Arguments: \(commandInfo.shellArguments.joined(separator: " "))
+
+    ENVIRONMENT:
+    PATH:
+    """
+
+    // Add PATH directories
+    let pathDirs = commandInfo.pathEnvironment.split(separator: ":")
+    for dir in pathDirs {
+      report += "\n  - \(dir)"
+    }
+
+    report += "\n\nEnvironment Variables: \(commandInfo.environment.count) set"
+
+    // Add some key environment variables if present
+    let keyVars = ["NODE_ENV", "HOME", "USER", "SHELL"]
+    var foundVars: [String] = []
+    for key in keyVars {
+      if let value = commandInfo.environment[key] {
+        foundVars.append("\(key)=\(value)")
+      }
+    }
+    if !foundVars.isEmpty {
+      report += "\nKey Variables:\n  " + foundVars.joined(separator: "\n  ")
+    }
+
+    report += "\n\n=== END DEBUG REPORT ==="
+
+    return report
+  }
+
+
   // MARK: - Initialization
   
   /// Creates a new ChatViewModel instance.
