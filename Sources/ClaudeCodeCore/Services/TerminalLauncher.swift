@@ -186,8 +186,15 @@ public struct TerminalLauncher {
       )
     }
 
-    // Step 4: Launch Terminal to resume the session with doctor prompt in plan mode
-    if let launchError = resumeSessionInTerminal(sessionId: sessionId, workingDir: workingDir, systemPrompt: systemPrompt, usePlanMode: true) {
+    // Step 4: Launch Terminal to resume the session with doctor prompt in plan mode, passing captured output as context
+    if let launchError = resumeSessionInTerminal(
+      sessionId: sessionId,
+      workingDir: workingDir,
+      systemPrompt: systemPrompt,
+      usePlanMode: true,
+      capturedOutput: output,
+      originalCommand: reproductionCommand
+    ) {
       return launchError
     }
 
@@ -318,8 +325,39 @@ public struct TerminalLauncher {
     return nil
   }
 
-  /// Launches Terminal.app with a small script that resumes the captured session with the doctor prompt
-  private static func resumeSessionInTerminal(sessionId: String, workingDir: String?, systemPrompt: String, usePlanMode: Bool) -> Error? {
+  /// Builds a context message containing the command execution details for the doctor to analyze
+  private static func buildDoctorContextMessage(
+    originalCommand: String,
+    workingDir: String?,
+    capturedOutput: String
+  ) -> String {
+    var lines: [String] = []
+    lines.append("DOCTOR CONTEXT: Previous command execution output for debugging.")
+    lines.append("")
+    if let wd = workingDir, !wd.isEmpty {
+      lines.append("Working Directory:")
+      lines.append(wd)
+      lines.append("")
+    }
+    lines.append("Reproduction Command:")
+    lines.append(originalCommand)
+    lines.append("")
+    lines.append("Captured Output (stdout + stderr):")
+    lines.append(capturedOutput)
+    lines.append("")
+    lines.append("Please analyze this output versus the debug report in your system prompt and propose a plan to fix any issues.")
+    return lines.joined(separator: "\n")
+  }
+
+  /// Launches Terminal.app with a small script that resumes the captured session with the doctor prompt and initial context
+  private static func resumeSessionInTerminal(
+    sessionId: String,
+    workingDir: String?,
+    systemPrompt: String,
+    usePlanMode: Bool,
+    capturedOutput: String,
+    originalCommand: String
+  ) -> Error? {
     // Resolve the claude executable for the resume step
     let claudeCommand = "claude"
     guard let claudeExecutablePath = findClaudeExecutable(command: claudeCommand, additionalPaths: nil) else {
@@ -334,16 +372,26 @@ public struct TerminalLauncher {
     let escapedClaude = claudeExecutablePath.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
     let escapedSession = sessionId.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
 
-    // Write prompt to a temp file to avoid huge quoting issues
+    // Build context message with captured output
+    let contextMessage = buildDoctorContextMessage(
+      originalCommand: originalCommand,
+      workingDir: workingDir,
+      capturedOutput: capturedOutput
+    )
+
+    // Write prompt and context to temp files to avoid huge quoting issues
     let tempDir = NSTemporaryDirectory()
     let promptPath = (tempDir as NSString).appendingPathComponent("doctor_prompt_\(UUID().uuidString).txt")
+    let contextPath = (tempDir as NSString).appendingPathComponent("doctor_context_\(UUID().uuidString).txt")
     do {
       try systemPrompt.write(toFile: promptPath, atomically: true, encoding: .utf8)
+      try contextMessage.write(toFile: contextPath, atomically: true, encoding: .utf8)
     } catch {
-      return NSError(domain: "TerminalLauncher", code: 3, userInfo: [NSLocalizedDescriptionKey: "Failed to write prompt file: \(error.localizedDescription)"])
+      return NSError(domain: "TerminalLauncher", code: 3, userInfo: [NSLocalizedDescriptionKey: "Failed to write prompt/context files: \(error.localizedDescription)"])
     }
 
     let escapedPromptPath = promptPath.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+    let escapedContextPath = contextPath.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
     let cdPrefix: String = {
       if let dir = workingDir, !dir.isEmpty {
         let escapedDir = dir.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
@@ -353,7 +401,8 @@ public struct TerminalLauncher {
     }()
 
     let permissionArg = usePlanMode ? " --permission-mode plan" : ""
-    let resumeCommand = "\(cdPrefix)\"\(escapedClaude)\" -r \"\(escapedSession)\" --append-system-prompt \"$(cat \"\(escapedPromptPath)\")\"\(permissionArg)"
+    // Pipe the context message as first user input to provide execution output to Claude
+    let resumeCommand = "\(cdPrefix)cat \"\(escapedContextPath)\" | \"\(escapedClaude)\" -r \"\(escapedSession)\" --append-system-prompt \"$(cat \"\(escapedPromptPath)\")\"\(permissionArg)"
 
     // Write a small .command script and open it
     let scriptPath = (tempDir as NSString).appendingPathComponent("doctor_launch_\(UUID().uuidString).command")
@@ -374,6 +423,7 @@ public struct TerminalLauncher {
       DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
         try? FileManager.default.removeItem(atPath: scriptPath)
         try? FileManager.default.removeItem(atPath: promptPath)
+        try? FileManager.default.removeItem(atPath: contextPath)
       }
       return nil
     } catch {
