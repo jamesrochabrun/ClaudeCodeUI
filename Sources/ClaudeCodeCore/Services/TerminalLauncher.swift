@@ -273,11 +273,37 @@ public struct TerminalLauncher {
 
   /// Executes the given command via login shell, capturing stdout and stderr together
   private static func executeHeadless(command: String) -> (String, Error?) {
+    // First attempt: run normally (non-PTY)
+    let (output1, status1) = runProcess(executable: "/bin/zsh", args: ["-lc", "set -o pipefail; \(command)"], env: ProcessInfo.processInfo.environment)
+
+    // Check for Ink raw mode error BEFORE checking exit status (error may occur even with status 0)
+    if output1.contains("Raw mode is not supported") || output1.contains("israwmodesupported") {
+      // Retry with a pseudo-terminal via `script` to satisfy Ink's TTY requirement
+      let (output2, status2) = runProcess(
+        executable: "/usr/bin/script",
+        args: ["-q", "/dev/stdout", "/bin/zsh", "-lc", "set -o pipefail; \(command)"],
+        env: ProcessInfo.processInfo.environment
+      )
+
+      if status2 == 0 {
+        return (output2, nil)
+      }
+      return (output2, NSError(domain: "TerminalLauncher", code: Int(status2), userInfo: [NSLocalizedDescriptionKey: "Command (PTY) exited with status \(status2). Output:\n\(output2)"]))
+    }
+
+    // No Ink error, return normally
+    if status1 == 0 {
+      return (output1, nil)
+    }
+    return (output1, NSError(domain: "TerminalLauncher", code: Int(status1), userInfo: [NSLocalizedDescriptionKey: "Command exited with status \(status1). Output:\n\(output1)"]))
+  }
+
+  /// Runs a process and returns (combined stdout+stderr, exitStatus)
+  private static func runProcess(executable: String, args: [String], env: [String: String]) -> (String, Int32) {
     let task = Process()
-    task.executableURL = URL(fileURLWithPath: "/bin/zsh")
-    // -l for login shell, -c to run the command; set -o pipefail to better surface errors
-    task.arguments = ["-lc", "set -o pipefail; \(command)"]
-    task.environment = ProcessInfo.processInfo.environment
+    task.executableURL = URL(fileURLWithPath: executable)
+    task.arguments = args
+    task.environment = env
 
     let pipe = Pipe()
     task.standardOutput = pipe
@@ -286,20 +312,14 @@ public struct TerminalLauncher {
     do {
       try task.run()
     } catch {
-      return ("", NSError(domain: "TerminalLauncher", code: 5, userInfo: [NSLocalizedDescriptionKey: "Failed to start process: \(error.localizedDescription)"]))
+      return ("Failed to start process: \(error.localizedDescription)", 127)
     }
 
     task.waitUntilExit()
 
     let data = pipe.fileHandleForReading.readDataToEndOfFile()
     let output = String(data: data, encoding: .utf8) ?? ""
-
-    // If process failed, still return output but include error
-    if task.terminationStatus != 0 {
-      return (output, NSError(domain: "TerminalLauncher", code: Int(task.terminationStatus), userInfo: [NSLocalizedDescriptionKey: "Command exited with status \(task.terminationStatus). Output:\n\(output)"]))
-    }
-
-    return (output, nil)
+    return (output, task.terminationStatus)
   }
 
   /// Parses the first non-empty line as JSON and extracts session_id; falls back to regex
