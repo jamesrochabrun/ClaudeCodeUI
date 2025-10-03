@@ -804,9 +804,8 @@ struct GlobalSettingsView: View {
 
     // Launch Terminal with doctor session
     Task {
-      if let error = await TerminalLauncher.launchDoctorWithCommand(
-        command: reproCommand,
-        workingDirectory: viewModel.projectPath,
+      if let error = await TerminalLauncher.launchDoctorByExecutingCommand(
+        reproductionCommand: reproCommand,
         systemPrompt: doctorPrompt
       ) {
         await MainActor.run {
