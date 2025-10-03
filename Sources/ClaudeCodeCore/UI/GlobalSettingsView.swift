@@ -284,7 +284,35 @@ struct GlobalSettingsView: View {
   
   private var debugSection: some View {
     Section("Debug") {
+      let hasCommandInfo = chatViewModel?.terminalReproductionCommand != nil
+
       VStack(alignment: .leading, spacing: 16) {
+        // Empty State Info Banner
+        if !hasCommandInfo {
+          HStack(spacing: 12) {
+            Image(systemName: "info.circle.fill")
+              .foregroundColor(.blue)
+              .font(.title2)
+
+            VStack(alignment: .leading, spacing: 4) {
+              Text("Debug Information Not Available")
+                .font(.headline)
+              Text("Send a message in the chat to generate command execution details.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            }
+
+            Spacer()
+          }
+          .padding(12)
+          .background(Color.blue.opacity(0.1))
+          .cornerRadius(8)
+          .overlay(
+            RoundedRectangle(cornerRadius: 8)
+              .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+          )
+        }
+
         // Terminal Reproduction Command
         VStack(alignment: .leading, spacing: 8) {
           Text("Terminal Reproduction Command")
@@ -296,11 +324,11 @@ struct GlobalSettingsView: View {
               .textSelection(.enabled)
               .frame(maxWidth: .infinity, alignment: .leading)
               .padding(8)
-              .background(Color(NSColor.textBackgroundColor))
+              .background(hasCommandInfo ? Color(NSColor.textBackgroundColor) : Color.secondary.opacity(0.05))
               .cornerRadius(4)
               .overlay(
                 RoundedRectangle(cornerRadius: 4)
-                  .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                  .stroke(hasCommandInfo ? Color.secondary.opacity(0.2) : Color.secondary.opacity(0.15), lineWidth: 1)
               )
 
             Button(action: {
@@ -310,8 +338,8 @@ struct GlobalSettingsView: View {
                 .frame(width: 20, height: 20)
             }
             .buttonStyle(.borderedProminent)
-            .disabled(chatViewModel?.terminalReproductionCommand == nil)
-            .help("Copy terminal command to clipboard")
+            .disabled(!hasCommandInfo)
+            .help(hasCommandInfo ? "Copy terminal command to clipboard" : "Send a message first to generate debug info")
           }
 
           Text("Copy this command to paste into Terminal and reproduce the last execution")
@@ -325,18 +353,35 @@ struct GlobalSettingsView: View {
         VStack(alignment: .leading, spacing: 8) {
           DisclosureGroup("Full Debug Report") {
             ScrollView {
-              Text(chatViewModel?.fullDebugReport ?? "No debug information available")
-                .font(.system(.caption, design: .monospaced))
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(8)
+              if hasCommandInfo {
+                Text(chatViewModel?.fullDebugReport ?? "")
+                  .font(.system(.caption, design: .monospaced))
+                  .textSelection(.enabled)
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                  .padding(8)
+              } else {
+                VStack(spacing: 8) {
+                  Image(systemName: "doc.text.magnifyingglass")
+                    .font(.largeTitle)
+                    .foregroundColor(.secondary)
+                  Text("No debug information available")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                  Text("Execute a command first to see detailed debug information")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(24)
+              }
             }
             .frame(height: 200)
-            .background(Color(NSColor.textBackgroundColor))
+            .background(hasCommandInfo ? Color(NSColor.textBackgroundColor) : Color.secondary.opacity(0.05))
             .cornerRadius(4)
             .overlay(
               RoundedRectangle(cornerRadius: 4)
-                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+                .stroke(hasCommandInfo ? Color.secondary.opacity(0.2) : Color.secondary.opacity(0.15), lineWidth: 1)
             )
 
             HStack {
@@ -350,7 +395,8 @@ struct GlobalSettingsView: View {
                 }
               }
               .buttonStyle(.borderedProminent)
-              .disabled(chatViewModel?.fullDebugReport == nil)
+              .disabled(!hasCommandInfo)
+              .help(hasCommandInfo ? "Copy complete debug report to clipboard" : "Send a message first to generate debug info")
               .padding(.top, 8)
             }
           }
