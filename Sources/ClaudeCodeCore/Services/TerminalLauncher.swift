@@ -143,6 +143,9 @@ public struct TerminalLauncher {
     - Test: After each fix, ask user to restart the app and test
     - Iterate: If still broken, ask for new debug report and continue
 
+    CRITICAL: When this session starts, immediately greet the user and begin your investigation.
+    Don't wait for user input - start by analyzing the debug report and running diagnostic commands.
+
     Be systematic, clear, and explain your reasoning at each step.
     Remember: You're debugging why commands work in Terminal but fail in the macOS app.
     """
@@ -168,7 +171,7 @@ public struct TerminalLauncher {
     let scriptContent = """
     #!/bin/bash
     cd "\(homeDir)"
-    echo "Analyze the debug report and help me troubleshoot this issue. Start by investigating the environment." | "\(escapedClaudePath)" --append-system-prompt "$(cat '\(promptPath)')" --permission-mode plan
+    "\(escapedClaudePath)" --append-system-prompt "$(cat '\(promptPath)')" --permission-mode plan
     rm -f "\(promptPath)"
     """
 
