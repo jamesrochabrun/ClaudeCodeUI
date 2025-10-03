@@ -188,18 +188,33 @@ public struct TerminalLauncher {
     originalCommand: String,
     systemPrompt: String
   ) -> Error? {
-    // Write system prompt to temp file
+    // Extract claude executable path from prepared command for use in resume
+    // The command may be like: echo "..." | "/path/to/claude" args...
+    let claudePath: String
+    if let match = command.range(of: #"\"([^\"]+/claude[^\"]*)\"|\s(/[^\s]+/claude)"#, options: .regularExpression) {
+      let matched = String(command[match])
+      claudePath = matched.replacingOccurrences(of: "\"", with: "").trimmingCharacters(in: .whitespaces)
+    } else {
+      // Fallback to finding claude executable
+      claudePath = findClaudeExecutable(command: "claude", additionalPaths: nil) ?? "claude"
+    }
+
+    // Write files to avoid quoting hell
     let tempDir = NSTemporaryDirectory()
     let promptPath = (tempDir as NSString).appendingPathComponent("doctor_prompt_\(UUID().uuidString).txt")
+    let originalCmdPath = (tempDir as NSString).appendingPathComponent("doctor_original_cmd_\(UUID().uuidString).txt")
 
     do {
       try systemPrompt.write(toFile: promptPath, atomically: true, encoding: .utf8)
+      try originalCommand.write(toFile: originalCmdPath, atomically: true, encoding: .utf8)
     } catch {
-      return NSError(domain: "TerminalLauncher", code: 3, userInfo: [NSLocalizedDescriptionKey: "Failed to write prompt file: \(error.localizedDescription)"])
+      return NSError(domain: "TerminalLauncher", code: 3, userInfo: [NSLocalizedDescriptionKey: "Failed to write temp files: \(error.localizedDescription)"])
     }
 
     // Escape paths for shell
     let escapedPromptPath = promptPath.replacingOccurrences(of: "'", with: "'\\''")
+    let escapedOriginalCmdPath = originalCmdPath.replacingOccurrences(of: "'", with: "'\\''")
+    let escapedClaudePath = claudePath.replacingOccurrences(of: "'", with: "'\\''")
 
     // Build cd prefix if needed
     let cdPrefix: String
@@ -222,7 +237,7 @@ public struct TerminalLauncher {
 
     \(cdPrefix)
     # Execute reproduction command and capture all output
-    echo "Running: \(originalCommand)"
+    echo "Running: $(cat '\(escapedOriginalCmdPath)')"
     echo ""
     OUTPUT=$(\(command) 2>&1)
     EXIT_CODE=$?
@@ -255,21 +270,25 @@ public struct TerminalLauncher {
     echo ""
 
     # Build context message with captured output
-    CONTEXT="DOCTOR CONTEXT: Previous command execution output for debugging.
+    cat > /tmp/doctor_context_$$.txt <<'CONTEXT_EOF'
+DOCTOR CONTEXT: Previous command execution output for debugging.
 
-    Reproduction Command:
-    \(originalCommand)
+Reproduction Command:
+CONTEXT_EOF
+    cat '\(escapedOriginalCmdPath)' >> /tmp/doctor_context_$$.txt
+    cat >> /tmp/doctor_context_$$.txt <<CONTEXT_EOF2
 
-    Captured Output (stdout + stderr):
-    $OUTPUT
+Captured Output (stdout + stderr):
+$OUTPUT
 
-    Please analyze this output versus the debug report in your system prompt and propose a plan to fix any issues."
+Please analyze this output versus the debug report in your system prompt and propose a plan to fix any issues.
+CONTEXT_EOF2
 
     # Pipe context into resumed session with doctor prompt
-    echo "$CONTEXT" | claude -r "$SESSION_ID" --append-system-prompt "$(cat '\(escapedPromptPath)')" --permission-mode plan
+    cat /tmp/doctor_context_$$.txt | '\(escapedClaudePath)' -r "$SESSION_ID" --append-system-prompt "$(cat '\(escapedPromptPath)')" --permission-mode plan
 
     # Cleanup
-    rm -f '\(escapedPromptPath)'
+    rm -f '\(escapedPromptPath)' '\(escapedOriginalCmdPath)' /tmp/doctor_context_$$.txt
     """
 
     do {
