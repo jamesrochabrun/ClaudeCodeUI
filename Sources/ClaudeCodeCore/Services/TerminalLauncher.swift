@@ -188,8 +188,17 @@ public struct TerminalLauncher {
     echo "Executing command to capture session..."
     echo ""
 
-    # Execute the command from file and capture output
-    OUTPUT=$(bash '\(commandPath)' 2>&1)
+    # Source shell profile to get proper PATH
+    if [ -f ~/.zshrc ]; then
+      source ~/.zshrc
+    elif [ -f ~/.bash_profile ]; then
+      source ~/.bash_profile
+    elif [ -f ~/.bashrc ]; then
+      source ~/.bashrc
+    fi
+
+    # Execute the command from file and capture output (source it to keep environment)
+    OUTPUT=$(source '\(commandPath)' 2>&1)
 
     # Extract session ID from first line (JSON format)
     SESSION_ID=$(echo "$OUTPUT" | head -1 | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
