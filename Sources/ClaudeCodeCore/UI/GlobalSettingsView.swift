@@ -392,8 +392,22 @@ struct GlobalSettingsView: View {
                 .stroke(hasCommandInfo ? Color.secondary.opacity(0.2) : Color.secondary.opacity(0.15), lineWidth: 1)
             )
 
-            HStack {
+            HStack(spacing: 8) {
               Spacer()
+
+              Button(action: {
+                runDoctor()
+              }) {
+                HStack(spacing: 4) {
+                  Image(systemName: "stethoscope")
+                  Text("Run Doctor")
+                }
+              }
+              .buttonStyle(.bordered)
+              .disabled(!hasCommandInfo)
+              .help(hasCommandInfo ? "Launch debugging session in Terminal" : "Send a message first to generate debug info")
+              .padding(.top, 8)
+
               Button(action: {
                 copyFullReportToClipboard()
               }) {
@@ -760,6 +774,30 @@ struct GlobalSettingsView: View {
     reportCopied = true
     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
       reportCopied = false
+    }
+  }
+
+  private func runDoctor() {
+    guard let viewModel = chatViewModel,
+          let report = viewModel.fullDebugReport else { return }
+
+    // Use the same command and configuration as the app
+    let command = globalPreferences.claudeCommand
+    let additionalPaths = viewModel.claudeClient.configuration.additionalPaths
+
+    // Launch the doctor session
+    if let error = TerminalLauncher.launchDoctorSession(
+      command: command,
+      additionalPaths: additionalPaths,
+      debugReport: report
+    ) {
+      // Show error alert
+      let alert = NSAlert()
+      alert.messageText = "Failed to Launch Doctor"
+      alert.informativeText = error.localizedDescription
+      alert.alertStyle = .warning
+      alert.addButton(withTitle: "OK")
+      alert.runModal()
     }
   }
 }

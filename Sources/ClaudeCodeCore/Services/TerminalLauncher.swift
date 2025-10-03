@@ -90,7 +90,113 @@ public struct TerminalLauncher {
       )
     }
   }
-  
+
+  /// Launches Terminal with a Doctor debugging session
+  /// - Parameters:
+  ///   - command: The command name to use (from preferences)
+  ///   - additionalPaths: Additional paths from configuration
+  ///   - debugReport: The full debug report to analyze
+  /// - Returns: An error if launching fails, nil on success
+  public static func launchDoctorSession(
+    command: String,
+    additionalPaths: [String],
+    debugReport: String
+  ) -> Error? {
+    // Find the full path to the executable
+    guard let claudeExecutablePath = findClaudeExecutable(
+      command: command,
+      additionalPaths: additionalPaths
+    ) else {
+      return NSError(
+        domain: "TerminalLauncher",
+        code: 1,
+        userInfo: [NSLocalizedDescriptionKey: "Could not find '\(command)' command. Please ensure it is installed."]
+      )
+    }
+
+    // Escape paths for shell
+    let escapedClaudePath = claudeExecutablePath.replacingOccurrences(of: "\\", with: "\\\\")
+      .replacingOccurrences(of: "\"", with: "\\\"")
+
+    // Create doctor system prompt
+    let doctorPrompt = """
+    You are a ClaudeCodeUI Debug Doctor. A user is experiencing issues with their macOS app that uses Claude Code.
+
+    CONTEXT - DEBUG REPORT:
+    \(debugReport)
+
+    YOUR TASK:
+    1. Analyze the debug report and investigate the user's environment
+    2. Run diagnostic commands to understand the issue:
+       - Compare PATH with 'echo $PATH'
+       - Check shell config: 'cat ~/.zshrc | head -50'
+       - Test executable: 'which \(command)' and '\(command) --version'
+       - Check permissions, environment variables, etc.
+    3. Identify the root cause of the issue
+    4. Propose fixes in priority order (most likely to work first)
+
+    IMPORTANT WORKFLOW:
+    - First: Investigate thoroughly (read configs, check paths, test commands)
+    - Then: Create a PLAN with 3-5 concrete, numbered steps
+    - Wait: Get user approval before executing (you're in plan mode)
+    - Execute: One step at a time, explain what each does
+    - Test: After each fix, ask user to restart the app and test
+    - Iterate: If still broken, ask for new debug report and continue
+
+    Be systematic, clear, and explain your reasoning at each step.
+    Remember: You're debugging why commands work in Terminal but fail in the macOS app.
+    """
+
+    // Escape the prompt for shell
+    let escapedPrompt = doctorPrompt
+      .replacingOccurrences(of: "\\", with: "\\\\")
+      .replacingOccurrences(of: "\"", with: "\\\"")
+      .replacingOccurrences(of: "$", with: "\\$")
+      .replacingOccurrences(of: "`", with: "\\`")
+
+    // Construct the doctor command with plan permission mode
+    let homeDir = NSHomeDirectory()
+    let doctorCommand = """
+    cd "\(homeDir)" && echo "\(escapedPrompt)" | "\(escapedClaudePath)" -p --permission-mode plan
+    """
+
+    // Create a temporary script file
+    let tempDir = NSTemporaryDirectory()
+    let scriptPath = (tempDir as NSString).appendingPathComponent("claude_doctor_\(UUID().uuidString).command")
+
+    // Create the script content
+    let scriptContent = """
+    #!/bin/bash
+    \(doctorCommand)
+    """
+
+    do {
+      // Write the script to file
+      try scriptContent.write(toFile: scriptPath, atomically: true, encoding: .utf8)
+
+      // Make it executable
+      let attributes = [FileAttributeKey.posixPermissions: 0o755]
+      try FileManager.default.setAttributes(attributes, ofItemAtPath: scriptPath)
+
+      // Open the script with Terminal
+      let url = URL(fileURLWithPath: scriptPath)
+      NSWorkspace.shared.open(url)
+
+      // Clean up the script file after a delay
+      DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+        try? FileManager.default.removeItem(atPath: scriptPath)
+      }
+
+      return nil
+    } catch {
+      return NSError(
+        domain: "TerminalLauncher",
+        code: 2,
+        userInfo: [NSLocalizedDescriptionKey: "Failed to launch Doctor session: \(error.localizedDescription)"]
+      )
+    }
+  }
+
   /// Finds the full path to the Claude executable
   /// - Parameters:
   ///   - command: The command name to search for (e.g., "claude")
