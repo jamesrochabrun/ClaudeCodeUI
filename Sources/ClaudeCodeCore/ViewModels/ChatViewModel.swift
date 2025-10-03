@@ -184,8 +184,8 @@ public final class ChatViewModel {
     Working Directory: \(commandInfo.workingDirectory ?? "None")
     Stdin Content: \(commandInfo.stdinContent ?? "None")
     Executed At: \(commandInfo.executedAt)
-    Method: \(commandInfo.method.rawValue)
-    Output Format: \(commandInfo.outputFormat.rawValue)
+    Method: \(commandInfo.method)
+    Output Format: \(commandInfo.outputFormat)
 
     SHELL CONFIGURATION:
     Shell Executable: \(commandInfo.shellExecutable)
