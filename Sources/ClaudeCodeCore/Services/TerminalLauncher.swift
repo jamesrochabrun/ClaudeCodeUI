@@ -225,21 +225,6 @@ public struct TerminalLauncher {
       cdPrefix = ""
     }
 
-    // Build context message content
-    let contextHeader = """
-    DOCTOR CONTEXT: Previous command execution output for debugging.
-
-    Reproduction Command:
-    """
-
-    let contextFooter = """
-
-    Captured Output (stdout + stderr):
-    $OUTPUT
-
-    Please analyze this output versus the debug report in your system prompt and propose a plan to fix any issues.
-    """
-
     // Create Terminal script that captures command output and auto-resumes
     let scriptPath = (tempDir as NSString).appendingPathComponent("doctor_\(UUID().uuidString).command")
     let scriptContent = """
@@ -284,18 +269,11 @@ public struct TerminalLauncher {
     echo "═══════════════════════════════════════"
     echo ""
 
-    # Build context message
-    {
-      echo "\(contextHeader)"
-      cat '\(escapedOriginalCmdPath)'
-      echo "\(contextFooter)"
-    } > /tmp/doctor_context_$$.txt
-
-    # Pipe context into resumed session with doctor prompt
-    cat /tmp/doctor_context_$$.txt | '\(escapedClaudePath)' -r "$SESSION_ID" --append-system-prompt "$(cat '\(escapedPromptPath)')" --permission-mode plan
+    # Resume the session with doctor prompt - no piping needed, session already has context
+    '\(escapedClaudePath)' -r "$SESSION_ID" --append-system-prompt "$(cat '\(escapedPromptPath)')" --permission-mode plan
 
     # Cleanup
-    rm -f '\(escapedPromptPath)' '\(escapedOriginalCmdPath)' /tmp/doctor_context_$$.txt
+    rm -f '\(escapedPromptPath)' '\(escapedOriginalCmdPath)'
     """
 
     do {
