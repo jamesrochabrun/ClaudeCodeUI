@@ -27,6 +27,9 @@ public struct UIConfiguration {
   /// Whether to show the system prompt fields in settings
   public let showSystemPromptFields: Bool
 
+  /// Whether to show the additional system prompt field in settings
+  public let showAdditionalSystemPromptField: Bool
+
   /// Initial additional system prompt prefix that will be prepended to user's additional system prompt
   /// This is not shown in the preferences UI and is set programmatically
   public let initialAdditionalSystemPromptPrefix: String?
@@ -40,6 +43,7 @@ public struct UIConfiguration {
       showTokenCount: true,
       workingDirectoryToolTip: nil,
       showSystemPromptFields: false,
+      showAdditionalSystemPromptField: true,
       initialAdditionalSystemPromptPrefix: nil
     )
   }
@@ -53,6 +57,7 @@ public struct UIConfiguration {
       showTokenCount: true,
       workingDirectoryToolTip: nil,
       showSystemPromptFields: false,
+      showAdditionalSystemPromptField: true,
       initialAdditionalSystemPromptPrefix: nil
     )
   }
@@ -65,6 +70,7 @@ public struct UIConfiguration {
     showTokenCount: Bool = true,
     workingDirectoryToolTip: String? = nil,
     showSystemPromptFields: Bool = false,
+    showAdditionalSystemPromptField: Bool = true,
     initialAdditionalSystemPromptPrefix: String? = nil
   ) {
     self.appName = appName
@@ -73,6 +79,7 @@ public struct UIConfiguration {
     self.showTokenCount = showTokenCount
     self.workingDirectoryToolTip = workingDirectoryToolTip
     self.showSystemPromptFields = showSystemPromptFields
+    self.showAdditionalSystemPromptField = showAdditionalSystemPromptField
     self.initialAdditionalSystemPromptPrefix = initialAdditionalSystemPromptPrefix
   }
 }
