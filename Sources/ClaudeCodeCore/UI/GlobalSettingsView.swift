@@ -782,30 +782,25 @@ struct GlobalSettingsView: View {
           let report = viewModel.fullDebugReport,
           let reproCommand = viewModel.terminalReproductionCommand else { return }
 
-    // Create doctor system prompt
-    let command = globalPreferences.claudeCommand
+    // Create doctor system prompt (instructions only, no data)
     let doctorPrompt = """
     You are a ClaudeCodeUI Debug Doctor.
 
-    I just executed a command from the app and you have the results in this session's context.
-
-    DEBUG REPORT:
-    \(report)
-
     Your task:
-    1. Review the command execution that just happened in this session
-    2. Compare the output with what's in the debug report
+    1. Review the debug report and command execution output in the first message
+    2. Compare the command output with what's expected in the debug report
     3. Look for discrepancies (PATH differences, executable location, errors, etc.)
-    4. If you find issues, create a plan to fix them
+    4. If you find issues, create a plan to fix them in priority order
     5. If everything works fine, explain that the app is working correctly
 
-    Start by reviewing the session context to see what the command returned.
+    Work in plan mode - propose fixes before executing them.
     """
 
     // Launch Terminal with doctor session
     Task {
       if let error = await TerminalLauncher.launchDoctorByExecutingCommand(
         reproductionCommand: reproCommand,
+        debugReport: report,
         systemPrompt: doctorPrompt
       ) {
         await MainActor.run {

@@ -157,10 +157,12 @@ public struct TerminalLauncher {
   /// NEW: Launches Doctor by executing reproduction command (headless), capturing session, then resuming in Terminal
   /// - Parameters:
   ///   - reproductionCommand: The full command from terminalReproductionCommand
-  ///   - systemPrompt: The doctor system prompt
+  ///   - debugReport: The full debug report to send as context
+  ///   - systemPrompt: The doctor system prompt (instructions only)
   /// - Returns: An error if launching fails, nil on success
   public static func launchDoctorByExecutingCommand(
     reproductionCommand: String,
+    debugReport: String,
     systemPrompt: String
   ) async -> Error? {
     // Resolve the claude executable path and extract working directory
@@ -175,6 +177,7 @@ public struct TerminalLauncher {
       command: preparedCommand,
       workingDir: workingDir,
       originalCommand: reproductionCommand,
+      debugReport: debugReport,
       systemPrompt: systemPrompt
     )
   }
@@ -186,6 +189,7 @@ public struct TerminalLauncher {
     command: String,
     workingDir: String?,
     originalCommand: String,
+    debugReport: String,
     systemPrompt: String
   ) -> Error? {
     // Extract claude executable path from prepared command for use in resume
@@ -203,10 +207,12 @@ public struct TerminalLauncher {
     let tempDir = NSTemporaryDirectory()
     let promptPath = (tempDir as NSString).appendingPathComponent("doctor_prompt_\(UUID().uuidString).txt")
     let originalCmdPath = (tempDir as NSString).appendingPathComponent("doctor_original_cmd_\(UUID().uuidString).txt")
+    let debugReportPath = (tempDir as NSString).appendingPathComponent("doctor_debug_report_\(UUID().uuidString).txt")
 
     do {
       try systemPrompt.write(toFile: promptPath, atomically: true, encoding: .utf8)
       try originalCommand.write(toFile: originalCmdPath, atomically: true, encoding: .utf8)
+      try debugReport.write(toFile: debugReportPath, atomically: true, encoding: .utf8)
     } catch {
       return NSError(domain: "TerminalLauncher", code: 3, userInfo: [NSLocalizedDescriptionKey: "Failed to write temp files: \(error.localizedDescription)"])
     }
@@ -214,6 +220,7 @@ public struct TerminalLauncher {
     // Escape paths for shell
     let escapedPromptPath = promptPath.replacingOccurrences(of: "'", with: "'\\''")
     let escapedOriginalCmdPath = originalCmdPath.replacingOccurrences(of: "'", with: "'\\''")
+    let escapedDebugReportPath = debugReportPath.replacingOccurrences(of: "'", with: "'\\''")
     let escapedClaudePath = claudePath.replacingOccurrences(of: "'", with: "'\\''")
 
     // Build cd prefix if needed
@@ -269,11 +276,19 @@ public struct TerminalLauncher {
     echo "═══════════════════════════════════════"
     echo ""
 
-    # Resume the session with doctor prompt - no piping needed, session already has context
-    '\(escapedClaudePath)' -r "$SESSION_ID" --append-system-prompt "$(cat '\(escapedPromptPath)')" --permission-mode plan
+    # Build context message with debug report + command output
+    CONTEXT_MSG="$(cat <<'CONTEXT_START'
+Debug Report:
+CONTEXT_START
+)"
+    CONTEXT_MSG="$CONTEXT_MSG"$'\n'"$(cat '\(escapedDebugReportPath)')"
+    CONTEXT_MSG="$CONTEXT_MSG"$'\n\nCommand Output:\n'"$OUTPUT"
+
+    # Resume session with context as first message
+    '\(escapedClaudePath)' -r "$SESSION_ID" -p "$CONTEXT_MSG" --append-system-prompt "$(cat '\(escapedPromptPath)')" --permission-mode plan
 
     # Cleanup
-    rm -f '\(escapedPromptPath)' '\(escapedOriginalCmdPath)'
+    rm -f '\(escapedPromptPath)' '\(escapedOriginalCmdPath)' '\(escapedDebugReportPath)'
     """
 
     do {
