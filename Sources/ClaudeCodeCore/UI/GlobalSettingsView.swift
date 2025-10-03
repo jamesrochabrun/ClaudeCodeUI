@@ -40,13 +40,19 @@ struct GlobalSettingsView: View {
   private enum Tab: Int, CaseIterable {
     case appearance = 0
     case preferences = 1
-    
+
     var title: String {
       switch self {
       case .appearance: return "Appearance"
       case .preferences: return "Preferences"
       }
     }
+  }
+
+  private enum PathValidationState {
+    case notSet
+    case valid
+    case invalid
   }
   
   // MARK: - Properties
@@ -61,6 +67,7 @@ struct GlobalSettingsView: View {
   @State private var isRequestingPermission: Bool = false
   @State private var commandCopied: Bool = false
   @State private var reportCopied: Bool = false
+  @State private var claudePathValidation: PathValidationState = .notSet
 
   // MARK: - Body
   var body: some View {
@@ -80,6 +87,7 @@ struct GlobalSettingsView: View {
           }
           dismiss()
         }
+        .disabled(claudePathValidation == .invalid)
       }
     }
     .sheet(isPresented: $showingToolsEditor) {
@@ -476,20 +484,46 @@ struct GlobalSettingsView: View {
   private var claudePathRow: some View {
     @Bindable var preferences = globalPreferences
     VStack(alignment: .leading, spacing: 8) {
-      Text("Claude Path (Advanced)")
+      Text("\(preferences.claudeCommand.capitalized) Path (Advanced)")
       HStack {
-        TextField("Path to Claude executable", text: $preferences.claudePath)
+        TextField("Path to \(preferences.claudeCommand.capitalized) executable", text: $preferences.claudePath)
           .textFieldStyle(.roundedBorder)
           .font(.system(.body, design: .monospaced))
+          .onChange(of: preferences.claudePath) { oldValue, newValue in
+            validateClaudePath(newValue)
+          }
+
+        // Validation indicator
+        if !preferences.claudePath.isEmpty {
+          Group {
+            switch claudePathValidation {
+            case .valid:
+              Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.green)
+            case .invalid:
+              Image(systemName: "xmark.circle.fill")
+                .foregroundColor(.red)
+            case .notSet:
+              EmptyView()
+            }
+          }
+          .help(claudePathValidation == .valid ? "Path exists" : "Path not found")
+        }
 
         if !preferences.claudePath.isEmpty {
           Button("Clear") {
             preferences.claudePath = ""
+            claudePathValidation = .notSet
           }
           .foregroundColor(.orange)
         }
       }
       VStack(alignment: .leading, spacing: 4) {
+        if claudePathValidation == .invalid {
+          Text("❌ Path does not exist - please check the path and try again")
+            .font(.caption)
+            .foregroundColor(.red)
+        }
         Text("⚠️ Only use this if you see '\(preferences.claudeCommand.capitalized) not installed' errors")
           .font(.caption)
           .foregroundColor(.orange)
@@ -500,6 +534,9 @@ struct GlobalSettingsView: View {
           .font(.caption)
           .foregroundColor(.secondary.opacity(0.7))
       }
+    }
+    .onAppear {
+      validateClaudePath(preferences.claudePath)
     }
   }
 
@@ -599,6 +636,19 @@ struct GlobalSettingsView: View {
   }
   
   // MARK: - Helper Methods
+  private func validateClaudePath(_ path: String) {
+    if path.isEmpty {
+      claudePathValidation = .notSet
+      return
+    }
+
+    if FileManager.default.fileExists(atPath: path) {
+      claudePathValidation = .valid
+    } else {
+      claudePathValidation = .invalid
+    }
+  }
+
   private func selectDefaultWorkingDirectory() {
     let openPanel = NSOpenPanel()
     openPanel.canChooseFiles = false
