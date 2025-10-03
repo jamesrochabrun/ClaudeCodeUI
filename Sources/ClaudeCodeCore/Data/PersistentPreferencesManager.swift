@@ -318,7 +318,8 @@ public struct GeneralPreferences: Codable {
   public var permissionTimeoutEnabled: Bool
   public var maxConcurrentPermissionRequests: Int
   public var disallowedTools: [String]
-  
+  public var isClaudeCommandFromConfig: Bool
+
   public init(
     autoApproveLowRisk: Bool = false,
     claudeCommand: String = "claude",
@@ -330,7 +331,8 @@ public struct GeneralPreferences: Codable {
     permissionRequestTimeout: TimeInterval = 3600.0,
     permissionTimeoutEnabled: Bool = false,
     maxConcurrentPermissionRequests: Int = 5,
-    disallowedTools: [String] = []
+    disallowedTools: [String] = [],
+    isClaudeCommandFromConfig: Bool = false
   ) {
     self.autoApproveLowRisk = autoApproveLowRisk
     self.claudeCommand = claudeCommand
@@ -343,5 +345,24 @@ public struct GeneralPreferences: Codable {
     self.permissionTimeoutEnabled = permissionTimeoutEnabled
     self.maxConcurrentPermissionRequests = maxConcurrentPermissionRequests
     self.disallowedTools = disallowedTools
+    self.isClaudeCommandFromConfig = isClaudeCommandFromConfig
+  }
+
+  // Custom decoding for backwards compatibility
+  public init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    autoApproveLowRisk = try container.decode(Bool.self, forKey: .autoApproveLowRisk)
+    claudeCommand = try container.decode(String.self, forKey: .claudeCommand)
+    claudePath = try container.decode(String.self, forKey: .claudePath)
+    defaultWorkingDirectory = try container.decode(String.self, forKey: .defaultWorkingDirectory)
+    appendSystemPrompt = try container.decode(String.self, forKey: .appendSystemPrompt)
+    systemPrompt = try container.decode(String.self, forKey: .systemPrompt)
+    showDetailedPermissionInfo = try container.decode(Bool.self, forKey: .showDetailedPermissionInfo)
+    permissionRequestTimeout = try container.decode(TimeInterval.self, forKey: .permissionRequestTimeout)
+    permissionTimeoutEnabled = try container.decode(Bool.self, forKey: .permissionTimeoutEnabled)
+    maxConcurrentPermissionRequests = try container.decode(Int.self, forKey: .maxConcurrentPermissionRequests)
+    disallowedTools = try container.decode([String].self, forKey: .disallowedTools)
+    // Decode with default value for backwards compatibility
+    isClaudeCommandFromConfig = try container.decodeIfPresent(Bool.self, forKey: .isClaudeCommandFromConfig) ?? false
   }
 }
