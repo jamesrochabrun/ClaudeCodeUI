@@ -148,7 +148,10 @@ public struct ClaudeCodeContainer: View {
       viewModel.projectPath = globalPrefs.defaultWorkingDirectory
       deps.settingsStorage.setProjectPath(globalPrefs.defaultWorkingDirectory)
     }
-    
+
+    // Apply stored claudePath from preferences to ensure it persists across app restarts
+    viewModel.updateClaudeCommand(from: globalPrefs)
+
     await MainActor.run {
       chatViewModel = viewModel
       globalPreferences = globalPrefs
