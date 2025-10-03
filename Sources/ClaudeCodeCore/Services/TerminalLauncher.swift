@@ -163,45 +163,133 @@ public struct TerminalLauncher {
     reproductionCommand: String,
     systemPrompt: String
   ) async -> Error? {
-    // Step 1: Prepare execution by resolving the actual claude executable and working directory
+    // Resolve the claude executable path and extract working directory
     let (preparedCommand, workingDir, resolveError) = prepareCommandWithResolvedClaudePath(reproductionCommand)
     if let err = resolveError {
       return err
     }
 
-    // Step 2: Execute the command headlessly and capture combined output
-    let (output, executionError) = executeHeadless(command: preparedCommand)
-    if let err = executionError {
-      return err
-    }
-
-    // Step 3: Extract session_id from the first non-empty line of output
-    guard let sessionId = extractSessionId(from: output) else {
-      // Include a preview of output for debugging
-      let preview = output.split(separator: "\n").prefix(20).joined(separator: "\n")
-      return NSError(
-        domain: "TerminalLauncher",
-        code: 4,
-        userInfo: [NSLocalizedDescriptionKey: "Could not extract session_id from output. First lines:\n\(preview)"]
-      )
-    }
-
-    // Step 4: Launch Terminal to resume the session with doctor prompt in plan mode, passing captured output as context
-    if let launchError = resumeSessionInTerminal(
-      sessionId: sessionId,
+    // Launch Terminal with a script that executes command, captures output, and auto-resumes with context
+    // This runs everything in Terminal (has TTY) - no headless execution needed
+    return launchTerminalWithCaptureAndResume(
+      command: preparedCommand,
       workingDir: workingDir,
-      systemPrompt: systemPrompt,
-      usePlanMode: true,
-      capturedOutput: output,
-      originalCommand: reproductionCommand
-    ) {
-      return launchError
-    }
-
-    return nil
+      originalCommand: reproductionCommand,
+      systemPrompt: systemPrompt
+    )
   }
 
   // MARK: - Private helpers for Doctor flow
+
+  /// Launches Terminal with a script that runs command, captures output, and auto-resumes with context
+  private static func launchTerminalWithCaptureAndResume(
+    command: String,
+    workingDir: String?,
+    originalCommand: String,
+    systemPrompt: String
+  ) -> Error? {
+    // Write system prompt to temp file
+    let tempDir = NSTemporaryDirectory()
+    let promptPath = (tempDir as NSString).appendingPathComponent("doctor_prompt_\(UUID().uuidString).txt")
+
+    do {
+      try systemPrompt.write(toFile: promptPath, atomically: true, encoding: .utf8)
+    } catch {
+      return NSError(domain: "TerminalLauncher", code: 3, userInfo: [NSLocalizedDescriptionKey: "Failed to write prompt file: \(error.localizedDescription)"])
+    }
+
+    // Escape paths for shell
+    let escapedPromptPath = promptPath.replacingOccurrences(of: "'", with: "'\\''")
+
+    // Build cd prefix if needed
+    let cdPrefix: String
+    if let dir = workingDir, !dir.isEmpty {
+      let escapedDir = dir.replacingOccurrences(of: "'", with: "'\\''")
+      cdPrefix = "cd '\(escapedDir)'\n"
+    } else {
+      cdPrefix = ""
+    }
+
+    // Create Terminal script that captures command output and auto-resumes
+    let scriptPath = (tempDir as NSString).appendingPathComponent("doctor_\(UUID().uuidString).command")
+    let scriptContent = """
+    #!/bin/bash -l
+
+    echo "═══════════════════════════════════════"
+    echo "ClaudeCodeUI Doctor - Executing Command"
+    echo "═══════════════════════════════════════"
+    echo ""
+
+    \(cdPrefix)
+    # Execute reproduction command and capture all output
+    echo "Running: \(originalCommand)"
+    echo ""
+    OUTPUT=$(\(command) 2>&1)
+    EXIT_CODE=$?
+
+    echo ""
+    echo "═══════════════════════════════════════"
+    echo "Command Completed (exit code: $EXIT_CODE)"
+    echo "═══════════════════════════════════════"
+    echo ""
+
+    # Extract session ID from output (first line should be JSON with session_id)
+    SESSION_ID=$(echo "$OUTPUT" | head -20 | grep -o '"session_id":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+    if [ -z "$SESSION_ID" ]; then
+      echo "❌ ERROR: Could not extract session_id from command output"
+      echo ""
+      echo "Output preview:"
+      echo "$OUTPUT" | head -20
+      echo ""
+      echo "Press Enter to close..."
+      read
+      exit 1
+    fi
+
+    echo "✅ Captured session: $SESSION_ID"
+    echo ""
+    echo "═══════════════════════════════════════"
+    echo "Launching Doctor Session..."
+    echo "═══════════════════════════════════════"
+    echo ""
+
+    # Build context message with captured output
+    CONTEXT="DOCTOR CONTEXT: Previous command execution output for debugging.
+
+    Reproduction Command:
+    \(originalCommand)
+
+    Captured Output (stdout + stderr):
+    $OUTPUT
+
+    Please analyze this output versus the debug report in your system prompt and propose a plan to fix any issues."
+
+    # Pipe context into resumed session with doctor prompt
+    echo "$CONTEXT" | claude -r "$SESSION_ID" --append-system-prompt "$(cat '\(escapedPromptPath)')" --permission-mode plan
+
+    # Cleanup
+    rm -f '\(escapedPromptPath)'
+    """
+
+    do {
+      try scriptContent.write(toFile: scriptPath, atomically: true, encoding: .utf8)
+      let attributes = [FileAttributeKey.posixPermissions: 0o755]
+      try FileManager.default.setAttributes(attributes, ofItemAtPath: scriptPath)
+
+      let url = URL(fileURLWithPath: scriptPath)
+      NSWorkspace.shared.open(url)
+
+      // Cleanup script after delay
+      DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+        try? FileManager.default.removeItem(atPath: scriptPath)
+      }
+
+      return nil
+    } catch {
+      return NSError(domain: "TerminalLauncher", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to launch Terminal: \(error.localizedDescription)"])
+    }
+  }
 
   /// Returns a tuple of (preparedCommand, workingDir, error)
   /// Replaces the first occurrence of the claude command with its resolved absolute path,
@@ -269,206 +357,5 @@ public struct TerminalLauncher {
     }
 
     return (prepared, workingDir, nil)
-  }
-
-  /// Executes the given command via login shell, capturing stdout and stderr together
-  private static func executeHeadless(command: String) -> (String, Error?) {
-    // First attempt: run with CI environment variables to disable TUI
-    var env = ProcessInfo.processInfo.environment
-    env["CI"] = "true"  // Many CLIs detect CI and disable interactive features
-    env["TERM"] = "dumb"  // Signal no terminal capabilities
-    env["NO_COLOR"] = "1"  // Disable color output
-
-    let (output1, status1) = runProcess(
-      executable: "/bin/zsh",
-      args: ["-lc", "set -o pipefail; \(command)"],
-      env: env
-    )
-
-    // Check for Ink raw mode error BEFORE checking exit status (error may occur even with status 0)
-    if output1.contains("Raw mode is not supported") || output1.contains("israwmodesupported") {
-      // Try with unbuffer if available (from expect package)
-      let unbufferPath = "/usr/bin/unbuffer"
-      if FileManager.default.fileExists(atPath: unbufferPath) {
-        let (output2, status2) = runProcess(
-          executable: unbufferPath,
-          args: ["/bin/zsh", "-lc", "set -o pipefail; \(command)"],
-          env: env
-        )
-        if status2 == 0 {
-          return (output2, nil)
-        }
-        return (output2, NSError(domain: "TerminalLauncher", code: Int(status2), userInfo: [NSLocalizedDescriptionKey: "Command (unbuffer) exited with status \(status2). Output:\n\(output2)"]))
-      }
-
-      // If unbuffer not available, return error with suggestion
-      return (output1, NSError(
-        domain: "TerminalLauncher",
-        code: 126,
-        userInfo: [NSLocalizedDescriptionKey: "Claude Code CLI requires a terminal (TTY) but none is available in headless mode.\n\nOutput:\n\(output1)\n\nTo fix: Install expect package (brew install expect) for unbuffer support."]
-      ))
-    }
-
-    // No Ink error, return normally
-    if status1 == 0 {
-      return (output1, nil)
-    }
-    return (output1, NSError(domain: "TerminalLauncher", code: Int(status1), userInfo: [NSLocalizedDescriptionKey: "Command exited with status \(status1). Output:\n\(output1)"]))
-  }
-
-  /// Runs a process and returns (combined stdout+stderr, exitStatus)
-  private static func runProcess(executable: String, args: [String], env: [String: String]) -> (String, Int32) {
-    let task = Process()
-    task.executableURL = URL(fileURLWithPath: executable)
-    task.arguments = args
-    task.environment = env
-
-    let pipe = Pipe()
-    task.standardOutput = pipe
-    task.standardError = pipe
-
-    do {
-      try task.run()
-    } catch {
-      return ("Failed to start process: \(error.localizedDescription)", 127)
-    }
-
-    task.waitUntilExit()
-
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-    let output = String(data: data, encoding: .utf8) ?? ""
-    return (output, task.terminationStatus)
-  }
-
-  /// Parses the first non-empty line as JSON and extracts session_id; falls back to regex
-  private static func extractSessionId(from output: String) -> String? {
-    // First non-empty line
-    guard let firstLine = output.split(separator: "\n", omittingEmptySubsequences: true).first else { return nil }
-
-    // Try JSON decode
-    if let data = String(firstLine).data(using: .utf8) {
-      if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-         let sessionId = json["session_id"] as? String, !sessionId.isEmpty {
-        return sessionId
-      }
-    }
-
-    // Fallback regex search in the entire output
-    let pattern = #"\"session_id\"\s*:\s*\"([^\"]+)\""#
-    if let regex = try? NSRegularExpression(pattern: pattern, options: []) {
-      let range = NSRange(location: 0, length: (output as NSString).length)
-      if let match = regex.firstMatch(in: output, options: [], range: range), match.numberOfRanges >= 2 {
-        let r = match.range(at: 1)
-        let sessionId = (output as NSString).substring(with: r)
-        if !sessionId.isEmpty { return sessionId }
-      }
-    }
-    return nil
-  }
-
-  /// Builds a context message containing the command execution details for the doctor to analyze
-  private static func buildDoctorContextMessage(
-    originalCommand: String,
-    workingDir: String?,
-    capturedOutput: String
-  ) -> String {
-    var lines: [String] = []
-    lines.append("DOCTOR CONTEXT: Previous command execution output for debugging.")
-    lines.append("")
-    if let wd = workingDir, !wd.isEmpty {
-      lines.append("Working Directory:")
-      lines.append(wd)
-      lines.append("")
-    }
-    lines.append("Reproduction Command:")
-    lines.append(originalCommand)
-    lines.append("")
-    lines.append("Captured Output (stdout + stderr):")
-    lines.append(capturedOutput)
-    lines.append("")
-    lines.append("Please analyze this output versus the debug report in your system prompt and propose a plan to fix any issues.")
-    return lines.joined(separator: "\n")
-  }
-
-  /// Launches Terminal.app with a small script that resumes the captured session with the doctor prompt and initial context
-  private static func resumeSessionInTerminal(
-    sessionId: String,
-    workingDir: String?,
-    systemPrompt: String,
-    usePlanMode: Bool,
-    capturedOutput: String,
-    originalCommand: String
-  ) -> Error? {
-    // Resolve the claude executable for the resume step
-    let claudeCommand = "claude"
-    guard let claudeExecutablePath = findClaudeExecutable(command: claudeCommand, additionalPaths: nil) else {
-      return NSError(
-        domain: "TerminalLauncher",
-        code: 1,
-        userInfo: [NSLocalizedDescriptionKey: "Could not find 'claude' command for resume. Please ensure CLI is installed."]
-      )
-    }
-
-    // Escape
-    let escapedClaude = claudeExecutablePath.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-    let escapedSession = sessionId.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-
-    // Build context message with captured output
-    let contextMessage = buildDoctorContextMessage(
-      originalCommand: originalCommand,
-      workingDir: workingDir,
-      capturedOutput: capturedOutput
-    )
-
-    // Write prompt and context to temp files to avoid huge quoting issues
-    let tempDir = NSTemporaryDirectory()
-    let promptPath = (tempDir as NSString).appendingPathComponent("doctor_prompt_\(UUID().uuidString).txt")
-    let contextPath = (tempDir as NSString).appendingPathComponent("doctor_context_\(UUID().uuidString).txt")
-    do {
-      try systemPrompt.write(toFile: promptPath, atomically: true, encoding: .utf8)
-      try contextMessage.write(toFile: contextPath, atomically: true, encoding: .utf8)
-    } catch {
-      return NSError(domain: "TerminalLauncher", code: 3, userInfo: [NSLocalizedDescriptionKey: "Failed to write prompt/context files: \(error.localizedDescription)"])
-    }
-
-    let escapedPromptPath = promptPath.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-    let escapedContextPath = contextPath.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-    let cdPrefix: String = {
-      if let dir = workingDir, !dir.isEmpty {
-        let escapedDir = dir.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
-        return "cd \"\(escapedDir)\" && "
-      }
-      return ""
-    }()
-
-    let permissionArg = usePlanMode ? " --permission-mode plan" : ""
-    // Pipe the context message as first user input to provide execution output to Claude
-    let resumeCommand = "\(cdPrefix)cat \"\(escapedContextPath)\" | \"\(escapedClaude)\" -r \"\(escapedSession)\" --append-system-prompt \"$(cat \"\(escapedPromptPath)\")\"\(permissionArg)"
-
-    // Write a small .command script and open it
-    let scriptPath = (tempDir as NSString).appendingPathComponent("doctor_launch_\(UUID().uuidString).command")
-    let scriptContent = """
-    #!/bin/bash -l
-    \(resumeCommand)
-    """
-
-    do {
-      try scriptContent.write(toFile: scriptPath, atomically: true, encoding: .utf8)
-      let attributes = [FileAttributeKey.posixPermissions: 0o755]
-      try FileManager.default.setAttributes(attributes, ofItemAtPath: scriptPath)
-
-      let url = URL(fileURLWithPath: scriptPath)
-      NSWorkspace.shared.open(url)
-
-      // Cleanup temp files later
-      DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
-        try? FileManager.default.removeItem(atPath: scriptPath)
-        try? FileManager.default.removeItem(atPath: promptPath)
-        try? FileManager.default.removeItem(atPath: contextPath)
-      }
-      return nil
-    } catch {
-      return NSError(domain: "TerminalLauncher", code: 2, userInfo: [NSLocalizedDescriptionKey: "Failed to launch Terminal: \(error.localizedDescription)"])
-    }
   }
 }
