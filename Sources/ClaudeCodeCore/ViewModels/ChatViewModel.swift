@@ -167,6 +167,69 @@ public final class ChatViewModel {
     return parts.joined(separator: " && ")
   }
 
+  /// Generates MCP configuration diagnostics for debug reporting
+  private func generateMCPDiagnostics() -> String {
+    var diagnostics = "\nMCP CONFIGURATION:"
+
+    // Check MCP config file
+    let configPath = globalPreferences.mcpConfigPath
+    diagnostics += "\nConfig File: \(configPath)"
+
+    let configExists = FileManager.default.fileExists(atPath: configPath)
+
+    // Try to load and validate config
+    let mcpManager = MCPConfigurationManager()
+    let configValid = configExists && !mcpManager.configuration.mcpServers.isEmpty
+
+    if !configExists {
+      diagnostics += "\nConfig Status: ✗ Not found"
+    } else if configValid {
+      diagnostics += "\nConfig Status: ✓ Exists and valid"
+      let serverNames = mcpManager.configuration.mcpServers.keys.sorted().joined(separator: ", ")
+      diagnostics += "\nConfigured Servers: \(mcpManager.configuration.mcpServers.count) (\(serverNames))"
+    } else {
+      diagnostics += "\nConfig Status: ✗ Exists but empty or invalid"
+    }
+
+    // Check approval server binary
+    diagnostics += "\n\nAPPROVAL SERVER:"
+
+    let bundlePath = Bundle.main.path(forResource: "ApprovalMCPServer", ofType: nil)
+    let binaryExists = bundlePath != nil && FileManager.default.fileExists(atPath: bundlePath!)
+
+    if let path = bundlePath {
+      diagnostics += "\nBinary Path: \(path)"
+      diagnostics += "\nBinary Status: \(binaryExists ? "✓ Exists" : "✗ Not found")"
+    } else {
+      diagnostics += "\nBinary Path: Not in bundle"
+      diagnostics += "\nBinary Status: ✗ Not found"
+    }
+
+    // Check if approval server is configured in MCP
+    if let approvalServer = mcpManager.configuration.mcpServers["approval_server"] {
+      diagnostics += "\nConfigured in MCP: ✓ Yes"
+      diagnostics += "\nConfigured Path: \(approvalServer.command)"
+
+      // Check if configured path matches bundled path
+      if let bundled = bundlePath {
+        if approvalServer.command == bundled {
+          diagnostics += "\nPath Match: ✓ Matches bundled binary"
+        } else {
+          diagnostics += "\nPath Match: ✗ Mismatch"
+          diagnostics += "\n  Expected (bundled): \(bundled)"
+          diagnostics += "\n  Actual (configured): \(approvalServer.command)"
+        }
+      }
+    } else {
+      diagnostics += "\nConfigured in MCP: ✗ No"
+      if binaryExists {
+        diagnostics += "\n⚠️  Binary exists but not configured - run 'Repair' in settings"
+      }
+    }
+
+    return diagnostics
+  }
+
   /// Returns a complete debug report with all command execution details
   var fullDebugReport: String? {
     guard let commandInfo = claudeClient.lastExecutedCommandInfo else {
@@ -222,6 +285,10 @@ public final class ChatViewModel {
     if !foundVars.isEmpty {
       report += "\nKey Variables:\n  " + foundVars.joined(separator: "\n  ")
     }
+
+    // Add MCP diagnostics
+    report += "\n"
+    report += generateMCPDiagnostics()
 
     report += "\n\n=== END DEBUG REPORT ==="
 
