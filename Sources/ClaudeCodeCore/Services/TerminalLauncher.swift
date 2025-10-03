@@ -147,7 +147,7 @@ public struct TerminalLauncher {
     Remember: You're debugging why commands work in Terminal but fail in the macOS app.
     """
 
-    // Write prompt to a temp file for safe piping
+    // Write prompt to a temp file
     let tempDir = NSTemporaryDirectory()
     let promptPath = (tempDir as NSString).appendingPathComponent("claude_doctor_prompt_\(UUID().uuidString).txt")
     let scriptPath = (tempDir as NSString).appendingPathComponent("claude_doctor_\(UUID().uuidString).command")
@@ -163,17 +163,12 @@ public struct TerminalLauncher {
       )
     }
 
-    // Construct the doctor command with plan permission mode
+    // Construct the doctor command - start interactive session with system prompt from file
     let homeDir = NSHomeDirectory()
-    let doctorCommand = """
-    cd "\(homeDir)" && "\(escapedClaudePath)" -p --permission-mode plan < "\(promptPath)"
-    """
-
-    // Create the script content
     let scriptContent = """
     #!/bin/bash
-    \(doctorCommand)
-    # Clean up prompt file when done
+    cd "\(homeDir)"
+    "\(escapedClaudePath)" --append-system-prompt "$(cat '\(promptPath)')" --permission-mode plan
     rm -f "\(promptPath)"
     """
 
