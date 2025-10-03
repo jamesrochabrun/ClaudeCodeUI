@@ -168,7 +168,7 @@ public struct TerminalLauncher {
     let scriptContent = """
     #!/bin/bash
     cd "\(homeDir)"
-    "\(escapedClaudePath)" --append-system-prompt "$(cat '\(promptPath)')" --permission-mode plan
+    echo "Analyze the debug report and help me troubleshoot this issue. Start by investigating the environment." | "\(escapedClaudePath)" --append-system-prompt "$(cat '\(promptPath)')" --permission-mode plan
     rm -f "\(promptPath)"
     """
 
