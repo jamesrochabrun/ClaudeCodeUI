@@ -59,7 +59,9 @@ struct GlobalSettingsView: View {
   @State private var selectedTools: Set<String> = []
   @State private var selectedMCPTools: [String: Set<String>] = [:]
   @State private var isRequestingPermission: Bool = false
-  
+  @State private var commandCopied: Bool = false
+  @State private var reportCopied: Bool = false
+
   // MARK: - Body
   var body: some View {
     VStack(spacing: 0) {
@@ -208,6 +210,7 @@ struct GlobalSettingsView: View {
           xcodeIntegrationSection
         }
         claudeCodeConfigurationSection
+        debugSection
         resetSection
       }
       .formStyle(.grouped)
@@ -279,6 +282,134 @@ struct GlobalSettingsView: View {
     }
   }
   
+  private var debugSection: some View {
+    Section("Debug") {
+      let hasCommandInfo = chatViewModel?.terminalReproductionCommand != nil
+
+      VStack(alignment: .leading, spacing: 16) {
+        // Empty State Info Banner
+        if !hasCommandInfo {
+          HStack(spacing: 12) {
+            Image(systemName: "info.circle.fill")
+              .foregroundColor(.blue)
+              .font(.title2)
+
+            VStack(alignment: .leading, spacing: 4) {
+              Text("Debug Information Not Available")
+                .font(.headline)
+              Text("Send a message in the chat to generate command execution details.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            }
+
+            Spacer()
+          }
+          .padding(12)
+          .background(Color.blue.opacity(0.1))
+          .cornerRadius(8)
+          .overlay(
+            RoundedRectangle(cornerRadius: 8)
+              .stroke(Color.blue.opacity(0.3), lineWidth: 1)
+          )
+        }
+
+        // Terminal Reproduction Command
+        VStack(alignment: .leading, spacing: 8) {
+          Text("Terminal Reproduction Command")
+            .font(.headline)
+
+          HStack(alignment: .top, spacing: 12) {
+            Text(chatViewModel?.terminalReproductionCommand ?? "No command executed yet")
+              .font(.system(.body, design: .monospaced))
+              .textSelection(.enabled)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .padding(8)
+              .background(hasCommandInfo ? Color(NSColor.textBackgroundColor) : Color.secondary.opacity(0.05))
+              .cornerRadius(4)
+              .overlay(
+                RoundedRectangle(cornerRadius: 4)
+                  .stroke(hasCommandInfo ? Color.secondary.opacity(0.2) : Color.secondary.opacity(0.15), lineWidth: 1)
+              )
+
+            Button(action: {
+              copyTerminalCommandToClipboard()
+            }) {
+              Image(systemName: commandCopied ? "checkmark" : "doc.on.doc")
+                .frame(width: 20, height: 20)
+            }
+            .buttonStyle(.borderedProminent)
+            .disabled(!hasCommandInfo)
+            .help(hasCommandInfo ? "Copy terminal command to clipboard" : "Send a message first to generate debug info")
+          }
+
+          Text("Copy this command to paste into Terminal and reproduce the last execution")
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
+
+        Divider()
+
+        // Full Debug Report
+        VStack(alignment: .leading, spacing: 8) {
+          DisclosureGroup("Full Debug Report") {
+            ScrollView {
+              if hasCommandInfo {
+                Text(chatViewModel?.fullDebugReport ?? "")
+                  .font(.system(.caption, design: .monospaced))
+                  .textSelection(.enabled)
+                  .frame(maxWidth: .infinity, alignment: .leading)
+                  .padding(8)
+              } else {
+                VStack(spacing: 8) {
+                  Image(systemName: "doc.text.magnifyingglass")
+                    .font(.largeTitle)
+                    .foregroundColor(.secondary)
+                  Text("No debug information available")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                  Text("Execute a command first to see detailed debug information")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(24)
+              }
+            }
+            .frame(height: 200)
+            .background(hasCommandInfo ? Color(NSColor.textBackgroundColor) : Color.secondary.opacity(0.05))
+            .cornerRadius(4)
+            .overlay(
+              RoundedRectangle(cornerRadius: 4)
+                .stroke(hasCommandInfo ? Color.secondary.opacity(0.2) : Color.secondary.opacity(0.15), lineWidth: 1)
+            )
+
+            HStack {
+              Spacer()
+              Button(action: {
+                copyFullReportToClipboard()
+              }) {
+                HStack(spacing: 4) {
+                  Image(systemName: reportCopied ? "checkmark" : "doc.on.doc")
+                  Text("Copy Full Report")
+                }
+              }
+              .buttonStyle(.borderedProminent)
+              .disabled(!hasCommandInfo)
+              .help(hasCommandInfo ? "Copy complete debug report to clipboard" : "Send a message first to generate debug info")
+              .padding(.top, 8)
+            }
+          }
+
+          Text("Complete report with all command details, environment, and PATH information")
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
+      }
+      .padding(.vertical, 8)
+    }
+  }
+
   private var resetSection: some View {
     Section {
       Button("Reset All Settings") {
@@ -287,7 +418,7 @@ struct GlobalSettingsView: View {
       .foregroundColor(.red)
     }
   }
-  
+
   // MARK: - Configuration Rows
   @ViewBuilder
   private var defaultWorkingDirectoryRow: some View {
@@ -557,6 +688,28 @@ struct GlobalSettingsView: View {
       await MainActor.run {
         isRequestingPermission = false
       }
+    }
+  }
+
+  private func copyTerminalCommandToClipboard() {
+    guard let command = chatViewModel?.terminalReproductionCommand else { return }
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(command, forType: .string)
+
+    commandCopied = true
+    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+      commandCopied = false
+    }
+  }
+
+  private func copyFullReportToClipboard() {
+    guard let report = chatViewModel?.fullDebugReport else { return }
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(report, forType: .string)
+
+    reportCopied = true
+    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+      reportCopied = false
     }
   }
 }

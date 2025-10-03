@@ -16,9 +16,9 @@ struct SettingsView: View {
   var settingsStorage: SettingsStorage {
     chatViewModel.settingsStorage
   }
-  
+
   @State private var projectPath: String = ""
-  
+
   init(chatViewModel: ChatViewModel) {
     self.chatViewModel = chatViewModel
   }
@@ -68,7 +68,7 @@ struct SettingsView: View {
             }
             .padding(.vertical, 8)
           }
-          
+
         }
         .formStyle(.grouped)
         
@@ -178,21 +178,21 @@ struct SettingsView: View {
   private func updateClaudeClient() {
     // Update the ClaudeCode client configuration directly
     let workingDirectory = projectPath
-    
+
     // Check if working directory changed
     let currentWorkingDir = chatViewModel.claudeClient.configuration.workingDirectory
     let newWorkingDir = workingDirectory.isEmpty ? nil : workingDirectory
-    
+
     if currentWorkingDir != newWorkingDir && !chatViewModel.messages.isEmpty {
       // Clear conversation when working directory changes and there are messages
       chatViewModel.clearConversation()
     }
-    
+
     // Update configuration properties
     chatViewModel.claudeClient.configuration.workingDirectory = newWorkingDir
-    
+
     // Update the observable project path in the view model
     chatViewModel.refreshProjectPath()
   }
-  
+
 }
