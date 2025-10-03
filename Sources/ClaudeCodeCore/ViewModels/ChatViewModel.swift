@@ -173,6 +173,13 @@ public final class ChatViewModel {
       return nil
     }
 
+    // Detect the actual executable path
+    let commandName = commandInfo.commandString.components(separatedBy: " ").first ?? ""
+    let resolvedExecutable = TerminalLauncher.findClaudeExecutable(
+      command: commandName,
+      additionalPaths: claudeClient.configuration.additionalPaths
+    )
+
     var report = """
     === CLAUDE CODE DEBUG REPORT ===
 
@@ -181,6 +188,7 @@ public final class ChatViewModel {
 
     COMMAND DETAILS:
     Command: \(commandInfo.commandString)
+    Resolved Executable: \(resolvedExecutable ?? "Not found - check PATH and shell aliases")
     Working Directory: \(commandInfo.workingDirectory ?? "None")
     Stdin Content: \(commandInfo.stdinContent ?? "None")
     Executed At: \(commandInfo.executedAt)

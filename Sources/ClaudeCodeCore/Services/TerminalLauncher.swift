@@ -96,7 +96,7 @@ public struct TerminalLauncher {
   ///   - command: The command name to search for (e.g., "claude")
   ///   - additionalPaths: Additional paths to search from configuration
   /// - Returns: The full path to the executable if found, nil otherwise
-  private static func findClaudeExecutable(
+  public static func findClaudeExecutable(
     command: String,
     additionalPaths: [String]?
   ) -> String? {
