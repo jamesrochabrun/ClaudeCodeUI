@@ -247,7 +247,9 @@ struct GlobalSettingsView: View {
       if uiConfiguration.showSystemPromptFields {
         systemPromptRow
       }
-      appendSystemPromptRow
+      if uiConfiguration.showAdditionalSystemPromptField {
+        appendSystemPromptRow
+      }
       allowedToolsRow
       mcpConfigurationRow
     }
