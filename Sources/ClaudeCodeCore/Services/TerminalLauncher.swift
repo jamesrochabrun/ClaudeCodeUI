@@ -229,10 +229,13 @@ public struct TerminalLauncher {
     }
 
     // At this point, `remaining` is either the original command or the part after the leading cd &&
-    // If the command is of the form: echo "..." | <cmd> ..., move to the part after the pipe
+    // If the command is of the form: echo "..." | <cmd> ..., we must preserve the echo prefix for execution,
+    // but identify the CLI token from the part after the pipe.
+    var leadingPrefix = ""
     var commandPortion = remaining
     if commandPortion.hasPrefix("echo ") {
       if let pipeRange = commandPortion.range(of: " | ") {
+        leadingPrefix = String(commandPortion[..<pipeRange.upperBound]) // includes the trailing pipe+space
         commandPortion = String(commandPortion[pipeRange.upperBound...])
       }
     }
@@ -260,9 +263,9 @@ public struct TerminalLauncher {
     let prepared: String
     if reproductionCommand.hasPrefix("cd "), let rangeOfAnd = reproductionCommand.range(of: " && ") {
       let prefix = String(reproductionCommand[..<rangeOfAnd.lowerBound])
-      prepared = prefix + " && " + replacedPortion
+      prepared = prefix + " && " + leadingPrefix + replacedPortion
     } else {
-      prepared = replacedPortion
+      prepared = leadingPrefix + replacedPortion
     }
 
     return (prepared, workingDir, nil)
