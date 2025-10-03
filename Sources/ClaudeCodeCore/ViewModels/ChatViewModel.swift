@@ -138,8 +138,7 @@ public final class ChatViewModel {
 
   /// Returns a terminal command that can be copied and pasted to reproduce the last execution
   var terminalReproductionCommand: String? {
-    guard let client = claudeClient as? ClaudeCodeClient,
-          let commandInfo = client.lastExecutedCommandInfo else {
+    guard let commandInfo = claudeClient.lastExecutedCommandInfo else {
       return nil
     }
 
@@ -170,8 +169,7 @@ public final class ChatViewModel {
 
   /// Returns a complete debug report with all command execution details
   var fullDebugReport: String? {
-    guard let client = claudeClient as? ClaudeCodeClient,
-          let commandInfo = client.lastExecutedCommandInfo else {
+    guard let commandInfo = claudeClient.lastExecutedCommandInfo else {
       return nil
     }
 
