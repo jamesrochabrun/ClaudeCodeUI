@@ -273,22 +273,40 @@ public struct TerminalLauncher {
 
   /// Executes the given command via login shell, capturing stdout and stderr together
   private static func executeHeadless(command: String) -> (String, Error?) {
-    // First attempt: run normally (non-PTY)
-    let (output1, status1) = runProcess(executable: "/bin/zsh", args: ["-lc", "set -o pipefail; \(command)"], env: ProcessInfo.processInfo.environment)
+    // First attempt: run with CI environment variables to disable TUI
+    var env = ProcessInfo.processInfo.environment
+    env["CI"] = "true"  // Many CLIs detect CI and disable interactive features
+    env["TERM"] = "dumb"  // Signal no terminal capabilities
+    env["NO_COLOR"] = "1"  // Disable color output
+
+    let (output1, status1) = runProcess(
+      executable: "/bin/zsh",
+      args: ["-lc", "set -o pipefail; \(command)"],
+      env: env
+    )
 
     // Check for Ink raw mode error BEFORE checking exit status (error may occur even with status 0)
     if output1.contains("Raw mode is not supported") || output1.contains("israwmodesupported") {
-      // Retry with a pseudo-terminal via `script` to satisfy Ink's TTY requirement
-      let (output2, status2) = runProcess(
-        executable: "/usr/bin/script",
-        args: ["-q", "/dev/stdout", "/bin/zsh", "-lc", "set -o pipefail; \(command)"],
-        env: ProcessInfo.processInfo.environment
-      )
-
-      if status2 == 0 {
-        return (output2, nil)
+      // Try with unbuffer if available (from expect package)
+      let unbufferPath = "/usr/bin/unbuffer"
+      if FileManager.default.fileExists(atPath: unbufferPath) {
+        let (output2, status2) = runProcess(
+          executable: unbufferPath,
+          args: ["/bin/zsh", "-lc", "set -o pipefail; \(command)"],
+          env: env
+        )
+        if status2 == 0 {
+          return (output2, nil)
+        }
+        return (output2, NSError(domain: "TerminalLauncher", code: Int(status2), userInfo: [NSLocalizedDescriptionKey: "Command (unbuffer) exited with status \(status2). Output:\n\(output2)"]))
       }
-      return (output2, NSError(domain: "TerminalLauncher", code: Int(status2), userInfo: [NSLocalizedDescriptionKey: "Command (PTY) exited with status \(status2). Output:\n\(output2)"]))
+
+      // If unbuffer not available, return error with suggestion
+      return (output1, NSError(
+        domain: "TerminalLauncher",
+        code: 126,
+        userInfo: [NSLocalizedDescriptionKey: "Claude Code CLI requires a terminal (TTY) but none is available in headless mode.\n\nOutput:\n\(output1)\n\nTo fix: Install expect package (brew install expect) for unbuffer support."]
+      ))
     }
 
     // No Ink error, return normally
