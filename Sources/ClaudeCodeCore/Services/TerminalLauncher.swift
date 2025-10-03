@@ -91,6 +91,102 @@ public struct TerminalLauncher {
     }
   }
 
+  /// Launches Terminal with a Doctor debugging session (test-first approach)
+  /// - Parameters:
+  ///   - claudeClient: The Claude client for running test command
+  ///   - command: The command name to use
+  ///   - workingDirectory: Working directory for the session
+  ///   - systemPrompt: The doctor system prompt
+  /// - Returns: An error if launching fails, nil on success
+  public static func launchDoctorSessionWithTest(
+    claudeClient: ClaudeCode,
+    command: String,
+    workingDirectory: String,
+    systemPrompt: String
+  ) async -> Error? {
+    // Find the full path to the executable
+    guard let claudeExecutablePath = findClaudeExecutable(
+      command: command,
+      additionalPaths: claudeClient.configuration.additionalPaths
+    ) else {
+      return NSError(
+        domain: "TerminalLauncher",
+        code: 1,
+        userInfo: [NSLocalizedDescriptionKey: "Could not find '\(command)' command. Please ensure it is installed."]
+      )
+    }
+
+    // Write system prompt to temp file
+    let tempDir = NSTemporaryDirectory()
+    let promptPath = (tempDir as NSString).appendingPathComponent("doctor_prompt_\(UUID().uuidString).txt")
+
+    do {
+      try systemPrompt.write(toFile: promptPath, atomically: true, encoding: .utf8)
+    } catch {
+      return NSError(
+        domain: "TerminalLauncher",
+        code: 3,
+        userInfo: [NSLocalizedDescriptionKey: "Failed to write prompt file: \(error.localizedDescription)"]
+      )
+    }
+
+    // Escape paths
+    let escapedClaudePath = claudeExecutablePath.replacingOccurrences(of: "\\", with: "\\\\")
+      .replacingOccurrences(of: "\"", with: "\\\"")
+    let escapedWorkDir = workingDirectory.replacingOccurrences(of: "\\", with: "\\\\")
+      .replacingOccurrences(of: "\"", with: "\\\"")
+
+    // Create script that:
+    // 1. Runs a test command to start session
+    // 2. Extracts session ID
+    // 3. Launches Terminal to resume that session
+    let scriptPath = (tempDir as NSString).appendingPathComponent("doctor_launcher_\(UUID().uuidString).command")
+    let scriptContent = """
+    #!/bin/bash
+    cd "\(escapedWorkDir)"
+
+    # Start a test session and capture output
+    echo "Starting diagnostic session..."
+    SESSION_OUTPUT=$("\(escapedClaudePath)" -p "Hello! I need help debugging my environment. Please start by running diagnostic commands." --append-system-prompt "$(cat '\(promptPath)')" --permission-mode plan 2>&1)
+
+    # Extract session ID (Claude outputs session ID in specific format)
+    SESSION_ID=$(echo "$SESSION_OUTPUT" | grep -o "session-[a-zA-Z0-9-]*" | head -1)
+
+    # If we got a session ID, resume it interactively
+    if [ -n "$SESSION_ID" ]; then
+      echo "Resuming session: $SESSION_ID"
+      "\(escapedClaudePath)" -r "$SESSION_ID"
+    else
+      echo "Could not capture session ID. Starting fresh interactive session..."
+      "\(escapedClaudePath)" --append-system-prompt "$(cat '\(promptPath)')" --permission-mode plan
+    fi
+
+    # Clean up
+    rm -f "\(promptPath)"
+    """
+
+    do {
+      try scriptContent.write(toFile: scriptPath, atomically: true, encoding: .utf8)
+      let attributes = [FileAttributeKey.posixPermissions: 0o755]
+      try FileManager.default.setAttributes(attributes, ofItemAtPath: scriptPath)
+
+      let url = URL(fileURLWithPath: scriptPath)
+      NSWorkspace.shared.open(url)
+
+      DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+        try? FileManager.default.removeItem(atPath: scriptPath)
+      }
+
+      return nil
+    } catch {
+      return NSError(
+        domain: "TerminalLauncher",
+        code: 2,
+        userInfo: [NSLocalizedDescriptionKey: "Failed to launch Doctor session: \(error.localizedDescription)"]
+      )
+    }
+  }
+
   /// Launches Terminal with a Doctor debugging session
   /// - Parameters:
   ///   - command: The command name to use (from preferences)

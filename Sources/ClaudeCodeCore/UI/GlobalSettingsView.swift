@@ -781,23 +781,39 @@ struct GlobalSettingsView: View {
     guard let viewModel = chatViewModel,
           let report = viewModel.fullDebugReport else { return }
 
-    // Use the same command and configuration as the app
+    // Create doctor system prompt
     let command = globalPreferences.claudeCommand
-    let additionalPaths = viewModel.claudeClient.configuration.additionalPaths
+    let doctorPrompt = """
+    You are a ClaudeCodeUI Debug Doctor. Analyze this debug report and help troubleshoot:
 
-    // Launch the doctor session
-    if let error = TerminalLauncher.launchDoctorSession(
-      command: command,
-      additionalPaths: additionalPaths,
-      debugReport: report
-    ) {
-      // Show error alert
-      let alert = NSAlert()
-      alert.messageText = "Failed to Launch Doctor"
-      alert.informativeText = error.localizedDescription
-      alert.alertStyle = .warning
-      alert.addButton(withTitle: "OK")
-      alert.runModal()
+    \(report)
+
+    Your task:
+    1. First, test if the command actually works by running diagnostic commands
+    2. Compare with the debug report to find discrepancies
+    3. If you find issues, create a plan to fix them
+    4. If everything works, explain that no fixes are needed
+
+    Start by running: echo $PATH, which \(command), and \(command) --version
+    """
+
+    // Launch Terminal with doctor session
+    Task {
+      if let error = await TerminalLauncher.launchDoctorSessionWithTest(
+        claudeClient: viewModel.claudeClient,
+        command: command,
+        workingDirectory: viewModel.projectPath,
+        systemPrompt: doctorPrompt
+      ) {
+        await MainActor.run {
+          let alert = NSAlert()
+          alert.messageText = "Failed to Launch Doctor"
+          alert.informativeText = error.localizedDescription
+          alert.alertStyle = .warning
+          alert.addButton(withTitle: "OK")
+          alert.runModal()
+        }
+      }
     }
   }
 }
