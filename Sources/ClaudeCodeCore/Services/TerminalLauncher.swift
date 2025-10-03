@@ -277,12 +277,7 @@ public struct TerminalLauncher {
     echo ""
 
     # Build context message with debug report + command output
-    CONTEXT_MSG="$(cat <<'CONTEXT_START'
-Debug Report:
-CONTEXT_START
-)"
-    CONTEXT_MSG="$CONTEXT_MSG"$'\n'"$(cat '\(escapedDebugReportPath)')"
-    CONTEXT_MSG="$CONTEXT_MSG"$'\n\nCommand Output:\n'"$OUTPUT"
+    CONTEXT_MSG="Debug Report:"$'\n'"$(cat '\(escapedDebugReportPath)')"$'\n\nCommand Output:\n'"$OUTPUT"
 
     # Resume session with context as first message
     '\(escapedClaudePath)' -r "$SESSION_ID" -p "$CONTEXT_MSG" --append-system-prompt "$(cat '\(escapedPromptPath)')" --permission-mode plan
