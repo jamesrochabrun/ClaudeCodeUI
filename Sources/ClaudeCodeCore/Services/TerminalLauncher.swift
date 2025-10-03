@@ -147,27 +147,34 @@ public struct TerminalLauncher {
     Remember: You're debugging why commands work in Terminal but fail in the macOS app.
     """
 
-    // Escape the prompt for shell
-    let escapedPrompt = doctorPrompt
-      .replacingOccurrences(of: "\\", with: "\\\\")
-      .replacingOccurrences(of: "\"", with: "\\\"")
-      .replacingOccurrences(of: "$", with: "\\$")
-      .replacingOccurrences(of: "`", with: "\\`")
+    // Write prompt to a temp file for safe piping
+    let tempDir = NSTemporaryDirectory()
+    let promptPath = (tempDir as NSString).appendingPathComponent("claude_doctor_prompt_\(UUID().uuidString).txt")
+    let scriptPath = (tempDir as NSString).appendingPathComponent("claude_doctor_\(UUID().uuidString).command")
+
+    // Write the prompt to the temp file
+    do {
+      try doctorPrompt.write(toFile: promptPath, atomically: true, encoding: .utf8)
+    } catch {
+      return NSError(
+        domain: "TerminalLauncher",
+        code: 3,
+        userInfo: [NSLocalizedDescriptionKey: "Failed to write prompt file: \(error.localizedDescription)"]
+      )
+    }
 
     // Construct the doctor command with plan permission mode
     let homeDir = NSHomeDirectory()
     let doctorCommand = """
-    cd "\(homeDir)" && echo "\(escapedPrompt)" | "\(escapedClaudePath)" -p --permission-mode plan
+    cd "\(homeDir)" && "\(escapedClaudePath)" -p --permission-mode plan < "\(promptPath)"
     """
-
-    // Create a temporary script file
-    let tempDir = NSTemporaryDirectory()
-    let scriptPath = (tempDir as NSString).appendingPathComponent("claude_doctor_\(UUID().uuidString).command")
 
     // Create the script content
     let scriptContent = """
     #!/bin/bash
     \(doctorCommand)
+    # Clean up prompt file when done
+    rm -f "\(promptPath)"
     """
 
     do {
