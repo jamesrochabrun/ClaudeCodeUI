@@ -779,29 +779,33 @@ struct GlobalSettingsView: View {
 
   private func runDoctor() {
     guard let viewModel = chatViewModel,
-          let report = viewModel.fullDebugReport else { return }
+          let report = viewModel.fullDebugReport,
+          let reproCommand = viewModel.terminalReproductionCommand else { return }
 
     // Create doctor system prompt
     let command = globalPreferences.claudeCommand
     let doctorPrompt = """
-    You are a ClaudeCodeUI Debug Doctor. Analyze this debug report and help troubleshoot:
+    You are a ClaudeCodeUI Debug Doctor.
 
+    I just executed a command from the app and you have the results in this session's context.
+
+    DEBUG REPORT:
     \(report)
 
     Your task:
-    1. First, test if the command actually works by running diagnostic commands
-    2. Compare with the debug report to find discrepancies
-    3. If you find issues, create a plan to fix them
-    4. If everything works, explain that no fixes are needed
+    1. Review the command execution that just happened in this session
+    2. Compare the output with what's in the debug report
+    3. Look for discrepancies (PATH differences, executable location, errors, etc.)
+    4. If you find issues, create a plan to fix them
+    5. If everything works fine, explain that the app is working correctly
 
-    Start by running: echo $PATH, which \(command), and \(command) --version
+    Start by reviewing the session context to see what the command returned.
     """
 
     // Launch Terminal with doctor session
     Task {
-      if let error = await TerminalLauncher.launchDoctorSessionWithTest(
-        claudeClient: viewModel.claudeClient,
-        command: command,
+      if let error = await TerminalLauncher.launchDoctorWithCommand(
+        command: reproCommand,
         workingDirectory: viewModel.projectPath,
         systemPrompt: doctorPrompt
       ) {

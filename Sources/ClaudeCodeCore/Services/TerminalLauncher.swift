@@ -91,6 +91,98 @@ public struct TerminalLauncher {
     }
   }
 
+  /// Launches Terminal with a Doctor session by executing command and resuming
+  /// - Parameters:
+  ///   - command: The terminal reproduction command to execute
+  ///   - workingDirectory: Working directory for the command
+  ///   - systemPrompt: The doctor system prompt
+  /// - Returns: An error if launching fails, nil on success
+  public static func launchDoctorWithCommand(
+    command: String,
+    workingDirectory: String,
+    systemPrompt: String
+  ) async -> Error? {
+    // Write system prompt to temp file
+    let tempDir = NSTemporaryDirectory()
+    let promptPath = (tempDir as NSString).appendingPathComponent("doctor_prompt_\(UUID().uuidString).txt")
+
+    do {
+      try systemPrompt.write(toFile: promptPath, atomically: true, encoding: .utf8)
+    } catch {
+      return NSError(
+        domain: "TerminalLauncher",
+        code: 3,
+        userInfo: [NSLocalizedDescriptionKey: "Failed to write prompt file: \(error.localizedDescription)"]
+      )
+    }
+
+    // Escape the command for shell script
+    let escapedCommand = command
+      .replacingOccurrences(of: "\\", with: "\\\\")
+      .replacingOccurrences(of: "\"", with: "\\\"")
+      .replacingOccurrences(of: "$", with: "\\$")
+
+    // Create launcher script
+    let scriptPath = (tempDir as NSString).appendingPathComponent("doctor_launcher_\(UUID().uuidString).command")
+    let scriptContent = """
+    #!/bin/bash
+
+    echo "Executing command to capture session..."
+
+    # Execute the command and capture output
+    OUTPUT=$(\(escapedCommand))
+
+    # Extract session ID from first line (JSON format)
+    SESSION_ID=$(echo "$OUTPUT" | head -1 | grep -o '"session_id":"[^"]*"' | cut -d'"' -f4)
+
+    if [ -n "$SESSION_ID" ]; then
+      echo "Session captured: $SESSION_ID"
+      echo "Launching Doctor session..."
+
+      # Extract the claude executable path from the command
+      CLAUDE_PATH=$(echo "\(escapedCommand)" | grep -o '/[^ ]*claude' | head -1)
+
+      if [ -z "$CLAUDE_PATH" ]; then
+        CLAUDE_PATH="claude"
+      fi
+
+      # Resume the session with doctor prompt
+      "$CLAUDE_PATH" -r "$SESSION_ID" --append-system-prompt "$(cat '\(promptPath)')" --permission-mode plan
+    else
+      echo "ERROR: Could not extract session ID from command output"
+      echo "Output was:"
+      echo "$OUTPUT"
+      echo ""
+      echo "Press Enter to close..."
+      read
+    fi
+
+    # Clean up
+    rm -f "\(promptPath)"
+    """
+
+    do {
+      try scriptContent.write(toFile: scriptPath, atomically: true, encoding: .utf8)
+      let attributes = [FileAttributeKey.posixPermissions: 0o755]
+      try FileManager.default.setAttributes(attributes, ofItemAtPath: scriptPath)
+
+      let url = URL(fileURLWithPath: scriptPath)
+      NSWorkspace.shared.open(url)
+
+      DispatchQueue.main.asyncAfter(deadline: .now() + 10) {
+        try? FileManager.default.removeItem(atPath: scriptPath)
+      }
+
+      return nil
+    } catch {
+      return NSError(
+        domain: "TerminalLauncher",
+        code: 2,
+        userInfo: [NSLocalizedDescriptionKey: "Failed to launch Doctor session: \(error.localizedDescription)"]
+      )
+    }
+  }
+
   /// Launches Terminal with a Doctor debugging session (test-first approach)
   /// - Parameters:
   ///   - claudeClient: The Claude client for running test command
