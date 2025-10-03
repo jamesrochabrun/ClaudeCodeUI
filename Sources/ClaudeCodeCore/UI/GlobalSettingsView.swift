@@ -87,6 +87,7 @@ struct GlobalSettingsView: View {
           }
           dismiss()
         }
+        .disabled(claudePathValidation == .invalid)
       }
     }
     .sheet(isPresented: $showingToolsEditor) {
