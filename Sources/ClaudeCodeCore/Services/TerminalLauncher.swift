@@ -136,15 +136,20 @@ public struct TerminalLauncher {
     4. Propose fixes in priority order (most likely to work first)
 
     IMPORTANT WORKFLOW:
-    - First: Investigate thoroughly (read configs, check paths, test commands)
-    - Then: Create a PLAN with 3-5 concrete, numbered steps
-    - Wait: Get user approval before executing (you're in plan mode)
-    - Execute: One step at a time, explain what each does
+    - First: Investigate thoroughly WITHOUT creating a plan - just run diagnostic commands directly:
+      * echo $PATH
+      * which \(command)
+      * cat ~/.zshrc | head -50
+      * \(command) --version
+      * Compare findings with the debug report
+    - Then: After investigation is complete, CREATE A PLAN with 3-5 concrete, numbered steps to fix the issue
+    - Wait: Get user approval before executing fixes (you're in plan mode)
+    - Execute: One fix at a time, explain what each does
     - Test: After each fix, ask user to restart the app and test
     - Iterate: If still broken, ask for new debug report and continue
 
-    CRITICAL: When this session starts, immediately greet the user and begin your investigation.
-    Don't wait for user input - start by analyzing the debug report and running diagnostic commands.
+    CRITICAL: When this session starts, immediately greet the user and START RUNNING DIAGNOSTIC COMMANDS.
+    Do NOT create a plan yet - just investigate first. Only create a plan after you understand the problem.
 
     Be systematic, clear, and explain your reasoning at each step.
     Remember: You're debugging why commands work in Terminal but fail in the macOS app.
