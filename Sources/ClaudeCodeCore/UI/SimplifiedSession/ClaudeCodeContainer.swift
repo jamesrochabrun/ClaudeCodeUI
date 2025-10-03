@@ -99,6 +99,7 @@ public struct ClaudeCodeContainer: View {
     // This respects the injected configuration while still allowing user to override later
     if claudeCodeConfiguration.command != "claude" {
       globalPrefs.claudeCommand = claudeCodeConfiguration.command
+      globalPrefs.isClaudeCommandFromConfig = true
     }
 
     // Now create the proper session manager with global preferences

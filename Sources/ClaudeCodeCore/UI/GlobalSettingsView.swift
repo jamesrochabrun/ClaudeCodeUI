@@ -462,21 +462,46 @@ struct GlobalSettingsView: View {
     @Bindable var preferences = globalPreferences
     VStack(alignment: .leading, spacing: 8) {
       Text("Claude Command")
-      HStack {
-        TextField("Command", text: $preferences.claudeCommand)
-          .textFieldStyle(.roundedBorder)
-          .font(.system(.body, design: .monospaced))
+      if preferences.isClaudeCommandFromConfig {
+        // Show static text when command is from configuration
+        HStack {
+          Text(preferences.claudeCommand)
+            .font(.system(.body, design: .monospaced))
+            .foregroundColor(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(8)
+            .background(Color(NSColor.textBackgroundColor).opacity(0.5))
+            .cornerRadius(4)
+            .overlay(
+              RoundedRectangle(cornerRadius: 4)
+                .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
+            )
 
-        if preferences.claudeCommand != "claude" {
-          Button("Reset") {
-            preferences.claudeCommand = "claude"
-          }
-          .foregroundColor(.orange)
+          Image(systemName: "lock.fill")
+            .foregroundColor(.secondary)
+            .help("Command is set by configuration and cannot be changed")
         }
+        Text("This command is configured by the app and cannot be changed from preferences")
+          .font(.caption)
+          .foregroundColor(.secondary)
+      } else {
+        // Show editable TextField when command is not from configuration
+        HStack {
+          TextField("Command", text: $preferences.claudeCommand)
+            .textFieldStyle(.roundedBorder)
+            .font(.system(.body, design: .monospaced))
+
+          if preferences.claudeCommand != "claude" {
+            Button("Reset") {
+              preferences.claudeCommand = "claude"
+            }
+            .foregroundColor(.orange)
+          }
+        }
+        Text("The command to execute Claude Code (default: 'claude')")
+          .font(.caption)
+          .foregroundColor(.secondary)
       }
-      Text("The command to execute Claude Code (default: 'claude')")
-        .font(.caption)
-        .foregroundColor(.secondary)
     }
   }
 

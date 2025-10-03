@@ -74,7 +74,13 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       saveToPersistentStorage()
     }
   }
-  
+
+  public var isClaudeCommandFromConfig: Bool {
+    didSet {
+      saveToPersistentStorage()
+    }
+  }
+
   // MARK: - Custom Permission Settings
   
   public var autoApproveLowRisk: Bool {
@@ -149,6 +155,7 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       self.permissionTimeoutEnabled = general.permissionTimeoutEnabled
       self.maxConcurrentPermissionRequests = general.maxConcurrentPermissionRequests
       self.disallowedTools = general.disallowedTools
+      self.isClaudeCommandFromConfig = general.isClaudeCommandFromConfig
       
       // MCP config path - default to Claude's standard location
       let homeURL = FileManager.default.homeDirectoryForCurrentUser
@@ -221,7 +228,8 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       self.defaultWorkingDirectory = ""
       self.claudeCommand = "claude"
       self.claudePath = ""
-      
+      self.isClaudeCommandFromConfig = false
+
       // Default permission settings
       self.autoApproveLowRisk = false
       self.showDetailedPermissionInfo = true
@@ -301,6 +309,7 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       self.permissionTimeoutEnabled = general.permissionTimeoutEnabled
       self.maxConcurrentPermissionRequests = general.maxConcurrentPermissionRequests
       self.disallowedTools = general.disallowedTools
+      self.isClaudeCommandFromConfig = general.isClaudeCommandFromConfig
       
       // Restore tool preferences
       self.allowedTools = buildAllowedToolsList(from: restored.toolPreferences)
@@ -334,7 +343,8 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     defaultWorkingDirectory = ""
     claudeCommand = "claude"
     claudePath = ""
-    
+    isClaudeCommandFromConfig = false
+
     // Reset permission settings
     autoApproveLowRisk = false
     showDetailedPermissionInfo = true
@@ -423,7 +433,8 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
         permissionRequestTimeout: permissionRequestTimeout,
         permissionTimeoutEnabled: permissionTimeoutEnabled,
         maxConcurrentPermissionRequests: maxConcurrentPermissionRequests,
-        disallowedTools: disallowedTools
+        disallowedTools: disallowedTools,
+        isClaudeCommandFromConfig: isClaudeCommandFromConfig
       )
     )
     
@@ -518,7 +529,8 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
         showDetailedPermissionInfo: showDetailedPermissionInfo,
         permissionRequestTimeout: permissionRequestTimeout,
         permissionTimeoutEnabled: permissionTimeoutEnabled,
-        maxConcurrentPermissionRequests: maxConcurrentPermissionRequests
+        maxConcurrentPermissionRequests: maxConcurrentPermissionRequests,
+        isClaudeCommandFromConfig: isClaudeCommandFromConfig
       )
     )
     
