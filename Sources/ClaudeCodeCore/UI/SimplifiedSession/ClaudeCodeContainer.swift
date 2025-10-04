@@ -95,11 +95,19 @@ public struct ClaudeCodeContainer: View {
       }
     }
 
-    // If the injected configuration has a non-default command, update global preferences with it
-    // This respects the injected configuration while still allowing user to override later
+    // Always sync command lock state with configuration
+    // This ensures proper behavior when config changes between custom and default
     if claudeCodeConfiguration.command != "claude" {
+      // Custom command from config - lock the field
       globalPrefs.claudeCommand = claudeCodeConfiguration.command
       globalPrefs.isClaudeCommandFromConfig = true
+    } else {
+      // Default "claude" from config - unlock field and allow user override
+      // Only reset to "claude" if it was previously locked from config
+      if globalPrefs.isClaudeCommandFromConfig {
+        globalPrefs.claudeCommand = "claude"
+      }
+      globalPrefs.isClaudeCommandFromConfig = false
     }
 
     // Now create the proper session manager with global preferences
