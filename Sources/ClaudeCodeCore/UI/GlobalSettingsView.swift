@@ -511,9 +511,9 @@ struct GlobalSettingsView: View {
   private var claudePathRow: some View {
     @Bindable var preferences = globalPreferences
     VStack(alignment: .leading, spacing: 8) {
-      Text("\(preferences.claudeCommand.capitalized) Path (Advanced)")
+      Text("\(preferences.claudeCommand) Path (Advanced)")
       HStack {
-        TextField("Path to \(preferences.claudeCommand.capitalized) executable", text: $preferences.claudePath)
+        TextField("Path to \(preferences.claudeCommand) executable", text: $preferences.claudePath)
           .textFieldStyle(.roundedBorder)
           .font(.system(.body, design: .monospaced))
           .onChange(of: preferences.claudePath) { oldValue, newValue in
@@ -551,7 +551,7 @@ struct GlobalSettingsView: View {
             .font(.caption)
             .foregroundColor(.red)
         }
-        Text("⚠️ Only use this if you see '\(preferences.claudeCommand.capitalized) not installed' errors")
+        Text("⚠️ Only use this if you see '\(preferences.claudeCommand) not installed' errors")
           .font(.caption)
           .foregroundColor(.orange)
         Text("Run 'which \(preferences.claudeCommand)' in Terminal and paste the output here")
@@ -645,7 +645,7 @@ struct GlobalSettingsView: View {
           }
         }
       } else {
-        Text("\(globalPreferences.allowedTools.count) tools auto-approved (no permission prompts)")
+        Text("\(globalPreferences.allowedTools.count) tools auto-approved")
           .font(.caption)
           .foregroundColor(.secondary)
       }
