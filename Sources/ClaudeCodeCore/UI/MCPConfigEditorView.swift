@@ -21,8 +21,10 @@ struct MCPConfigEditorView: View {
     NavigationStack {
       VStack(spacing: 0) {
         // File path header
-        filePathHeader
-        
+        VStack(spacing: 4) {
+          filePathHeader
+          Text("⚠️ Do not remove approval_server from this file. This server handles user approvals.")
+        }
         Divider()
         
         // JSON Editor
