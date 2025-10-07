@@ -24,6 +24,9 @@ public struct UIConfiguration {
   /// Optional tooltip text to display when no working directory is selected
   public let workingDirectoryToolTip: String?
 
+  /// Optional general instructions tip to display in the welcome row
+  public let generalInstructionsTip: String?
+
   /// Whether to show the system prompt fields in settings
   public let showSystemPromptFields: Bool
 
@@ -42,6 +45,7 @@ public struct UIConfiguration {
       showRiskData: true,
       showTokenCount: true,
       workingDirectoryToolTip: nil,
+      generalInstructionsTip: nil,
       showSystemPromptFields: false,
       showAdditionalSystemPromptField: true,
       initialAdditionalSystemPromptPrefix: nil
@@ -56,6 +60,7 @@ public struct UIConfiguration {
       showRiskData: true,
       showTokenCount: true,
       workingDirectoryToolTip: nil,
+      generalInstructionsTip: nil,
       showSystemPromptFields: false,
       showAdditionalSystemPromptField: true,
       initialAdditionalSystemPromptPrefix: nil
@@ -69,6 +74,7 @@ public struct UIConfiguration {
     showRiskData: Bool = true,
     showTokenCount: Bool = true,
     workingDirectoryToolTip: String? = nil,
+    generalInstructionsTip: String? = nil,
     showSystemPromptFields: Bool = false,
     showAdditionalSystemPromptField: Bool = true,
     initialAdditionalSystemPromptPrefix: String? = nil
@@ -78,6 +84,7 @@ public struct UIConfiguration {
     self.showRiskData = showRiskData
     self.showTokenCount = showTokenCount
     self.workingDirectoryToolTip = workingDirectoryToolTip
+    self.generalInstructionsTip = generalInstructionsTip
     self.showSystemPromptFields = showSystemPromptFields
     self.showAdditionalSystemPromptField = showAdditionalSystemPromptField
     self.initialAdditionalSystemPromptPrefix = initialAdditionalSystemPromptPrefix
