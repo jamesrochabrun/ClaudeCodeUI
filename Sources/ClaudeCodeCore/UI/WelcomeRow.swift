@@ -13,15 +13,25 @@ import AppKit
 
 private struct WelcomeHeader: View {
   let appName: String
+  let generalInstructionsTip: String?
 
   var body: some View {
-    HStack(alignment: .firstTextBaseline, spacing: 6) {
-      Text("✻")
-        .foregroundColor(.brandPrimary)
+    VStack(alignment: .leading, spacing: 6) {
+      HStack(alignment: .firstTextBaseline, spacing: 6) {
+        Text("✻")
+          .foregroundColor(.brandPrimary)
 
-      Text("Welcome to **\(appName)!**")
-        .font(.system(.body, design: .monospaced))
-        .foregroundColor(.primary)
+        Text("Welcome to **\(appName)!**")
+          .font(.system(.body, design: .monospaced))
+          .foregroundColor(.primary)
+      }
+
+      if let tip = generalInstructionsTip, !tip.isEmpty {
+        Text(tip)
+          .font(.system(.caption, design: .monospaced))
+          .foregroundColor(.secondary)
+          .padding(.leading, 18)
+      }
     }
   }
 }
@@ -200,6 +210,7 @@ struct WelcomeRow: View {
   let showSettingsButton: Bool
   let appName: String
   let toolTip: String?
+  let generalInstructionsTip: String?
   let hasMessages: Bool
   let onSettingsTapped: () -> Void
   let onWorktreeSelected: ((String) -> Void)?
@@ -209,13 +220,14 @@ struct WelcomeRow: View {
   @State private var isLoadingWorktrees = false
   @State private var showInvalidPathAlert = false
   @State private var invalidPathMessage = ""
-  
+
   // Custom color
   init(
     path: String?,
     showSettingsButton: Bool = false,
     appName: String = "Claude Code UI",
     toolTip: String? = nil,
+    generalInstructionsTip: String? = nil,
     hasMessages: Bool = false,
     onSettingsTapped: @escaping () -> Void = {},
     onWorktreeSelected: ((String) -> Void)? = nil
@@ -224,6 +236,7 @@ struct WelcomeRow: View {
     self.showSettingsButton = showSettingsButton
     self.appName = appName
     self.toolTip = toolTip
+    self.generalInstructionsTip = generalInstructionsTip
     self.hasMessages = hasMessages
     self.onSettingsTapped = onSettingsTapped
     self.onWorktreeSelected = onWorktreeSelected
@@ -231,7 +244,7 @@ struct WelcomeRow: View {
   
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      WelcomeHeader(appName: appName)
+      WelcomeHeader(appName: appName, generalInstructionsTip: generalInstructionsTip)
 
       if showSettingsButton {
         NoDirectoryView(
@@ -390,7 +403,7 @@ struct WelcomeRow: View {
 
     var body: some View {
       VStack(alignment: .leading, spacing: 16) {
-        WelcomeHeader(appName: "Claude Code UI")
+        WelcomeHeader(appName: "Claude Code UI", generalInstructionsTip: nil)
 
         VStack(alignment: .leading, spacing: 8) {
           WorkingDirectoryHeader(

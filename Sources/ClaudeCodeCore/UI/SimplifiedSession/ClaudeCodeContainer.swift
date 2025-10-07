@@ -151,6 +151,15 @@ public struct ClaudeCodeContainer: View {
       onUserMessageSent: onUserMessageSent
     )
 
+    // Initialize global preference from configuration if not already set
+    // This allows configuration to suggest a default path on first launch
+    // Once set, user's global preference takes precedence (won't be overridden by config changes)
+    if globalPrefs.defaultWorkingDirectory.isEmpty,
+       let configPath = claudeCodeConfiguration.workingDirectory,
+       !configPath.isEmpty {
+      globalPrefs.defaultWorkingDirectory = configPath
+    }
+
     // Set the default working directory from global preferences on app launch
     if !globalPrefs.defaultWorkingDirectory.isEmpty {
       claudeClient.configuration.workingDirectory = globalPrefs.defaultWorkingDirectory

@@ -102,6 +102,7 @@ extension ChatScreen {
           showSettingsButton: shouldShowSettingsButton,
           appName: uiConfiguration.appName,
           toolTip: uiConfiguration.workingDirectoryToolTip,
+          generalInstructionsTip: uiConfiguration.generalInstructionsTip,
           hasMessages: !viewModel.messages.isEmpty,
           onSettingsTapped: {
             settingsTypeToShow = .session
