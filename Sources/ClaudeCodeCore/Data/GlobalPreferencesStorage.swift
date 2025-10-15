@@ -364,21 +364,14 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
   /// Creates a PermissionConfiguration from the current settings
   public func createPermissionConfiguration() -> PermissionConfiguration {
     return PermissionConfiguration(
-      defaultTimeout: permissionTimeoutEnabled ? permissionRequestTimeout : nil,
       autoApproveLowRisk: autoApproveLowRisk,
       showDetailedInfo: showDetailedPermissionInfo,
       maxConcurrentRequests: maxConcurrentPermissionRequests
     )
   }
-  
+
   /// Updates the permission settings from a PermissionConfiguration
   public func updateFromPermissionConfiguration(_ config: PermissionConfiguration) {
-    if let timeout = config.defaultTimeout {
-      permissionTimeoutEnabled = true
-      permissionRequestTimeout = timeout
-    } else {
-      permissionTimeoutEnabled = false
-    }
     autoApproveLowRisk = config.autoApproveLowRisk
     showDetailedPermissionInfo = config.showDetailedInfo
     maxConcurrentPermissionRequests = config.maxConcurrentRequests

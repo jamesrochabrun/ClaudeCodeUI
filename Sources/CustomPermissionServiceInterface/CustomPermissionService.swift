@@ -14,9 +14,8 @@ public protocol CustomPermissionService: Sendable {
   /// Requests approval for a tool use
   /// - Parameters:
   ///   - request: The approval request with tool details
-  ///   - timeout: Maximum time to wait for user response (nil means no timeout)
   /// - Returns: The approval response
-  func requestApproval(for request: ApprovalRequest, timeout: TimeInterval?) async throws -> ApprovalResponse
+  func requestApproval(for request: ApprovalRequest) async throws -> ApprovalResponse
   
   /// Cancels all pending approval requests
   func cancelAllRequests()
@@ -88,29 +87,24 @@ public enum CustomPermissionError: Error, LocalizedError, Sendable {
 
 /// Configuration for permission behavior
 public struct PermissionConfiguration: Codable, Sendable {
-  /// Default timeout for approval requests (in seconds), nil means no timeout
-  public let defaultTimeout: TimeInterval?
-  
   /// Whether to auto-approve low-risk operations
   public let autoApproveLowRisk: Bool
-  
+
   /// Whether to show detailed information in prompts
   public let showDetailedInfo: Bool
-  
+
   /// Maximum number of concurrent approval requests
   public let maxConcurrentRequests: Int
-  
+
   public init(
-    defaultTimeout: TimeInterval? = nil, // nil means no timeout
     autoApproveLowRisk: Bool = false,
     showDetailedInfo: Bool = true,
     maxConcurrentRequests: Int = 5
   ) {
-    self.defaultTimeout = defaultTimeout
     self.autoApproveLowRisk = autoApproveLowRisk
     self.showDetailedInfo = showDetailedInfo
     self.maxConcurrentRequests = maxConcurrentRequests
   }
-  
+
   public static let `default` = PermissionConfiguration()
 }

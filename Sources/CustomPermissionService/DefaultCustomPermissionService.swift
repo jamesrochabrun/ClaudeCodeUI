@@ -48,7 +48,7 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
     autoApproveSubject.eraseToAnyPublisher()
   }
   
-  public func requestApproval(for request: ApprovalRequest, timeout: TimeInterval?) async throws -> ApprovalResponse {
+  public func requestApproval(for request: ApprovalRequest) async throws -> ApprovalResponse {
     // Check if auto-approval is enabled
     if autoApproveToolCalls {
       return ApprovalResponse(
@@ -57,7 +57,7 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
         message: "Auto-approved"
       )
     }
-    
+
     // Check if auto-approval is enabled for low-risk operations
     if
       configuration.autoApproveLowRisk,
@@ -70,34 +70,20 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
         message: "Auto-approved (low risk)"
       )
     }
-    
+
     // Check concurrent request limit
     guard pendingRequests.count < configuration.maxConcurrentRequests else {
       throw CustomPermissionError.processingError("Too many concurrent permission requests")
     }
-    
+
     return try await withCheckedThrowingContinuation { continuation in
-      let timeoutTask: Task<Void, Error>
-      if let timeout = timeout {
-        timeoutTask = Task {
-          try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
-          await self.handleTimeout(for: request.toolUseId)
-        }
-      } else {
-        // Create a never-ending task for no timeout
-        timeoutTask = Task {
-          try await Task.sleep(nanoseconds: UInt64.max)
-        }
-      }
-      
       let pendingRequest = PendingRequest(
         request: request,
-        continuation: continuation,
-        timeoutTask: timeoutTask
+        continuation: continuation
       )
-      
+
       pendingRequests[request.toolUseId] = pendingRequest
-      
+
       // Add to queue and process
       Task { @MainActor in
         self.addToApprovalQueue(request)
@@ -107,15 +93,14 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
   
   public func cancelAllRequests() {
     for (_, pendingRequest) in pendingRequests {
-      pendingRequest.timeoutTask.cancel()
       pendingRequest.continuation.resume(throwing: CustomPermissionError.requestCancelled)
     }
     pendingRequests.removeAll()
-    
+
     // Clear the queue
     approvalQueue.removeAll()
     currentProcessingRequest = nil
-    
+
     // Hide any active toast
     hideToast()
   }
@@ -154,7 +139,7 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
       context: context
     )
     
-    let response = try await requestApproval(for: request, timeout: configuration.defaultTimeout)
+    let response = try await requestApproval(for: request)
     
     // Convert to the JSON format expected by Claude Code SDK
     let responseDict: [String: Any] = [
@@ -243,12 +228,10 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
     withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
       isToastVisible = true
     }
-    
-    // Note: Toast will be hidden when:
+
+    // Note: Toast will remain visible until:
     // - User approves/denies the request
-    // - The configured timeout expires (handled by the main timeout mechanism)
-    // - The request is cancelled
-    // We don't auto-hide the toast to respect the user's timeout configuration
+    // - The request is cancelled via cancelAllRequests()
   }
   
   private func hideToast() {
@@ -271,47 +254,32 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
   
   private func handleApproval(for toolUseId: String, updatedInput: [String: Any]?) async {
     guard let pendingRequest = pendingRequests.removeValue(forKey: toolUseId) else { return }
-    
-    pendingRequest.timeoutTask.cancel()
-    
+
     let response = ApprovalResponse(
       behavior: .allow,
       updatedInput: updatedInput ?? pendingRequest.request.inputAsAny,
       message: "Approved by user"
     )
-    
+
     pendingRequest.continuation.resume(returning: response)
-    
+
     // Hide the toast and process next
     await MainActor.run {
       hideToast()
     }
   }
-  
+
   private func handleDenial(for toolUseId: String, reason: String) async {
     guard let pendingRequest = pendingRequests.removeValue(forKey: toolUseId) else { return }
-    
-    pendingRequest.timeoutTask.cancel()
-    
+
     let response = ApprovalResponse(
       behavior: .deny,
       updatedInput: nil,
       message: reason
     )
-    
+
     pendingRequest.continuation.resume(returning: response)
-    
-    // Hide the toast and process next
-    await MainActor.run {
-      hideToast()
-    }
-  }
-  
-  private func handleTimeout(for toolUseId: String) async {
-    guard let pendingRequest = pendingRequests.removeValue(forKey: toolUseId) else { return }
-    
-    pendingRequest.continuation.resume(throwing: CustomPermissionError.requestTimedOut)
-    
+
     // Hide the toast and process next
     await MainActor.run {
       hideToast()
@@ -377,7 +345,6 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
 private struct PendingRequest {
   let request: ApprovalRequest
   let continuation: CheckedContinuation<ApprovalResponse, Error>
-  let timeoutTask: Task<Void, Error>
 }
 
 // MARK: - PromptWindowDelegate
