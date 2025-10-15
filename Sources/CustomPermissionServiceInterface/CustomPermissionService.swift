@@ -15,6 +15,10 @@ public protocol CustomPermissionService: Sendable {
   /// Parameters: (toolUseId, sessionId)
   var onConversationShouldPause: ((String, String) -> Void)? { get set }
 
+  /// Callback invoked when user responds to a paused approval to resume conversation
+  /// Parameters: (approved, toolName)
+  var onResumeAfterTimeout: ((Bool, String) -> Void)? { get set }
+
   /// Requests approval for a tool use
   /// - Parameters:
   ///   - request: The approval request with tool details

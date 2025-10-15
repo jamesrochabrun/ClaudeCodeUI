@@ -350,6 +350,20 @@ public final class ChatViewModel {
       return self
     }
 
+    // Wire up approval timeout callback
+    customPermissionService.onConversationShouldPause = { [weak self] toolUseId, _ in
+      Task { @MainActor in
+        await self?.handleApprovalTimeout(toolUseId: toolUseId)
+      }
+    }
+
+    // Wire up resume after timeout callback
+    customPermissionService.onResumeAfterTimeout = { [weak self] approved, toolName in
+      Task { @MainActor in
+        await self?.resumeAfterApprovalTimeout(approved: approved, toolName: toolName)
+      }
+    }
+
     // Only load sessions if we're managing them (e.g., when used with RootView)
     // Skip loading when using ChatScreen directly to avoid wasteful operations
     if shouldManageSessions {
@@ -567,27 +581,89 @@ public final class ChatViewModel {
   public func cancelRequest() {
     // Set cancellation flag
     isCancelled = true
-    
+
     // IMPORTANT: Terminate the Claude Code subprocess first
     claudeClient.cancel()
-    
+
     // Cancel the stream subscription
     streamProcessor.cancelStream()
-    
+
     // Cancel any pending tool approval requests
     customPermissionService.cancelAllRequests()
-    
+
     // Clean up UI state
     isLoading = false
     streamingStartTime = nil
-    
+
     // Mark the last message as cancelled
     let messages = messageStore.getAllMessages()
     if let lastMessage = messages.last {
       messageStore.markMessageAsCancelled(id: lastMessage.id)
     }
   }
-  
+
+  /// Handles approval timeout by pausing the conversation
+  /// Called by permission service when approval toast has been visible too long
+  private func handleApprovalTimeout(toolUseId: String) async {
+    logger.info("Pausing conversation due to approval timeout for tool: \(toolUseId)")
+
+    // Cancel the current request
+    // This will:
+    // 1. Terminate the Claude Code subprocess
+    // 2. Clean up the stream
+    // 3. Leave the conversation in a clean state (pending tool call is discarded by Claude)
+    cancelRequest()
+
+    // Note: The toast remains visible (not hidden)
+    // When user approves/denies later, we'll resume the session
+  }
+
+  /// Resumes conversation after approval timeout with user's decision
+  /// - Parameters:
+  ///   - approved: Whether the user approved or denied the tool
+  ///   - toolName: Name of the tool that was approved/denied
+  public func resumeAfterApprovalTimeout(approved: Bool, toolName: String) async {
+    guard let sessionId = currentSessionId else {
+      logger.warning("Cannot resume after approval timeout: no active session")
+      return
+    }
+
+    logger.info("Resuming session \(sessionId) after approval timeout. Tool: \(toolName), Approved: \(approved)")
+
+    // Send a generic message to Claude asking it to continue
+    // We don't mention the specific tool - Claude will re-request it if needed
+    let prompt = "Please continue with the previous task."
+
+    // Set up loading state
+    await MainActor.run {
+      self.isLoading = true
+      self.streamingStartTime = Date()
+      self.currentInputTokens = 0
+      self.currentOutputTokens = 0
+      self.currentCostUSD = 0.0
+    }
+
+    let assistantId = UUID()
+    await MainActor.run {
+      self.currentMessageId = assistantId
+    }
+
+    // Resume the conversation
+    do {
+      let options = createOptions()
+      let result = try await claudeClient.resumeConversation(
+        sessionId: sessionId,
+        prompt: prompt,
+        outputFormat: .streamJson,
+        options: options
+      )
+
+      await processResult(result, messageId: assistantId)
+    } catch {
+      await handleSessionResumptionError(error, sessionId: sessionId)
+    }
+  }
+
   /// Updates token usage from streaming response
   public func updateTokenUsage(inputTokens: Int, outputTokens: Int) {
     if isDebugEnabled {
