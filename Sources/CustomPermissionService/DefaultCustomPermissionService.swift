@@ -131,6 +131,15 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
     // Stop any active timer
     stopToastTimer()
 
+    // Check if current toast is paused - if so, preserve it
+    let hasPausedToast: Bool
+    if let currentRequest = currentToastRequest {
+      let toolSignature = createToolSignature(for: currentRequest)
+      hasPausedToast = pausedApprovals[toolSignature] != nil
+    } else {
+      hasPausedToast = false
+    }
+
     for (_, pendingRequest) in pendingRequests {
       pendingRequest.continuation.resume(throwing: CustomPermissionError.requestCancelled)
     }
@@ -140,11 +149,13 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
     approvalQueue.removeAll()
     currentProcessingRequest = nil
 
-    // Clear paused approvals
-    pausedApprovals.removeAll()
-
-    // Hide any active toast
-    hideToast()
+    // Only hide toast and clear paused approvals if there's no paused toast
+    if !hasPausedToast {
+      pausedApprovals.removeAll()
+      hideToast()
+    } else {
+      logger.info("Preserving paused toast after cancellation")
+    }
   }
   
   public func getApprovalStatus(for toolUseId: String) -> ApprovalStatus? {
@@ -309,26 +320,17 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
   @MainActor
   private func startToastTimer(for request: ApprovalRequest, threshold: TimeInterval) {
     // Record when toast was displayed
-    let startTime = Date()
-    toastDisplayStartTime = startTime
+    toastDisplayStartTime = Date()
 
     // Cancel any existing timer
     stopToastTimer()
 
-    // Create a repeating timer that checks every 10 seconds
-    toastTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
+    // Create a single-shot timer that fires exactly at threshold
+    toastTimer = Timer.scheduledTimer(withTimeInterval: threshold, repeats: false) { [weak self] _ in
       guard let self = self else { return }
-
-      let elapsed = Date().timeIntervalSince(startTime)
-
-      if elapsed >= threshold {
-        // Timeout threshold reached
-        self.logger.info("Approval timeout threshold (\(threshold, privacy: .public)s) reached after \(elapsed, privacy: .public)s")
-        Task { @MainActor in
-          await self.handleToastTimeout(for: request)
-        }
-      } else {
-        self.logger.debug("Toast visible for \(Int(elapsed), privacy: .public)s (threshold: \(Int(threshold), privacy: .public)s)")
+      self.logger.info("Approval timeout threshold (\(threshold, privacy: .public)s) reached")
+      Task { @MainActor in
+        await self.handleToastTimeout(for: request)
       }
     }
   }
@@ -344,6 +346,13 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
   private func handleToastTimeout(for request: ApprovalRequest) async {
     // Stop the timer
     stopToastTimer()
+
+    // Remove from pending requests and complete its continuation
+    // This prevents the request from blocking and allows clean cancellation
+    if let pendingRequest = pendingRequests.removeValue(forKey: request.toolUseId) {
+      pendingRequest.continuation.resume(throwing: CustomPermissionError.requestCancelled)
+      logger.info("Removed pending request for \(request.toolUseId) due to timeout")
+    }
 
     // Store this approval for later resumption using tool signature
     let toolSignature = createToolSignature(for: request)
