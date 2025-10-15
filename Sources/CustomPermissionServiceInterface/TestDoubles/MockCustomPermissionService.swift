@@ -26,21 +26,19 @@ public final class MockCustomPermissionService: CustomPermissionService {
   // Tracking for tests
   public private(set) var requestApprovalCallCount = 0
   public private(set) var lastRequest: ApprovalRequest?
-  public private(set) var lastTimeout: TimeInterval??
   public private(set) var cancelAllRequestsCallCount = 0
   public private(set) var getApprovalStatusCallCount = 0
   public private(set) var setupMCPToolCallCount = 0
   public private(set) var processMCPToolCallCount = 0
-  
+
   private var approvalStatuses: [String: ApprovalStatus] = [:]
   private var mcpHandlers: [String: (ApprovalRequest) async throws -> ApprovalResponse] = [:]
-  
+
   public init() {}
-  
-  public func requestApproval(for request: ApprovalRequest, timeout: TimeInterval?) async throws -> ApprovalResponse {
+
+  public func requestApproval(for request: ApprovalRequest) async throws -> ApprovalResponse {
     requestApprovalCallCount += 1
     lastRequest = request
-    lastTimeout = timeout
     
     if simulatedDelay > 0 {
       try await Task.sleep(nanoseconds: UInt64(simulatedDelay * 1_000_000_000))
@@ -103,7 +101,7 @@ public final class MockCustomPermissionService: CustomPermissionService {
     }
     
     let request = ApprovalRequest(toolName: toolName, anyInput: input, toolUseId: toolUseId)
-    let response = try await requestApproval(for: request, timeout: 240)
+    let response = try await requestApproval(for: request)
     
     // Convert to JSON string as expected by MCP
     let responseDict: [String: Any] = [
@@ -120,19 +118,18 @@ public final class MockCustomPermissionService: CustomPermissionService {
   public func reset() {
     requestApprovalCallCount = 0
     lastRequest = nil
-    lastTimeout = nil
     cancelAllRequestsCallCount = 0
     getApprovalStatusCallCount = 0
     setupMCPToolCallCount = 0
     processMCPToolCallCount = 0
-    
+
     shouldApprove = true
     shouldTimeout = false
     shouldThrowError = false
     customResponse = nil
     simulatedDelay = 0
     autoApproveToolCalls = false
-    
+
     approvalStatuses.removeAll()
     mcpHandlers.removeAll()
   }

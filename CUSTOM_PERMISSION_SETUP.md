@@ -40,7 +40,6 @@ The permission settings are automatically integrated into the MCP Configuration 
 - **Auto-approve all tool calls**: Disables all permission prompts
 - **Auto-approve low-risk operations**: Automatically approves read-only operations
 - **Show detailed permission information**: Controls detail level in prompts
-- **Permission request timeout**: How long to wait for user response (default: 4 minutes)
 - **Max concurrent requests**: Maximum simultaneous permission requests (default: 5)
 
 ### 2. MCP Integration
@@ -87,7 +86,7 @@ public protocol CustomPermissionService: Sendable {
     var autoApproveToolCalls: Bool { get set }
     var autoApprovePublisher: AnyPublisher<Bool, Never> { get }
     
-    func requestApproval(for request: ApprovalRequest, timeout: TimeInterval) async throws -> ApprovalResponse
+    func requestApproval(for request: ApprovalRequest) async throws -> ApprovalResponse
     func cancelAllRequests()
     func getApprovalStatus(for toolUseId: String) -> ApprovalStatus?
     func setupMCPTool(toolName: String, handler: @escaping (ApprovalRequest) async throws -> ApprovalResponse)
@@ -195,7 +194,6 @@ This separation allows for easy testing, mocking, and future extensibility.
 - Permission prompts run on the main thread to ensure UI responsiveness
 - All tool parameters are displayed to users for transparency
 - Auto-approval settings are clearly indicated in the UI
-- Timeout mechanisms prevent hung permission requests
 - All communication with Claude Code is logged for audit purposes
 
 ## Future Enhancements

@@ -99,10 +99,7 @@ public final class ApprovalBridge: ObservableObject {
             )
             
             // Request approval through the permission service (this will show UI)
-            // Get timeout from preferences - nil means no timeout
-            let preferences = GlobalPreferencesStorage()
-            let timeout = preferences.permissionTimeoutEnabled ? preferences.permissionRequestTimeout : nil
-            let response = try await permissionService.requestApproval(for: approvalRequest, timeout: timeout)
+            let response = try await permissionService.requestApproval(for: approvalRequest)
             
             // Send response back to MCP server
             let ipcResponse = IPCResponse(
