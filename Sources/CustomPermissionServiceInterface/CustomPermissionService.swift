@@ -7,10 +7,18 @@ import ClaudeCodeSDK
 public protocol CustomPermissionService: Sendable {
   /// Current auto-approval setting
   var autoApproveToolCalls: Bool { get set }
-  
+
   /// Publisher for auto-approval setting changes
   var autoApprovePublisher: AnyPublisher<Bool, Never> { get }
-  
+
+  /// Callback invoked when conversation should pause due to approval timeout
+  /// Parameters: (toolUseId, sessionId)
+  var onConversationShouldPause: ((String, String) -> Void)? { get set }
+
+  /// Callback invoked when user responds to a paused approval to resume conversation
+  /// Parameters: (approved, toolName)
+  var onResumeAfterTimeout: ((Bool, String) -> Void)? { get set }
+
   /// Requests approval for a tool use
   /// - Parameters:
   ///   - request: The approval request with tool details
@@ -96,14 +104,22 @@ public struct PermissionConfiguration: Codable, Sendable {
   /// Maximum number of concurrent approval requests
   public let maxConcurrentRequests: Int
 
+  /// Timeout threshold for approval toasts (in seconds)
+  /// When a toast is visible for longer than this duration, the conversation will be paused
+  /// and the toast will remain visible for user response. If nil, no timeout is applied.
+  /// Default: 240 seconds (4 minutes)
+  public let approvalTimeoutThreshold: TimeInterval?
+
   public init(
     autoApproveLowRisk: Bool = false,
     showDetailedInfo: Bool = true,
-    maxConcurrentRequests: Int = 5
+    maxConcurrentRequests: Int = 5,
+    approvalTimeoutThreshold: TimeInterval? = 240.0
   ) {
     self.autoApproveLowRisk = autoApproveLowRisk
     self.showDetailedInfo = showDetailedInfo
     self.maxConcurrentRequests = maxConcurrentRequests
+    self.approvalTimeoutThreshold = approvalTimeoutThreshold
   }
 
   public static let `default` = PermissionConfiguration()
