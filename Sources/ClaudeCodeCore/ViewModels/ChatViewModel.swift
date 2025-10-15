@@ -35,7 +35,7 @@ public final class ChatViewModel {
   let globalPreferences: GlobalPreferencesStorage
   
   /// Service for handling custom tool permission requests and user approvals
-  let customPermissionService: CustomPermissionService
+  var customPermissionService: CustomPermissionService
   
   /// Optional callback invoked when session changes, used for external state synchronization
   private let onSessionChange: ((String) -> Void)?
