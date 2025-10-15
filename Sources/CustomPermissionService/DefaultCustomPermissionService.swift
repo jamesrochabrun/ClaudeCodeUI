@@ -4,6 +4,7 @@ import CCCustomPermissionServiceInterface
 import Foundation
 import SwiftUI
 import Observation
+import os.log
 
 // MARK: - DefaultCustomPermissionService
 
@@ -133,8 +134,8 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
   }
   
   public func processMCPToolCall(_ toolCallData: [String: Any]) async throws -> String {
-    print("[CustomPermissionService] Processing MCP tool call with data: \(toolCallData)")
-    
+    logger.info("Processing MCP tool call with data: \(String(describing: toolCallData))")
+
     guard
       let toolName = toolCallData["tool_name"] as? String,
       let input = toolCallData["input"] as? [String: Any],
@@ -142,8 +143,8 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
     else {
       throw CustomPermissionError.invalidRequest("Missing required fields: tool_name, input, or tool_use_id")
     }
-    
-    print("[CustomPermissionService] Tool: \(toolName), ID: \(toolUseId)")
+
+    logger.info("Tool: \(toolName), ID: \(toolUseId)")
     
     // Create context based on tool name and input
     let context = createContextForTool(toolName: toolName, input: input)
@@ -181,12 +182,15 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
   }
   
   // MARK: Private
-  
+
   private let configuration: PermissionConfiguration
   private var pendingRequests: [String: PendingRequest] = [:]
   private var mcpHandlers: [String: (ApprovalRequest) async throws -> ApprovalResponse] = [:]
-  
+
   private var currentToastCallbacks: (approve: () -> Void, deny: () -> Void, denyWithGuidance: (String) -> Void)?
+
+  // Logger for permission service
+  private let logger = Logger(subsystem: "com.claudecodeui.permission", category: "CustomPermissionService")
   
   // MARK: - Private Methods
   
@@ -294,12 +298,12 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
 
       if elapsed >= threshold {
         // Timeout threshold reached
-        print("[CustomPermissionService] Approval timeout threshold (\(threshold)s) reached after \(elapsed)s")
+        self.logger.info("Approval timeout threshold (\(threshold, privacy: .public)s) reached after \(elapsed, privacy: .public)s")
         Task { @MainActor in
           await self.handleToastTimeout(for: request)
         }
       } else {
-        print("[CustomPermissionService] Toast visible for \(Int(elapsed))s (threshold: \(Int(threshold))s)")
+        self.logger.debug("Toast visible for \(Int(elapsed), privacy: .public)s (threshold: \(Int(threshold), privacy: .public)s)")
       }
     }
   }
@@ -323,16 +327,16 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
     // Notify that conversation should be paused
     // The callback will provide the sessionId which we'll store
     if let callback = onConversationShouldPause {
-      print("[CustomPermissionService] Notifying to pause conversation for tool: \(request.toolUseId)")
+      logger.info("Notifying to pause conversation for tool: \(request.toolUseId)")
       // We don't have sessionId yet - it will come from ChatViewModel
       callback(request.toolUseId, "")  // Empty sessionId for now, will be updated by ChatViewModel
     } else {
-      print("[CustomPermissionService] WARNING: No pause callback set, timeout will not pause conversation")
+      logger.warning("No pause callback set, timeout will not pause conversation")
     }
 
     // IMPORTANT: We do NOT call hideToast() here!
     // Toast stays visible so user can still approve/deny later
-    print("[CustomPermissionService] Toast will remain visible - user can still respond")
+    logger.info("Toast will remain visible - user can still respond")
   }
 
   private func handleApproval(for toolUseId: String, updatedInput: [String: Any]?) async {
