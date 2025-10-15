@@ -351,14 +351,14 @@ public final class ChatViewModel {
     }
 
     // Wire up approval timeout callback
-    customPermissionService.onConversationShouldPause = { [weak self] toolUseId, _ in
+    self.customPermissionService.onConversationShouldPause = { [weak self] toolUseId, _ in
       Task { @MainActor in
         await self?.handleApprovalTimeout(toolUseId: toolUseId)
       }
     }
 
     // Wire up resume after timeout callback
-    customPermissionService.onResumeAfterTimeout = { [weak self] approved, toolName in
+    self.customPermissionService.onResumeAfterTimeout = { [weak self] approved, toolName in
       Task { @MainActor in
         await self?.resumeAfterApprovalTimeout(approved: approved, toolName: toolName)
       }
