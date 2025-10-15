@@ -228,12 +228,10 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
     withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
       isToastVisible = true
     }
-    
-    // Note: Toast will be hidden when:
+
+    // Note: Toast will remain visible until:
     // - User approves/denies the request
-    // - The configured timeout expires (handled by the main timeout mechanism)
-    // - The request is cancelled
-    // We don't auto-hide the toast to respect the user's timeout configuration
+    // - The request is cancelled via cancelAllRequests()
   }
   
   private func hideToast() {
