@@ -15,7 +15,10 @@ public final class MockCustomPermissionService: CustomPermissionService {
   public var autoApprovePublisher: AnyPublisher<Bool, Never> {
     autoApproveSubject.eraseToAnyPublisher()
   }
-  
+
+  // Callback for conversation pause (matching the protocol requirement)
+  public var onConversationShouldPause: ((String, String) -> Void)?
+
   // Test configuration
   public var shouldApprove: Bool = true
   public var shouldTimeout: Bool = false

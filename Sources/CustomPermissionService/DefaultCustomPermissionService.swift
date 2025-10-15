@@ -47,7 +47,17 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
   public var autoApprovePublisher: AnyPublisher<Bool, Never> {
     autoApproveSubject.eraseToAnyPublisher()
   }
-  
+
+  // Timer for tracking toast display duration
+  private var toastDisplayStartTime: Date?
+  private var toastTimer: Timer?
+
+  // Callback for when conversation should be paused due to approval timeout
+  public var onConversationShouldPause: ((String, String) -> Void)?  // (toolUseId, sessionId)
+
+  // Storage for paused approvals that can be resumed later
+  private var pausedApprovals: [String: (request: ApprovalRequest, sessionId: String?)] = [:]
+
   public func requestApproval(for request: ApprovalRequest) async throws -> ApprovalResponse {
     // Check if auto-approval is enabled
     if autoApproveToolCalls {
@@ -92,6 +102,9 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
   }
   
   public func cancelAllRequests() {
+    // Stop any active timer
+    stopToastTimer()
+
     for (_, pendingRequest) in pendingRequests {
       pendingRequest.continuation.resume(throwing: CustomPermissionError.requestCancelled)
     }
@@ -100,6 +113,9 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
     // Clear the queue
     approvalQueue.removeAll()
     currentProcessingRequest = nil
+
+    // Clear paused approvals
+    pausedApprovals.removeAll()
 
     // Hide any active toast
     hideToast()
@@ -222,23 +238,32 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
         }
       }
     )
-    
+
     // Show the toast
     currentToastRequest = request
     withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
       isToastVisible = true
     }
 
+    // Start timer for timeout detection (if configured)
+    if let timeoutThreshold = configuration.approvalTimeoutThreshold {
+      startToastTimer(for: request, threshold: timeoutThreshold)
+    }
+
     // Note: Toast will remain visible until:
     // - User approves/denies the request
     // - The request is cancelled via cancelAllRequests()
+    // - Timeout threshold is reached (conversation pauses, toast stays visible)
   }
   
   private func hideToast() {
+    // Stop the timer when hiding toast
+    stopToastTimer()
+
     withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
       isToastVisible = false
     }
-    
+
     // Process next request after a short delay
     Task {
       try await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds (reduced from 0.5)
@@ -251,7 +276,65 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
       }
     }
   }
-  
+
+  @MainActor
+  private func startToastTimer(for request: ApprovalRequest, threshold: TimeInterval) {
+    // Record when toast was displayed
+    let startTime = Date()
+    toastDisplayStartTime = startTime
+
+    // Cancel any existing timer
+    stopToastTimer()
+
+    // Create a repeating timer that checks every 10 seconds
+    toastTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
+      guard let self = self else { return }
+
+      let elapsed = Date().timeIntervalSince(startTime)
+
+      if elapsed >= threshold {
+        // Timeout threshold reached
+        print("[CustomPermissionService] Approval timeout threshold (\(threshold)s) reached after \(elapsed)s")
+        Task { @MainActor in
+          await self.handleToastTimeout(for: request)
+        }
+      } else {
+        print("[CustomPermissionService] Toast visible for \(Int(elapsed))s (threshold: \(Int(threshold))s)")
+      }
+    }
+  }
+
+  @MainActor
+  private func stopToastTimer() {
+    toastTimer?.invalidate()
+    toastTimer = nil
+    toastDisplayStartTime = nil
+  }
+
+  @MainActor
+  private func handleToastTimeout(for request: ApprovalRequest) async {
+    // Stop the timer
+    stopToastTimer()
+
+    // Store this approval for later resumption
+    // Note: We don't have sessionId here yet - it will be provided by the pause callback
+    pausedApprovals[request.toolUseId] = (request: request, sessionId: nil)
+
+    // Notify that conversation should be paused
+    // The callback will provide the sessionId which we'll store
+    if let callback = onConversationShouldPause {
+      print("[CustomPermissionService] Notifying to pause conversation for tool: \(request.toolUseId)")
+      // We don't have sessionId yet - it will come from ChatViewModel
+      callback(request.toolUseId, "")  // Empty sessionId for now, will be updated by ChatViewModel
+    } else {
+      print("[CustomPermissionService] WARNING: No pause callback set, timeout will not pause conversation")
+    }
+
+    // IMPORTANT: We do NOT call hideToast() here!
+    // Toast stays visible so user can still approve/deny later
+    print("[CustomPermissionService] Toast will remain visible - user can still respond")
+  }
+
   private func handleApproval(for toolUseId: String, updatedInput: [String: Any]?) async {
     guard let pendingRequest = pendingRequests.removeValue(forKey: toolUseId) else { return }
 
