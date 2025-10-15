@@ -107,14 +107,14 @@ public struct PermissionConfiguration: Codable, Sendable {
   /// Timeout threshold for approval toasts (in seconds)
   /// When a toast is visible for longer than this duration, the conversation will be paused
   /// and the toast will remain visible for user response. If nil, no timeout is applied.
-  /// Default: 15 seconds (for debugging/testing)
+  /// Default: 240 seconds (4 minutes)
   public let approvalTimeoutThreshold: TimeInterval?
 
   public init(
     autoApproveLowRisk: Bool = false,
     showDetailedInfo: Bool = true,
     maxConcurrentRequests: Int = 5,
-    approvalTimeoutThreshold: TimeInterval? = 15.0
+    approvalTimeoutThreshold: TimeInterval? = 240.0
   ) {
     self.autoApproveLowRisk = autoApproveLowRisk
     self.showDetailedInfo = showDetailedInfo
