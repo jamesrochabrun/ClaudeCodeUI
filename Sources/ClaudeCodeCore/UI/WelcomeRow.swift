@@ -18,11 +18,11 @@ private struct WelcomeHeader: View {
   
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
-      HStack(alignment: .firstTextBaseline, spacing: 6) {
+      HStack(alignment: .top, spacing: 6) {
         if let iconName = appIconAssetName {
           Image(iconName)
             .resizable()
-            .frame(width: 64, height: 64)
+            .frame(width: 82, height: 82)
         }
         
         Text("✻")
