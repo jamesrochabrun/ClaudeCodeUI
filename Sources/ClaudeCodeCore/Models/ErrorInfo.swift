@@ -27,6 +27,19 @@ public struct ErrorInfo: Identifiable, Equatable {
     return error.localizedDescription
   }
 
+  /// Extracts subprocess stderr from error if available
+  public var subprocessStderr: String? {
+    guard let claudeError = error as? ClaudeCodeError else { return nil }
+
+    switch claudeError {
+    case .processLaunchFailed(let message), .executionFailed(let message):
+      // The message contains the stderr output
+      return message.isEmpty ? nil : message
+    default:
+      return nil
+    }
+  }
+
   public init(
     error: Error,
     severity: ErrorSeverity = .error,
