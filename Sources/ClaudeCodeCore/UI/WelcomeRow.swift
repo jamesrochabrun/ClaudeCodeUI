@@ -17,27 +17,28 @@ private struct WelcomeHeader: View {
   let appIconAssetName: String?
   
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      HStack(alignment: .top, spacing: 6) {
-        if let iconName = appIconAssetName {
-          Image(iconName)
-            .resizable()
-            .frame(width: 82, height: 82)
-        }
-        
-        Text("✻")
-          .foregroundColor(.brandPrimary)
-        
-        Text("Welcome to **\(appName)!**")
-          .font(.system(.body, design: .monospaced))
-          .foregroundColor(.primary)
+    HStack {
+      if let iconName = appIconAssetName {
+        Image(systemName: "brain")
+          .resizable()
+          .aspectRatio(contentMode: .fit)
+          .frame(width: 82, height: 82)
+          .border(.red)
       }
-      
-      if let tip = generalInstructionsTip, !tip.isEmpty {
-        Text(tip)
-          .font(.system(.caption, design: .monospaced))
-          .foregroundColor(.secondary)
-          .padding(.leading, 18)
+      VStack(alignment: .leading) {
+        HStack {
+          Text("✻")
+            .foregroundColor(.brandPrimary)
+          Text("Welcome to **\(appName)!**")
+            .font(.system(.body, design: .monospaced))
+            .foregroundColor(.primary)
+        }
+        if let tip = generalInstructionsTip, !tip.isEmpty {
+          Text(tip)
+            .font(.system(.caption, design: .monospaced))
+            .foregroundColor(.secondary)
+            .padding(.leading, 8)
+        }
       }
     }
   }
@@ -353,15 +354,18 @@ struct WelcomeRow: View {
           path: nil,
           showSettingsButton: true,
           appName: "Claude Code UI",
-          toolTip: "Tip: Select a folder to enable AI assistance"
-        ) {
+          toolTip: "Tip: Select a folder to enable AI assistance",
+          generalInstructionsTip: "- Some value \n- Some other",
+          appIconAssetName: "claudeCodeSmall") {
           print("Settings tapped")
         }
         
         // Preview with directory but no worktrees
         WelcomeRow(
           path: "cwd: /Users/jamesrochabrun/Desktop/simple-project",
-          appName: "Claude Code UI"
+          appName: "Claude Code UI",
+          toolTip: "Tip: Select a folder to enable AI assistance",
+          appIconAssetName: "claudeCodeSmall"
         ) {
           print("Edit directory tapped")
         }
