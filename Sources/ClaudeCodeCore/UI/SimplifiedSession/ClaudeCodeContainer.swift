@@ -151,7 +151,7 @@ public struct ClaudeCodeContainer: View {
       onUserMessageSent: onUserMessageSent,
       onSelectWorkingDirectory: { @MainActor in
         // Show directory picker when recovery action is triggered
-        selectWorkingDirectory(for: viewModel, claudeClient: claudeClient, settingsStorage: deps.settingsStorage)
+        selectWorkingDirectory(for: viewModel, settingsStorage: deps.settingsStorage)
       }
     )
 
@@ -344,7 +344,6 @@ public struct ClaudeCodeContainer: View {
 
   private func selectWorkingDirectory(
     for viewModel: ChatViewModel,
-    claudeClient: ClaudeCode,
     settingsStorage: SettingsStorage
   ) {
     #if os(macOS)
@@ -368,7 +367,7 @@ public struct ClaudeCodeContainer: View {
 
       // Update all necessary components with the new path
       viewModel.projectPath = selectedPath
-      claudeClient.configuration.workingDirectory = selectedPath
+      viewModel.claudeClient.configuration.workingDirectory = selectedPath
       settingsStorage.setProjectPath(selectedPath)
 
       // If there's an active session, save the path for that session too
