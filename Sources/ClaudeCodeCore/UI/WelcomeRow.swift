@@ -14,23 +14,30 @@ import AppKit
 private struct WelcomeHeader: View {
   let appName: String
   let generalInstructionsTip: String?
-
+  let appIconAssetName: String?
+  
   var body: some View {
-    VStack(alignment: .leading, spacing: 6) {
-      HStack(alignment: .firstTextBaseline, spacing: 6) {
-        Text("✻")
-          .foregroundColor(.brandPrimary)
-
-        Text("Welcome to **\(appName)!**")
-          .font(.system(.body, design: .monospaced))
-          .foregroundColor(.primary)
+    HStack {
+      if let iconName = appIconAssetName {
+        Image(iconName)
+          .resizable()
+          .aspectRatio(contentMode: .fit)
+          .frame(width: 82, height: 68)
       }
-
-      if let tip = generalInstructionsTip, !tip.isEmpty {
-        Text(tip)
-          .font(.system(.caption, design: .monospaced))
-          .foregroundColor(.secondary)
-          .padding(.leading, 18)
+      VStack(alignment: .leading) {
+        HStack {
+          Text("✻")
+            .foregroundColor(.brandPrimary)
+          Text("**\(appName)**")
+            .font(.system(.body, design: .monospaced))
+            .foregroundColor(.primary)
+        }
+        if let tip = generalInstructionsTip, !tip.isEmpty {
+          Text(tip)
+            .font(.system(.caption, design: .monospaced))
+            .foregroundColor(.secondary)
+            .padding(.leading, 8)
+        }
       }
     }
   }
@@ -39,19 +46,19 @@ private struct WelcomeHeader: View {
 private struct NoDirectoryView: View {
   let toolTip: String?
   let onSettingsTapped: () -> Void
-
+  
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
       Text("No working directory selected")
         .font(.system(.caption, design: .monospaced))
         .foregroundColor(.orange)
-
+      
       if let toolTip = toolTip {
         Text(toolTip)
           .font(.system(.caption, design: .monospaced))
           .foregroundColor(.secondary)
       }
-
+      
       Button(action: onSettingsTapped) {
         HStack(spacing: 4) {
           Image(systemName: "folder.badge.plus")
@@ -79,13 +86,13 @@ private struct WorkingDirectoryHeader: View {
   let selectedWorktree: GitWorktreeInfo?
   let onEditTapped: () -> Void
   let onToggleExpanded: () -> Void
-
+  
   var body: some View {
     HStack(spacing: 8) {
       Text(path)
         .font(.system(.caption, design: .monospaced))
         .foregroundColor(.secondary)
-
+      
       Button(action: onEditTapped) {
         Image(systemName: "pencil.circle")
           .font(.caption)
@@ -95,7 +102,7 @@ private struct WorkingDirectoryHeader: View {
       .disabled(hasMessages)
       .opacity(hasMessages ? 0.5 : 1.0)
       .help(hasMessages ? "Cannot change directory while session is active" : "Change working directory")
-
+      
       if worktreeCount > 1 {
         Spacer()
         Button(action: {
@@ -132,14 +139,14 @@ private struct WorktreeListItem: View {
   let worktree: GitWorktreeInfo
   let isSelected: Bool
   let onSelect: () -> Void
-
+  
   var body: some View {
     Button(action: onSelect) {
       HStack(spacing: 8) {
         Image(systemName: worktree.isWorktree ? "arrow.triangle.branch" : "arrow.branch")
           .font(.caption)
           .foregroundColor(isSelected ? .white : .secondary)
-
+        
         VStack(alignment: .leading, spacing: 2) {
           Text(worktree.branch ?? "unknown")
             .font(.system(.caption, design: .monospaced))
@@ -148,9 +155,9 @@ private struct WorktreeListItem: View {
             .font(.system(.caption2, design: .monospaced))
             .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
         }
-
+        
         Spacer()
-
+        
         if isSelected {
           Image(systemName: "checkmark.circle.fill")
             .font(.caption)
@@ -172,7 +179,7 @@ private struct WorktreeListView: View {
   let worktrees: [GitWorktreeInfo]
   let currentPath: String
   let onWorktreeSelected: (String) -> Void
-
+  
   var body: some View {
     VStack(alignment: .leading, spacing: 4) {
       ForEach(worktrees, id: \.path) { worktree in
@@ -181,12 +188,12 @@ private struct WorktreeListView: View {
           isSelected: {
             let currentClean = currentPath.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
             let worktreeClean = worktree.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-
+            
             // Exact match
             if currentClean == worktreeClean {
               return true
             }
-
+            
             // Check if current is subdirectory (with separator to avoid prefix collision)
             return currentClean.hasPrefix(worktreeClean + "/")
           }(),
@@ -211,16 +218,17 @@ struct WelcomeRow: View {
   let appName: String
   let toolTip: String?
   let generalInstructionsTip: String?
+  let appIconAssetName: String?
   let hasMessages: Bool
   let onSettingsTapped: () -> Void
   let onWorktreeSelected: ((String) -> Void)?
-
+  
   @State private var availableWorktrees: [GitWorktreeInfo] = []
   @State private var isExpanded = false
   @State private var isLoadingWorktrees = false
   @State private var showInvalidPathAlert = false
   @State private var invalidPathMessage = ""
-
+  
   // Custom color
   init(
     path: String?,
@@ -228,6 +236,7 @@ struct WelcomeRow: View {
     appName: String = "Claude Code UI",
     toolTip: String? = nil,
     generalInstructionsTip: String? = nil,
+    appIconAssetName: String? = nil,
     hasMessages: Bool = false,
     onSettingsTapped: @escaping () -> Void = {},
     onWorktreeSelected: ((String) -> Void)? = nil
@@ -237,15 +246,16 @@ struct WelcomeRow: View {
     self.appName = appName
     self.toolTip = toolTip
     self.generalInstructionsTip = generalInstructionsTip
+    self.appIconAssetName = appIconAssetName
     self.hasMessages = hasMessages
     self.onSettingsTapped = onSettingsTapped
     self.onWorktreeSelected = onWorktreeSelected
   }
   
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
-      WelcomeHeader(appName: appName, generalInstructionsTip: generalInstructionsTip)
-
+    VStack(alignment: .leading, spacing: 6) {
+      WelcomeHeader(appName: appName, generalInstructionsTip: generalInstructionsTip, appIconAssetName: appIconAssetName)
+      
       if showSettingsButton {
         NoDirectoryView(
           toolTip: toolTip,
@@ -271,7 +281,7 @@ struct WelcomeRow: View {
               }
             }
           )
-
+          
           if isExpanded && availableWorktrees.count > 1 && !hasMessages {
             WorktreeListView(
               worktrees: availableWorktrees,
@@ -335,7 +345,7 @@ struct WelcomeRow: View {
   // Create a custom WelcomeRow with mock worktrees for preview
   struct PreviewWrapper: View {
     @State private var currentPath = "cwd: /Users/jamesrochabrun/Desktop/git/ClaudeCodeUI-feature-branch"
-
+    
     var body: some View {
       VStack(spacing: 20) {
         // Preview with no directory selected
@@ -343,36 +353,39 @@ struct WelcomeRow: View {
           path: nil,
           showSettingsButton: true,
           appName: "Claude Code UI",
-          toolTip: "Tip: Select a folder to enable AI assistance"
-        ) {
+          toolTip: "Tip: Select a folder to enable AI assistance",
+          generalInstructionsTip: "- Some value \n- Some other",
+          appIconAssetName: "claudeCodeSmall") {
           print("Settings tapped")
         }
-
+        
         // Preview with directory but no worktrees
         WelcomeRow(
           path: "cwd: /Users/jamesrochabrun/Desktop/simple-project",
-          appName: "Claude Code UI"
+          appName: "Claude Code UI",
+          toolTip: "Tip: Select a folder to enable AI assistance",
+          appIconAssetName: "claudeCodeSmall"
         ) {
           print("Edit directory tapped")
         }
-
+        
         // Create a modified WelcomeRow with mock worktrees
         MockWorktreeWelcomeRow(
           currentPath: $currentPath
         )
-
+        
         Spacer()
       }
       .frame(width: 600)
       .padding()
     }
   }
-
+  
   // Mock version of WelcomeRow with hardcoded worktrees for preview
   struct MockWorktreeWelcomeRow: View {
     @Binding var currentPath: String
     @State private var isExpanded = true  // Start expanded to see worktrees in preview
-
+    
     // Mock worktrees for preview
     let mockWorktrees = [
       GitWorktreeInfo(
@@ -400,11 +413,11 @@ struct WelcomeRow: View {
         mainRepoPath: "/Users/jamesrochabrun/Desktop/git/ClaudeCodeUI"
       )
     ]
-
+    
     var body: some View {
       VStack(alignment: .leading, spacing: 16) {
-        WelcomeHeader(appName: "Claude Code UI", generalInstructionsTip: nil)
-
+        WelcomeHeader(appName: "Claude Code UI", generalInstructionsTip: nil, appIconAssetName: nil)
+        
         VStack(alignment: .leading, spacing: 8) {
           WorkingDirectoryHeader(
             path: currentPath,
@@ -420,7 +433,7 @@ struct WelcomeRow: View {
             onEditTapped: { print("Edit tapped") },
             onToggleExpanded: { isExpanded.toggle() }
           )
-
+          
           if isExpanded && mockWorktrees.count > 1 {
             WorktreeListView(
               worktrees: mockWorktrees,
@@ -443,6 +456,6 @@ struct WelcomeRow: View {
       .padding(12)
     }
   }
-
+  
   return PreviewWrapper()
 }
