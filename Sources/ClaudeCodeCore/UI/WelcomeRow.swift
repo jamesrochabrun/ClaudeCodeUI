@@ -19,7 +19,7 @@ private struct WelcomeHeader: View {
   var body: some View {
     HStack {
       if let iconName = appIconAssetName {
-        Image(systemName: "brain")
+        Image(iconName)
           .resizable()
           .aspectRatio(contentMode: .fit)
           .frame(width: 82, height: 82)
