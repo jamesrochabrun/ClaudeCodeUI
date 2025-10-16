@@ -22,8 +22,7 @@ private struct WelcomeHeader: View {
         Image(iconName)
           .resizable()
           .aspectRatio(contentMode: .fit)
-          .frame(width: 82, height: 82)
-          .border(.red)
+          .frame(width: 82, height: 68)
       }
       VStack(alignment: .leading) {
         HStack {
@@ -254,7 +253,7 @@ struct WelcomeRow: View {
   }
   
   var body: some View {
-    VStack(alignment: .leading, spacing: 16) {
+    VStack(alignment: .leading, spacing: 6) {
       WelcomeHeader(appName: appName, generalInstructionsTip: generalInstructionsTip, appIconAssetName: appIconAssetName)
       
       if showSettingsButton {
