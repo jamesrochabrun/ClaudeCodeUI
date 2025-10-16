@@ -115,6 +115,9 @@ public final class ChatViewModel {
 
   /// Error queue for multiple errors
   public var errorQueue: [ErrorInfo] = []
+
+  /// Last error for debug reporting (private, captured when error occurs)
+  private var lastError: Error?
   
   /// Current project path (observable)
   public var projectPath: String = ""
@@ -289,6 +292,37 @@ public final class ChatViewModel {
     // Add MCP diagnostics
     report += "\n"
     report += generateMCPDiagnostics()
+
+    // Add error information if available
+    if let error = lastError {
+      report += "\n\nLAST ERROR:"
+      report += "\nError Type: \(type(of: error))"
+      report += "\nError Message: \(error.localizedDescription)"
+
+      // Extract stderr from ClaudeCodeError if available
+      if let claudeError = error as? ClaudeCodeError {
+        switch claudeError {
+        case .processLaunchFailed(let message), .executionFailed(let message):
+          report += "\n\nSUBPROCESS STDERR/OUTPUT:"
+          report += "\n\(message)"
+        case .invalidOutput(let message):
+          report += "\nInvalid Output: \(message)"
+        default:
+          break
+        }
+      }
+
+      // Add error info context if available
+      if let errorInfo = errorInfo {
+        report += "\n\nERROR CONTEXT:"
+        report += "\nSeverity: \(errorInfo.severity.displayName)"
+        report += "\nOperation: \(errorInfo.operation.displayName)"
+        report += "\nContext: \(errorInfo.context)"
+        if let suggestion = errorInfo.recoverySuggestion {
+          report += "\nRecovery Suggestion: \(suggestion)"
+        }
+      }
+    }
 
     report += "\n\n=== END DEBUG REPORT ==="
 
@@ -1262,6 +1296,9 @@ public final class ChatViewModel {
   @MainActor
   func handleError(_ error: Error, operation: ErrorOperation = .general) {
     logger.error("Error: \(error.localizedDescription)")
+
+    // Capture error for debug reporting
+    lastError = error
 
     // Create detailed error info based on operation type
     var errorInfo: ErrorInfo

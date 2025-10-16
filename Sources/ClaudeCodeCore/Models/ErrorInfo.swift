@@ -236,6 +236,9 @@ extension ErrorInfo {
         suggestion = "Invalid configuration detected. Review your settings."
       } else if lowerMessage.contains("zsh:") || lowerMessage.contains("bash:") {
         suggestion = "Shell error detected. Check your system prompt formatting."
+      } else if lowerMessage.contains("process terminated without sending any data") ||
+                lowerMessage.contains("process exited immediately") {
+        suggestion = "The subprocess crashed on launch. Common causes:\n• Invalid working directory or git worktree\n• Corrupted .git file in worktree\n• System prompt with unescaped special characters\n• Invalid MCP configuration\n\nCheck the debug report for stderr details."
       } else {
         suggestion = nil // Let the actual error message speak for itself
       }
