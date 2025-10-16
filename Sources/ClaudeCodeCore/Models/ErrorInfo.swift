@@ -20,9 +20,29 @@ public struct ErrorInfo: Identifiable, Equatable {
   public let recoveryAction: (() -> Void)?
 
   public var displayMessage: String {
-    // For ClaudeCodeError, use its localizedDescription which has the actual error details
+    // For ClaudeCodeError, extract the meaningful message from the associated value
     if let claudeError = error as? ClaudeCodeError {
-      return claudeError.localizedDescription
+      switch claudeError {
+      case .executionFailed(let message), .processLaunchFailed(let message), .permissionDenied(let message):
+        return message
+      case .invalidOutput(let message):
+        return "Invalid output: \(message)"
+      case .notInstalled:
+        return "Claude Code is not installed. Please install with 'npm install -g @anthropic/claude-code'"
+      case .jsonParsingError(let error):
+        return "JSON parsing error: \(error.localizedDescription)"
+      case .cancelled:
+        return "Operation cancelled"
+      case .timeout(let duration):
+        return "Operation timed out after \(Int(duration)) seconds"
+      case .rateLimitExceeded(let retryAfter):
+        if let retryAfter = retryAfter {
+          return "Rate limit exceeded. Retry after \(Int(retryAfter)) seconds"
+        }
+        return "Rate limit exceeded"
+      case .networkError(let error):
+        return "Network error: \(error.localizedDescription)"
+      }
     }
     return error.localizedDescription
   }
