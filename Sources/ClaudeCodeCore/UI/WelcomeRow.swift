@@ -28,7 +28,7 @@ private struct WelcomeHeader: View {
         HStack {
           Text("✻")
             .foregroundColor(.brandPrimary)
-          Text("Welcome to **\(appName)!**")
+          Text("**\(appName)**")
             .font(.system(.body, design: .monospaced))
             .foregroundColor(.primary)
         }
