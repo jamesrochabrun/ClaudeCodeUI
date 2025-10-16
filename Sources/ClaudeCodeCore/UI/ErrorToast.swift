@@ -201,17 +201,6 @@ public struct ErrorToast: View {
         }
       }
 
-      // Error details (for debugging)
-      Label {
-        Text("Error: \(errorInfo.error.localizedDescription)")
-          .font(.system(size: 11, design: .monospaced))
-          .foregroundColor(.secondary)
-      } icon: {
-        Image(systemName: "exclamationmark.triangle")
-          .font(.system(size: 10))
-          .foregroundColor(.secondary)
-      }
-
       // Show subprocess stderr if available (from Phase 2 & 3)
       if let stderr = errorInfo.subprocessStderr, !stderr.isEmpty {
         Divider()

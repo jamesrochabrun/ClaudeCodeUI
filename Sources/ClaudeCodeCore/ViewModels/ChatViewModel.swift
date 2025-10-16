@@ -42,6 +42,9 @@ public final class ChatViewModel {
 
   /// Optional callback invoked when a user message is sent, used for external logging
   private let onUserMessageSent: ((String, [TextSelection]?, [FileAttachment]?) -> Void)?
+
+  /// Optional callback invoked when user needs to select a new working directory
+  private let onSelectWorkingDirectory: (() -> Void)?
   
   /// Controls whether this view model should manage sessions (load, save, switch, etc.)
   /// Set to false when using ChatScreen directly without RootView to avoid unnecessary session operations
@@ -353,7 +356,8 @@ EOF
     systemPromptPrefix: String? = nil,
     shouldManageSessions: Bool = true,
     onSessionChange: ((String) -> Void)? = nil,
-    onUserMessageSent: ((String, [TextSelection]?, [FileAttachment]?) -> Void)? = nil)
+    onUserMessageSent: ((String, [TextSelection]?, [FileAttachment]?) -> Void)? = nil,
+    onSelectWorkingDirectory: (() -> Void)? = nil)
   {
     self.claudeClient = claudeClient
     self.sessionStorage = sessionStorage
@@ -364,6 +368,7 @@ EOF
     self.shouldManageSessions = shouldManageSessions
     self.onSessionChange = onSessionChange
     self.onUserMessageSent = onUserMessageSent
+    self.onSelectWorkingDirectory = onSelectWorkingDirectory
     self.sessionManager = SessionManager(sessionStorage: sessionStorage)
     self.streamProcessor = StreamProcessor(
       messageStore: messageStore,
@@ -1328,6 +1333,31 @@ EOF
       )
     }
 
+    // For working directory errors, add recovery action to select new directory
+    if let claudeError = error as? ClaudeCodeError,
+       case .executionFailed(let message) = claudeError {
+      let lowerMessage = message.lowercased()
+
+      // Check if it's a working directory error
+      if lowerMessage.contains("working directory does not exist") ||
+         lowerMessage.contains("git worktree is corrupted") ||
+         lowerMessage.contains("cannot read .git file") ||
+         lowerMessage.contains("invalid .git file format") {
+
+        errorInfo = ErrorInfo(
+          error: error,
+          severity: .error,
+          context: "Working Directory Error",
+          recoverySuggestion: message,
+          operation: .configuration,
+          recoveryAction: { [weak self] in
+            // Invoke callback to show directory picker
+            self?.onSelectWorkingDirectory?()
+          }
+        )
+      }
+    }
+
     // For notInstalled errors, enhance with the actual command being used
     if let claudeError = error as? ClaudeCodeError,
        case .notInstalled = claudeError {
@@ -1391,20 +1421,18 @@ EOF
     var isDirectory: ObjCBool = false
     guard FileManager.default.fileExists(atPath: workingDir, isDirectory: &isDirectory),
           isDirectory.boolValue else {
-      // Create an error with recovery action to clear the invalid directory
-      let error = NSError(
-        domain: "ClaudeCodeUI",
-        code: 1001,
-        userInfo: [NSLocalizedDescriptionKey: "Working directory does not exist: \(workingDir)"]
-      )
-
       // Clear the invalid directory immediately
       claudeClient.configuration.workingDirectory = nil
       projectPath = ""
       settingsStorage.clearProjectPath()
 
-      // Throw a user-friendly error with recovery suggestion
-      throw ClaudeCodeError.executionFailed("Working directory does not exist: \(workingDir)\n\nThe directory has been cleared. Please select a valid working directory in Settings.")
+      // Create error with recovery action to select a new directory
+      let errorMessage = "Working directory does not exist: \(workingDir)\n\nThe directory has been cleared. Please select a valid working directory."
+      let error = ClaudeCodeError.executionFailed(errorMessage)
+
+      // Store error info with recovery action for later retrieval in handleError
+      // We'll add the recovery action in handleError since we can't pass it through the throw
+      throw error
     }
 
     // Check if it's a git repository (has .git file or directory)

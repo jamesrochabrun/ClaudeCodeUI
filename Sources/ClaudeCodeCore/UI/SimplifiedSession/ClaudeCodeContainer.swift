@@ -148,7 +148,11 @@ public struct ClaudeCodeContainer: View {
           await loadAvailableSessions()
         }
       },
-      onUserMessageSent: onUserMessageSent
+      onUserMessageSent: onUserMessageSent,
+      onSelectWorkingDirectory: { @MainActor in
+        // Show directory picker when recovery action is triggered
+        selectWorkingDirectory(for: viewModel, claudeClient: claudeClient, settingsStorage: deps.settingsStorage)
+      }
     )
 
     // Initialize global preference from configuration if not already set
@@ -336,5 +340,44 @@ public struct ClaudeCodeContainer: View {
         sessionToDelete = nil
       }
     }
+  }
+
+  private func selectWorkingDirectory(
+    for viewModel: ChatViewModel,
+    claudeClient: ClaudeCode,
+    settingsStorage: SettingsStorage
+  ) {
+    #if os(macOS)
+    let openPanel = NSOpenPanel()
+    openPanel.title = "Select Working Directory"
+    openPanel.message = "Choose a working directory for Claude Code"
+    openPanel.canChooseFiles = false
+    openPanel.canChooseDirectories = true
+    openPanel.allowsMultipleSelection = false
+    openPanel.canCreateDirectories = true
+
+    // Set initial directory to current working directory if it exists
+    if !viewModel.projectPath.isEmpty, FileManager.default.fileExists(atPath: viewModel.projectPath) {
+      openPanel.directoryURL = URL(fileURLWithPath: viewModel.projectPath)
+    }
+
+    openPanel.begin { response in
+      guard response == .OK, let url = openPanel.url else { return }
+
+      let selectedPath = url.path
+
+      // Update all necessary components with the new path
+      viewModel.projectPath = selectedPath
+      claudeClient.configuration.workingDirectory = selectedPath
+      settingsStorage.setProjectPath(selectedPath)
+
+      // If there's an active session, save the path for that session too
+      if let sessionId = viewModel.activeSessionId {
+        settingsStorage.setProjectPath(selectedPath, forSessionId: sessionId)
+      }
+
+      ClaudeCodeLogger.shared.log(.container, "[ClaudeCodeContainer] Updated working directory to: \(selectedPath)")
+    }
+    #endif
   }
 }
