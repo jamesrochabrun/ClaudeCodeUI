@@ -138,7 +138,7 @@ public final class DependencyContainer {
     if let dir = workingDirectory {
       settingsStorage.setProjectPath(dir)
     }
-    
+
     return ChatViewModel(
       claudeClient: claudeClient,
       sessionStorage: sessionStorage,

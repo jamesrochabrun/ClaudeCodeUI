@@ -115,6 +115,9 @@ public final class ChatViewModel {
 
   /// Error queue for multiple errors
   public var errorQueue: [ErrorInfo] = []
+
+  /// Last error for debug reporting (private, captured when error occurs)
+  private var lastError: Error?
   
   /// Current project path (observable)
   public var projectPath: String = ""
@@ -152,14 +155,15 @@ public final class ChatViewModel {
       parts.append("cd \"\(escapedPath)\"")
     }
 
-    // Add stdin content if present
+    // Add stdin content if present using HEREDOC for reliable multiline handling
     if let stdin = commandInfo.stdinContent, !stdin.isEmpty {
-      let escapedStdin = stdin
-        .replacingOccurrences(of: "\\", with: "\\\\")
-        .replacingOccurrences(of: "\"", with: "\\\"")
-        .replacingOccurrences(of: "$", with: "\\$")
-        .replacingOccurrences(of: "`", with: "\\`")
-      parts.append("echo \"\(escapedStdin)\" | \(commandInfo.commandString)")
+      // Use HEREDOC to avoid escaping issues with newlines and special characters
+      let heredocCommand = """
+cat <<'EOF' | \(commandInfo.commandString)
+\(stdin)
+EOF
+"""
+      parts.append(heredocCommand)
     } else {
       parts.append(commandInfo.commandString)
     }
@@ -289,6 +293,37 @@ public final class ChatViewModel {
     // Add MCP diagnostics
     report += "\n"
     report += generateMCPDiagnostics()
+
+    // Add error information if available
+    if let error = lastError {
+      report += "\n\nLAST ERROR:"
+      report += "\nError Type: \(type(of: error))"
+      report += "\nError Message: \(error.localizedDescription)"
+
+      // Extract stderr from ClaudeCodeError if available
+      if let claudeError = error as? ClaudeCodeError {
+        switch claudeError {
+        case .processLaunchFailed(let message), .executionFailed(let message):
+          report += "\n\nSUBPROCESS STDERR/OUTPUT:"
+          report += "\n\(message)"
+        case .invalidOutput(let message):
+          report += "\nInvalid Output: \(message)"
+        default:
+          break
+        }
+      }
+
+      // Add error info context if available
+      if let errorInfo = errorInfo {
+        report += "\n\nERROR CONTEXT:"
+        report += "\nSeverity: \(errorInfo.severity.displayName)"
+        report += "\nOperation: \(errorInfo.operation.displayName)"
+        report += "\nContext: \(errorInfo.context)"
+        if let suggestion = errorInfo.recoverySuggestion {
+          report += "\nRecovery Suggestion: \(suggestion)"
+        }
+      }
+    }
 
     report += "\n\n=== END DEBUG REPORT ==="
 
@@ -1048,6 +1083,9 @@ public final class ChatViewModel {
       logger.info("Starting new conversation")
     }
 
+    // Validate working directory before launching subprocess
+    try validateWorkingDirectory()
+
     let options = createOptions()
 
     let result = try await claudeClient.runSinglePrompt(
@@ -1064,9 +1102,12 @@ public final class ChatViewModel {
       let log = "Continuing session '\(sessionId)'"
       logger.debug("\(log)")
     }
-    
+
+    // Validate working directory before launching subprocess
+    try validateWorkingDirectory()
+
     let options = createOptions()
-    
+
     do {
       let result = try await claudeClient.resumeConversation(
         sessionId: sessionId,
@@ -1074,7 +1115,7 @@ public final class ChatViewModel {
         outputFormat: .streamJson,
         options: options
       )
-      
+
       await processResult(result, messageId: messageId)
     } catch {
       // Check if it's a session not found error
@@ -1263,6 +1304,9 @@ public final class ChatViewModel {
   func handleError(_ error: Error, operation: ErrorOperation = .general) {
     logger.error("Error: \(error.localizedDescription)")
 
+    // Capture error for debug reporting
+    lastError = error
+
     // Create detailed error info based on operation type
     var errorInfo: ErrorInfo
     switch operation {
@@ -1330,6 +1374,70 @@ public final class ChatViewModel {
     // Remove incomplete assistant message if there was an error
     if let currentMessageId = currentMessageId {
       messageStore.removeMessage(id: currentMessageId)
+    }
+  }
+
+  // MARK: - Working Directory Validation
+
+  /// Validates the working directory before launching subprocess
+  /// Throws an error if the directory is invalid, doesn't exist, or has git worktree issues
+  private func validateWorkingDirectory() throws {
+    guard let workingDir = claudeClient.configuration.workingDirectory else {
+      // No working directory set - this is OK
+      return
+    }
+
+    // Check if directory exists
+    var isDirectory: ObjCBool = false
+    guard FileManager.default.fileExists(atPath: workingDir, isDirectory: &isDirectory),
+          isDirectory.boolValue else {
+      // Clear the invalid directory immediately
+      claudeClient.configuration.workingDirectory = nil
+      projectPath = ""
+      settingsStorage.clearProjectPath()
+
+      // Provide clear instructions to the user
+      let errorMessage = "Working directory does not exist: \(workingDir)\n\nThe directory has been cleared. To continue:\n1. Start a new session (trash icon)\n2. Select a valid working directory in Settings"
+      throw ClaudeCodeError.executionFailed(errorMessage)
+    }
+
+    // Check if it's a git repository (has .git file or directory)
+    let gitPath = (workingDir as NSString).appendingPathComponent(".git")
+    guard FileManager.default.fileExists(atPath: gitPath) else {
+      // Not a git repo - this is OK, just skip worktree validation
+      return
+    }
+
+    // Validate git worktree if applicable
+    try validateGitWorktree(at: workingDir, gitPath: gitPath)
+  }
+
+  /// Validates a git worktree to ensure it's not corrupted or pointing to a deleted location
+  private func validateGitWorktree(at workingDir: String, gitPath: String) throws {
+    var isDirectory: ObjCBool = false
+    let gitIsDirectory = FileManager.default.fileExists(atPath: gitPath, isDirectory: &isDirectory) && isDirectory.boolValue
+
+    // If .git is a directory, it's a normal git repo (not a worktree)
+    guard !gitIsDirectory else { return }
+
+    // .git is a file - this is a worktree. Read the file to check the gitdir reference
+    guard let gitFileContents = try? String(contentsOfFile: gitPath, encoding: .utf8) else {
+      throw ClaudeCodeError.executionFailed("Cannot read .git file in worktree: \(gitPath)")
+    }
+
+    // Extract gitdir path from the .git file (format: "gitdir: /path/to/repo/.git/worktrees/name")
+    let gitdirPrefix = "gitdir: "
+    guard gitFileContents.hasPrefix(gitdirPrefix) else {
+      throw ClaudeCodeError.executionFailed("Invalid .git file format in worktree: \(gitPath)")
+    }
+
+    let gitdirPath = gitFileContents
+      .dropFirst(gitdirPrefix.count)
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    // Check if the referenced gitdir exists
+    guard FileManager.default.fileExists(atPath: gitdirPath) else {
+      throw ClaudeCodeError.executionFailed("Git worktree is corrupted or points to deleted location.\n\nWorktree path: \(workingDir)\nMissing gitdir: \(gitdirPath)\n\nThis worktree has been pruned or the main repository was moved/deleted.\nPlease select a different working directory or repair the worktree.")
     }
   }
 
