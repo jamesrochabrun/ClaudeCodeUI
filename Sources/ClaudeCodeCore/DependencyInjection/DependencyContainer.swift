@@ -129,12 +129,10 @@ public final class DependencyContainer {
   /// - Parameters:
   ///   - claudeClient: The Claude client for API communication
   ///   - workingDirectory: Optional working directory to set
-  ///   - onSelectWorkingDirectory: Optional callback to handle working directory selection
   /// - Returns: A configured ChatViewModel with session management disabled
   public func createChatViewModelWithoutSessions(
     claudeClient: ClaudeCode,
-    workingDirectory: String? = nil,
-    onSelectWorkingDirectory: (() -> Void)? = nil
+    workingDirectory: String? = nil
   ) -> ChatViewModel {
     // Set working directory if provided
     if let dir = workingDirectory {
@@ -148,9 +146,7 @@ public final class DependencyContainer {
       globalPreferences: globalPreferences,
       customPermissionService: customPermissionService,
       shouldManageSessions: false, // Disable session management for direct usage
-      onSessionChange: nil,
-      onUserMessageSent: nil,
-      onSelectWorkingDirectory: onSelectWorkingDirectory
+      onSessionChange: nil
     )
   }
   
