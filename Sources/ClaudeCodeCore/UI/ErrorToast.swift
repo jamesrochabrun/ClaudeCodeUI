@@ -94,6 +94,19 @@ public struct ErrorToast: View {
 
       // Action buttons
       HStack(spacing: 8) {
+        // Expand/collapse indicator
+        Button(action: {
+          withAnimation(.easeInOut(duration: 0.2)) {
+            showDetails.toggle()
+          }
+        }) {
+          Image(systemName: showDetails ? "chevron.down" : "chevron.up")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(.secondary)
+        }
+        .buttonStyle(.plain)
+        .help(showDetails ? "Hide details" : "Show details (subprocess output, error type, etc.)")
+
         // Recovery action button (if available)
         if let recoveryAction = errorInfo.recoveryAction {
           Button(action: {
@@ -190,13 +203,39 @@ public struct ErrorToast: View {
 
       // Error details (for debugging)
       Label {
-        Text("Error Type: \(String(describing: type(of: errorInfo.error)))")
+        Text("Error: \(errorInfo.error.localizedDescription)")
           .font(.system(size: 11, design: .monospaced))
           .foregroundColor(.secondary)
       } icon: {
         Image(systemName: "exclamationmark.triangle")
           .font(.system(size: 10))
           .foregroundColor(.secondary)
+      }
+
+      // Show subprocess stderr if available (from Phase 2 & 3)
+      if let stderr = errorInfo.subprocessStderr, !stderr.isEmpty {
+        Divider()
+          .padding(.vertical, 4)
+
+        VStack(alignment: .leading, spacing: 4) {
+          Label {
+            Text("Subprocess Output:")
+              .font(.system(size: 11, weight: .semibold))
+              .foregroundColor(.red)
+          } icon: {
+            Image(systemName: "terminal.fill")
+              .font(.system(size: 10))
+              .foregroundColor(.red)
+          }
+
+          Text(stderr)
+            .font(.system(size: 10, design: .monospaced))
+            .foregroundColor(.red.opacity(0.9))
+            .textSelection(.enabled)
+            .padding(8)
+            .background(Color.red.opacity(0.05))
+            .cornerRadius(6)
+        }
       }
 
       // Timestamp

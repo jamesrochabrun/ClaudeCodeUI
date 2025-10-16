@@ -1391,7 +1391,20 @@ EOF
     var isDirectory: ObjCBool = false
     guard FileManager.default.fileExists(atPath: workingDir, isDirectory: &isDirectory),
           isDirectory.boolValue else {
-      throw ClaudeCodeError.executionFailed("Working directory does not exist: \(workingDir)")
+      // Create an error with recovery action to clear the invalid directory
+      let error = NSError(
+        domain: "ClaudeCodeUI",
+        code: 1001,
+        userInfo: [NSLocalizedDescriptionKey: "Working directory does not exist: \(workingDir)"]
+      )
+
+      // Clear the invalid directory immediately
+      claudeClient.configuration.workingDirectory = nil
+      projectPath = ""
+      settingsStorage.clearProjectPath()
+
+      // Throw a user-friendly error with recovery suggestion
+      throw ClaudeCodeError.executionFailed("Working directory does not exist: \(workingDir)\n\nThe directory has been cleared. Please select a valid working directory in Settings.")
     }
 
     // Check if it's a git repository (has .git file or directory)
