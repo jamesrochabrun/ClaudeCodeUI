@@ -155,14 +155,15 @@ public final class ChatViewModel {
       parts.append("cd \"\(escapedPath)\"")
     }
 
-    // Add stdin content if present
+    // Add stdin content if present using HEREDOC for reliable multiline handling
     if let stdin = commandInfo.stdinContent, !stdin.isEmpty {
-      let escapedStdin = stdin
-        .replacingOccurrences(of: "\\", with: "\\\\")
-        .replacingOccurrences(of: "\"", with: "\\\"")
-        .replacingOccurrences(of: "$", with: "\\$")
-        .replacingOccurrences(of: "`", with: "\\`")
-      parts.append("echo \"\(escapedStdin)\" | \(commandInfo.commandString)")
+      // Use HEREDOC to avoid escaping issues with newlines and special characters
+      let heredocCommand = """
+cat <<'EOF' | \(commandInfo.commandString)
+\(stdin)
+EOF
+"""
+      parts.append(heredocCommand)
     } else {
       parts.append(commandInfo.commandString)
     }
