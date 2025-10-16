@@ -27,6 +27,9 @@ public struct UIConfiguration {
   /// Optional general instructions tip to display in the welcome row
   public let generalInstructionsTip: String?
 
+  /// Optional app icon asset name to display in the welcome row
+  public let appIconAssetName: String?
+
   /// Whether to show the system prompt fields in settings
   public let showSystemPromptFields: Bool
 
@@ -46,6 +49,7 @@ public struct UIConfiguration {
       showTokenCount: true,
       workingDirectoryToolTip: nil,
       generalInstructionsTip: nil,
+      appIconAssetName: nil,
       showSystemPromptFields: false,
       showAdditionalSystemPromptField: true,
       initialAdditionalSystemPromptPrefix: nil
@@ -61,6 +65,7 @@ public struct UIConfiguration {
       showTokenCount: true,
       workingDirectoryToolTip: nil,
       generalInstructionsTip: nil,
+      appIconAssetName: nil,
       showSystemPromptFields: false,
       showAdditionalSystemPromptField: true,
       initialAdditionalSystemPromptPrefix: nil
@@ -75,6 +80,7 @@ public struct UIConfiguration {
     showTokenCount: Bool = true,
     workingDirectoryToolTip: String? = nil,
     generalInstructionsTip: String? = nil,
+    appIconAssetName: String? = nil,
     showSystemPromptFields: Bool = false,
     showAdditionalSystemPromptField: Bool = true,
     initialAdditionalSystemPromptPrefix: String? = nil
@@ -85,6 +91,7 @@ public struct UIConfiguration {
     self.showTokenCount = showTokenCount
     self.workingDirectoryToolTip = workingDirectoryToolTip
     self.generalInstructionsTip = generalInstructionsTip
+    self.appIconAssetName = appIconAssetName
     self.showSystemPromptFields = showSystemPromptFields
     self.showAdditionalSystemPromptField = showAdditionalSystemPromptField
     self.initialAdditionalSystemPromptPrefix = initialAdditionalSystemPromptPrefix

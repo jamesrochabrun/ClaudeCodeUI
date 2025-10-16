@@ -14,10 +14,17 @@ import AppKit
 private struct WelcomeHeader: View {
   let appName: String
   let generalInstructionsTip: String?
+  let appIconAssetName: String?
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
       HStack(alignment: .firstTextBaseline, spacing: 6) {
+        if let iconName = appIconAssetName {
+          Image(iconName)
+            .resizable()
+            .frame(width: 16, height: 16)
+        }
+
         Text("✻")
           .foregroundColor(.brandPrimary)
 
@@ -211,6 +218,7 @@ struct WelcomeRow: View {
   let appName: String
   let toolTip: String?
   let generalInstructionsTip: String?
+  let appIconAssetName: String?
   let hasMessages: Bool
   let onSettingsTapped: () -> Void
   let onWorktreeSelected: ((String) -> Void)?
@@ -228,6 +236,7 @@ struct WelcomeRow: View {
     appName: String = "Claude Code UI",
     toolTip: String? = nil,
     generalInstructionsTip: String? = nil,
+    appIconAssetName: String? = nil,
     hasMessages: Bool = false,
     onSettingsTapped: @escaping () -> Void = {},
     onWorktreeSelected: ((String) -> Void)? = nil
@@ -237,6 +246,7 @@ struct WelcomeRow: View {
     self.appName = appName
     self.toolTip = toolTip
     self.generalInstructionsTip = generalInstructionsTip
+    self.appIconAssetName = appIconAssetName
     self.hasMessages = hasMessages
     self.onSettingsTapped = onSettingsTapped
     self.onWorktreeSelected = onWorktreeSelected
@@ -244,7 +254,7 @@ struct WelcomeRow: View {
   
   var body: some View {
     VStack(alignment: .leading, spacing: 16) {
-      WelcomeHeader(appName: appName, generalInstructionsTip: generalInstructionsTip)
+      WelcomeHeader(appName: appName, generalInstructionsTip: generalInstructionsTip, appIconAssetName: appIconAssetName)
 
       if showSettingsButton {
         NoDirectoryView(
@@ -403,7 +413,7 @@ struct WelcomeRow: View {
 
     var body: some View {
       VStack(alignment: .leading, spacing: 16) {
-        WelcomeHeader(appName: "Claude Code UI", generalInstructionsTip: nil)
+        WelcomeHeader(appName: "Claude Code UI", generalInstructionsTip: nil, appIconAssetName: nil)
 
         VStack(alignment: .leading, spacing: 8) {
           WorkingDirectoryHeader(
