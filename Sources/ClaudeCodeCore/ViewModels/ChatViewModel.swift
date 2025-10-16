@@ -1082,6 +1082,9 @@ public final class ChatViewModel {
       logger.info("Starting new conversation")
     }
 
+    // Validate working directory before launching subprocess
+    try validateWorkingDirectory()
+
     let options = createOptions()
 
     let result = try await claudeClient.runSinglePrompt(
@@ -1098,9 +1101,12 @@ public final class ChatViewModel {
       let log = "Continuing session '\(sessionId)'"
       logger.debug("\(log)")
     }
-    
+
+    // Validate working directory before launching subprocess
+    try validateWorkingDirectory()
+
     let options = createOptions()
-    
+
     do {
       let result = try await claudeClient.resumeConversation(
         sessionId: sessionId,
@@ -1108,7 +1114,7 @@ public final class ChatViewModel {
         outputFormat: .streamJson,
         options: options
       )
-      
+
       await processResult(result, messageId: messageId)
     } catch {
       // Check if it's a session not found error
@@ -1367,6 +1373,63 @@ public final class ChatViewModel {
     // Remove incomplete assistant message if there was an error
     if let currentMessageId = currentMessageId {
       messageStore.removeMessage(id: currentMessageId)
+    }
+  }
+
+  // MARK: - Working Directory Validation
+
+  /// Validates the working directory before launching subprocess
+  /// Throws an error if the directory is invalid, doesn't exist, or has git worktree issues
+  private func validateWorkingDirectory() throws {
+    guard let workingDir = claudeClient.configuration.workingDirectory else {
+      // No working directory set - this is OK
+      return
+    }
+
+    // Check if directory exists
+    var isDirectory: ObjCBool = false
+    guard FileManager.default.fileExists(atPath: workingDir, isDirectory: &isDirectory),
+          isDirectory.boolValue else {
+      throw ClaudeCodeError.executionFailed("Working directory does not exist: \(workingDir)")
+    }
+
+    // Check if it's a git repository (has .git file or directory)
+    let gitPath = (workingDir as NSString).appendingPathComponent(".git")
+    guard FileManager.default.fileExists(atPath: gitPath) else {
+      // Not a git repo - this is OK, just skip worktree validation
+      return
+    }
+
+    // Validate git worktree if applicable
+    try validateGitWorktree(at: workingDir, gitPath: gitPath)
+  }
+
+  /// Validates a git worktree to ensure it's not corrupted or pointing to a deleted location
+  private func validateGitWorktree(at workingDir: String, gitPath: String) throws {
+    var isDirectory: ObjCBool = false
+    let gitIsDirectory = FileManager.default.fileExists(atPath: gitPath, isDirectory: &isDirectory) && isDirectory.boolValue
+
+    // If .git is a directory, it's a normal git repo (not a worktree)
+    guard !gitIsDirectory else { return }
+
+    // .git is a file - this is a worktree. Read the file to check the gitdir reference
+    guard let gitFileContents = try? String(contentsOfFile: gitPath, encoding: .utf8) else {
+      throw ClaudeCodeError.executionFailed("Cannot read .git file in worktree: \(gitPath)")
+    }
+
+    // Extract gitdir path from the .git file (format: "gitdir: /path/to/repo/.git/worktrees/name")
+    let gitdirPrefix = "gitdir: "
+    guard gitFileContents.hasPrefix(gitdirPrefix) else {
+      throw ClaudeCodeError.executionFailed("Invalid .git file format in worktree: \(gitPath)")
+    }
+
+    let gitdirPath = gitFileContents
+      .dropFirst(gitdirPrefix.count)
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+
+    // Check if the referenced gitdir exists
+    guard FileManager.default.fileExists(atPath: gitdirPath) else {
+      throw ClaudeCodeError.executionFailed("Git worktree is corrupted or points to deleted location.\n\nWorktree path: \(workingDir)\nMissing gitdir: \(gitdirPath)\n\nThis worktree has been pruned or the main repository was moved/deleted.\nPlease select a different working directory or repair the worktree.")
     }
   }
 
