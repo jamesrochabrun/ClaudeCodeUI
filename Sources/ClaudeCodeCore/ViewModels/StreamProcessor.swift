@@ -34,6 +34,9 @@ final class StreamProcessor {
   // Track if we just processed an ExitPlanMode tool to skip its result
   private var skipNextToolResult = false
 
+  // Track if we're waiting for AskUserQuestion answers
+  private var pendingQuestionToolId: String?
+
   /// Gets the currently active session ID (pending or current)
   /// Returns the pending session ID if streaming is in progress, otherwise the current session ID
   var activeSessionId: String? {
@@ -412,6 +415,12 @@ final class StreamProcessor {
           return
         }
 
+        // Check for AskUserQuestion tool
+        if toolUse.name == "AskUserQuestion" {
+          handleAskUserQuestion(toolUse, state: state)
+          return
+        }
+
         // Mark that we've processed a tool use
         state.hasProcessedToolUse = true
 
@@ -654,6 +663,69 @@ final class StreamProcessor {
     // Set flag to skip the next tool result (which will be for this ExitPlanMode)
     skipNextToolResult = true
     ClaudeCodeLogger.shared.stream("Setting flag to skip next tool result for ExitPlanMode")
+  }
+
+  private func handleAskUserQuestion(_ toolUse: MessageResponse.Content.ToolUse, state: StreamState) {
+    ClaudeCodeLogger.shared.stream("Handling AskUserQuestion tool")
+
+    // Extract questions array from tool input
+    guard case .array(let questionsArray) = toolUse.input["questions"] else {
+      ClaudeCodeLogger.shared.stream("Error: questions not found or not an array")
+      return
+    }
+
+    // Parse questions
+    var questions: [Question] = []
+    for questionItem in questionsArray {
+      guard case .dictionary(let questionDict) = questionItem else { continue }
+
+      // Extract question fields
+      guard case .string(let questionText) = questionDict["question"],
+            case .string(let header) = questionDict["header"],
+            case .bool(let multiSelect) = questionDict["multiSelect"],
+            case .array(let optionsArray) = questionDict["options"] else {
+        continue
+      }
+
+      // Parse options
+      var options: [QuestionOption] = []
+      for optionItem in optionsArray {
+        guard case .dictionary(let optionDict) = optionItem,
+              case .string(let label) = optionDict["label"],
+              case .string(let description) = optionDict["description"] else {
+          continue
+        }
+        options.append(QuestionOption(label: label, description: description))
+      }
+
+      questions.append(Question(
+        question: questionText,
+        header: header,
+        options: options,
+        multiSelect: multiSelect
+      ))
+    }
+
+    // Create QuestionSet with the tool use ID
+    let questionSet = QuestionSet(questions: questions, toolUseId: toolUse.id)
+
+    // Create a message with the question set
+    let questionMessage = MessageFactory.askUserQuestionMessage(
+      questionSet: questionSet,
+      taskGroupId: state.currentTaskGroupId
+    )
+
+    messageStore.addMessage(questionMessage)
+
+    // Mark that we processed a tool use
+    state.hasProcessedToolUse = true
+
+    // Store the tool ID so we can match answers later
+    pendingQuestionToolId = toolUse.id
+
+    // Skip the automatic tool result - the UI will send back the user's answers
+    skipNextToolResult = true
+    ClaudeCodeLogger.shared.stream("Setting flag to skip next tool result for AskUserQuestion")
   }
 
   // Callback to get parent view model - needs to be set during initialization

@@ -86,7 +86,8 @@ public enum ClaudeCodeTool: String, ToolType, CaseIterable {
   case webFetch = "WebFetch"
   case todoWrite = "TodoWrite"
   case webSearch = "WebSearch"
-  
+  case askUserQuestion = "AskUserQuestion"
+
   public var identifier: String { rawValue }
   
   public var friendlyName: String {
@@ -106,6 +107,7 @@ public enum ClaudeCodeTool: String, ToolType, CaseIterable {
     case .webFetch: return "Fetch Web Content"
     case .todoWrite: return "Todo List"
     case .webSearch: return "Web Search"
+    case .askUserQuestion: return "Ask User Question"
     }
   }
   
@@ -126,6 +128,7 @@ public enum ClaudeCodeTool: String, ToolType, CaseIterable {
     case .webFetch: return "globe"
     case .todoWrite: return "checklist"
     case .webSearch: return "magnifyingglass.circle"
+    case .askUserQuestion: return "questionmark.circle"
     }
   }
   
@@ -154,6 +157,7 @@ public enum ClaudeCodeTool: String, ToolType, CaseIterable {
     case .todoWrite: return .todos
     case .task: return .markdown
     case .exitPlanMode: return .plainText
+    case .askUserQuestion: return .plainText
     }
   }
   
@@ -181,6 +185,7 @@ public enum ClaudeCodeTool: String, ToolType, CaseIterable {
     case .webSearch: return ["query", "allowed_domains", "blocked_domains"]
     case .task: return ["description", "prompt"]
     case .exitPlanMode: return ["plan"]
+    case .askUserQuestion: return ["questions"]
     }
   }
   
@@ -203,6 +208,9 @@ public enum ClaudeCodeTool: String, ToolType, CaseIterable {
       return .preview
     case .edit, .multiEdit, .write, .notebookEdit, .todoWrite, .exitPlanMode, .task:
       // Expanded: full collapsible content with expand/collapse
+      return .expanded
+    case .askUserQuestion:
+      // AskUserQuestion has its own custom UI rendering
       return .expanded
     }
   }

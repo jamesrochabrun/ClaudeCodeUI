@@ -1497,5 +1497,49 @@ EOF
   public func updatePlanApprovalStatus(messageId: UUID, status: PlanApprovalStatus) {
     messageStore.updatePlanApprovalStatus(id: messageId, status: status)
   }
+
+  // MARK: - AskUserQuestion
+
+  /// Submits answers to user questions and continues the conversation
+  public func submitQuestionAnswers(toolUseId: String, answers: [QuestionAnswer], messageId: UUID) {
+    // Format answers into the expected response format
+    var formattedAnswers: [String: String] = [:]
+
+    for answer in answers {
+      // Use the question index as the key (or could use question text)
+      let key = "question_\(answer.questionIndex)"
+
+      // Combine selected options and other text
+      var value = answer.selectedLabels.joined(separator: ", ")
+
+      if let otherText = answer.otherText, !otherText.isEmpty {
+        if !value.isEmpty {
+          value += " (Other: \(otherText))"
+        } else {
+          value = "Other: \(otherText)"
+        }
+      }
+
+      formattedAnswers[key] = value
+    }
+
+    // Convert to JSON string for the tool result
+    if let jsonData = try? JSONSerialization.data(withJSONObject: formattedAnswers, options: [.prettyPrinted]),
+       let jsonString = String(data: jsonData, encoding: .utf8) {
+
+      // Send as a hidden message that will be formatted as a tool result
+      // The format should match what Claude expects for AskUserQuestion tool results
+      let answerMessage = """
+      User answers to questions:
+      \(jsonString)
+      """
+
+      // Send the message to continue the conversation
+      sendMessage(answerMessage)
+
+      // Mark the question message as resolved
+      // (We could add a resolution status to ChatMessage similar to planApprovalStatus)
+    }
+  }
 }
 

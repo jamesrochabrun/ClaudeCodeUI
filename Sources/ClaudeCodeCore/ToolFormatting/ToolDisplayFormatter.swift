@@ -55,6 +55,8 @@ public struct ToolDisplayFormatter {
       return TaskToolFormatter()
     case .exitPlanMode:
       return PlainTextToolFormatter()
+    case .askUserQuestion:
+      return AskUserQuestionFormatter()
     default:
       // Check format type as fallback
       switch tool.formatType {

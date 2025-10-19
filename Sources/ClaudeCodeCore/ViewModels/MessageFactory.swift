@@ -201,6 +201,25 @@ public struct MessageFactory {
       return "[\(items.map { formatDynamicContent($0) }.joined(separator: ", "))]"
     }
   }
+
+  /// Creates an AskUserQuestion message with questions for the user to answer
+  /// - Parameters:
+  ///   - questionSet: The set of questions to be answered
+  ///   - taskGroupId: Optional group ID for Task tool execution tracking
+  /// - Returns: A ChatMessage configured as an askUserQuestion message
+  static func askUserQuestionMessage(questionSet: QuestionSet, taskGroupId: UUID? = nil) -> ChatMessage {
+    let questionCount = questionSet.questions.count
+    let content = "ASK USER QUESTION: \(questionCount) question\(questionCount == 1 ? "" : "s")"
+
+    return ChatMessage(
+      role: .askUserQuestion,
+      content: content,
+      messageType: .askUserQuestion,
+      toolName: "AskUserQuestion",
+      taskGroupId: taskGroupId,
+      questionSet: questionSet
+    )
+  }
 }
 
 extension ContentItem {

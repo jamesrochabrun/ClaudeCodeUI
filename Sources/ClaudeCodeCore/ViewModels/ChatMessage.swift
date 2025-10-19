@@ -103,6 +103,10 @@ public struct ChatMessage: Identifiable, Equatable, Codable, Sendable {
   /// - Note: Tracks which diffs have been applied/rejected for auto-collapse behavior
   public var diffLifecycleState: DiffLifecycleState?
 
+  /// Question data for AskUserQuestion tool messages
+  /// - Note: Only populated for askUserQuestion message types
+  public var questionSet: QuestionSet?
+
   public init(
     id: UUID = UUID(),
     role: MessageRole,
@@ -119,7 +123,8 @@ public struct ChatMessage: Identifiable, Equatable, Codable, Sendable {
     taskGroupId: UUID? = nil,
     isTaskContainer: Bool = false,
     planApprovalStatus: PlanApprovalStatus? = nil,
-    diffLifecycleState: DiffLifecycleState? = nil
+    diffLifecycleState: DiffLifecycleState? = nil,
+    questionSet: QuestionSet? = nil
   ) {
     self.id = id
     self.role = role
@@ -137,6 +142,7 @@ public struct ChatMessage: Identifiable, Equatable, Codable, Sendable {
     self.isTaskContainer = isTaskContainer
     self.planApprovalStatus = planApprovalStatus
     self.diffLifecycleState = diffLifecycleState
+    self.questionSet = questionSet
   }
   
   public static func == (lhs: ChatMessage, rhs: ChatMessage) -> Bool {
@@ -152,7 +158,9 @@ public struct ChatMessage: Identifiable, Equatable, Codable, Sendable {
     lhs.wasCancelled == rhs.wasCancelled &&
     lhs.taskGroupId == rhs.taskGroupId &&
     lhs.isTaskContainer == rhs.isTaskContainer &&
-    lhs.planApprovalStatus == rhs.planApprovalStatus
+    lhs.planApprovalStatus == rhs.planApprovalStatus &&
+    lhs.diffLifecycleState == rhs.diffLifecycleState &&
+    lhs.questionSet == rhs.questionSet
   }
 }
 
@@ -174,6 +182,8 @@ public enum MessageType: String, Codable, Sendable {
   case webSearch
   /// Code execution results
   case codeExecution
+  /// Questions posed to the user requiring input
+  case askUserQuestion
 }
 
 /// Defines who sent the message or what generated it
@@ -194,6 +204,8 @@ public enum MessageRole: String, Codable, Sendable {
   case toolDenied
   /// Assistant's thinking process
   case thinking
+  /// Questions posed to user
+  case askUserQuestion
 }
 
 /// Structured data extracted from tool inputs for enhanced UI display

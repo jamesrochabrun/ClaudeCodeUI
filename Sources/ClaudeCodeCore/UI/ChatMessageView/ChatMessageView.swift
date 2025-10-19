@@ -285,7 +285,7 @@ struct ChatMessageView: View {
     switch message.messageType {
     case .toolUse, .toolResult, .toolError, .toolDenied, .thinking, .webSearch, .codeExecution:
       return true
-    case .text:
+    case .text, .askUserQuestion:
       return false
     }
   }

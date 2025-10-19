@@ -55,7 +55,7 @@ struct ChatMessageRow: View {
     switch message.messageType {
     case .toolUse, .toolResult, .toolError, .toolDenied, .thinking, .webSearch, .codeExecution:
       return true
-    case .text:
+    case .text, .askUserQuestion:
       return false
     }
   }
@@ -408,6 +408,8 @@ struct ChatMessageRow: View {
       return Color(red: 0/255, green: 199/255, blue: 190/255)
     case .codeExecution:
       return Color(red: 175/255, green: 82/255, blue: 222/255)
+    case .askUserQuestion:
+      return Color(red: 147/255, green: 51/255, blue: 234/255)
     }
   }
   
