@@ -113,7 +113,7 @@ public final class ApprovalBridge: ObservableObject {
 
         } catch {
             logger.error("Failed to decode approval request: \\(error)")
-            sendErrorResponse("Failed to decode request: \\(error.localizedDescription)")
+            sendErrorResponse("Failed to decode request: \(error.localizedDescription)")
         }
     }
 

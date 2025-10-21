@@ -92,30 +92,24 @@ public final class AXNotificationStream: AsyncSequence, @unchecked Sendable {
             pendingRegistrationNames.remove(name)
 
           case .actionUnsupported:
-            print("AXObserver: Action unsupported: \(name)")
             pendingRegistrationNames.remove(name)
 
           case .apiDisabled:
-            print("AXObserver: Accessibility API disabled, will try again later")
             retry -= 1
 
           case .invalidUIElement:
-            print("AXObserver: Invalid UI element, notification name \(name)")
             pendingRegistrationNames.remove(name)
 
           case .invalidUIElementObserver:
-            print("AXObserver: Invalid UI element observer")
             pendingRegistrationNames.remove(name)
 
           case .cannotComplete:
             print("AXObserver: Failed to observe \(name), will try again later")
 
           case .notificationUnsupported:
-            print("AXObserver: Notification unsupported: \(name)")
             pendingRegistrationNames.remove(name)
 
           case .notificationAlreadyRegistered:
-            print("AXObserver: Notification already registered: \(name)")
             pendingRegistrationNames.remove(name)
 
           default:
