@@ -239,7 +239,7 @@ public final class ApprovalBridge: ObservableObject {
                 toolUseId: ipcRequest.toolUseId,
                 behavior: "deny",
                 updatedInput: ipcRequest.input,
-                message: "Approval processing failed: \\(error.localizedDescription). If this persists, try resetting the approval system."
+                message: "Approval processing failed: \(error.localizedDescription). If this persists, try resetting the approval system."
             )
 
             sendApprovalResponse(errorResponse)
