@@ -1,5 +1,5 @@
 {
-  "originHash" : "31373653d5f3496b9c68f267dc43ac1a633f81ff14c483e208e78839fc3fbc9f",
+  "originHash" : "4acea2986e0a7938831f201f4677591e0b68022d37e92e5bff0e083d62c8d793",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/jamesrochabrun/ClaudeCodeSDK",
       "state" : {
-        "revision" : "614db0c89c6589b73c3736c7098d5717333a114f",
-        "version" : "1.1.9"
+        "branch" : "sdk-migration",
+        "revision" : "3b11602852f6c4a3100a3a52f61a4b317a497cf5"
       }
     },
     {
