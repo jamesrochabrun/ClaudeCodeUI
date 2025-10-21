@@ -189,6 +189,13 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
 
   /// Checks if the approval system is in a healthy state
   public var isHealthy: Bool {
+    // Debug override for testing - check first
+    #if DEBUG
+    if UserDefaults.standard.bool(forKey: "DebugForceApprovalUnhealthy") {
+      return false  // Force unhealthy for testing recovery UI
+    }
+    #endif
+
     // System is unhealthy if:
     // 1. Too many pending requests (possible stuck state)
     // 2. A toast has been visible for too long without being processed

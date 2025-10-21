@@ -415,6 +415,48 @@ struct GlobalSettingsView: View {
             .font(.caption)
             .foregroundColor(.secondary)
         }
+
+        #if DEBUG
+        Divider()
+
+        // Approval System Testing
+        VStack(alignment: .leading, spacing: 8) {
+          Text("Approval System Testing")
+            .font(.headline)
+
+          Text("Use these buttons to test the approval recovery banner UI")
+            .font(.caption)
+            .foregroundColor(.secondary)
+
+          HStack(spacing: 12) {
+            Button(action: {
+              UserDefaults.standard.set(true, forKey: "DebugForceApprovalUnhealthy")
+            }) {
+              HStack(spacing: 4) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                Text("Show Recovery Banner")
+              }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.orange)
+
+            Button(action: {
+              UserDefaults.standard.set(false, forKey: "DebugForceApprovalUnhealthy")
+            }) {
+              HStack(spacing: 4) {
+                Image(systemName: "checkmark.circle.fill")
+                Text("Hide Banner (Healthy)")
+              }
+            }
+            .buttonStyle(.bordered)
+          }
+
+          Text("Note: Close and reopen chat to see changes")
+            .font(.caption2)
+            .foregroundColor(.secondary)
+            .italic()
+        }
+        #endif
       }
       .padding(.vertical, 8)
     }
