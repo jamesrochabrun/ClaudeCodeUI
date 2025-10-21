@@ -212,7 +212,7 @@ public final class ApprovalBridge: ObservableObject {
       let contextualMessage: String
       switch error {
       case .requestTimedOut:
-        contextualMessage = "Approval request timed out after \\(Int(approvalTimeout)) seconds. The approval dialog may not have been visible or the system was unresponsive."
+        contextualMessage = "Approval request timed out after \(Int(approvalTimeout)) seconds. The approval dialog may not have been visible or the system was unresponsive."
       case .requestCancelled:
         contextualMessage = "Approval request was cancelled. This may occur if the conversation was stopped or the approval system was reset."
       case .invalidRequest(let details):
@@ -234,15 +234,15 @@ public final class ApprovalBridge: ObservableObject {
       
     } catch {
       // Handle other unexpected errors
-      logger.error("ApprovalBridge Unexpected error processing approval for \(ipcRequest.toolUseId): \\(error)")
-      
+      logger.error("ApprovalBridge Unexpected error processing approval for \(ipcRequest.toolUseId): \(error)")
+
       let errorResponse = IPCResponse(
         toolUseId: ipcRequest.toolUseId,
         behavior: "deny",
         updatedInput: ipcRequest.input,
         message: "Approval processing failed: \(error.localizedDescription). If this persists, try resetting the approval system."
       )
-      
+
       sendApprovalResponse(errorResponse)
     }
   }
@@ -278,7 +278,7 @@ public final class ApprovalBridge: ObservableObject {
     default:
       riskLevel = .medium
       isSensitive = false
-      description = "Tool operation: \\(toolName)"
+      description = "Tool operation: \(toolName)"
     }
     
     // Extract file paths from input
