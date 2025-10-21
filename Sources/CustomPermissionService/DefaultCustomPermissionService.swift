@@ -157,6 +157,58 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
       logger.info("Preserving paused toast after cancellation")
     }
   }
+
+  /// Resets the entire approval service state - for recovery from error states
+  @MainActor
+  public func resetState() {
+    logger.info("Resetting CustomPermissionService state")
+
+    // Stop any active timer
+    stopToastTimer()
+
+    // Cancel all pending requests with proper cleanup
+    for (_, pendingRequest) in pendingRequests {
+      pendingRequest.continuation.resume(throwing: CustomPermissionError.requestCancelled)
+    }
+    pendingRequests.removeAll()
+
+    // Clear all state
+    approvalQueue.removeAll()
+    currentProcessingRequest = nil
+    pausedApprovals.removeAll()
+    currentToastRequest = nil
+    currentToastCallbacks = nil
+
+    // Hide any visible toasts
+    withAnimation {
+      isToastVisible = false
+    }
+
+    logger.info("CustomPermissionService state reset complete")
+  }
+
+  /// Checks if the approval system is in a healthy state
+  public var isHealthy: Bool {
+    // System is unhealthy if:
+    // 1. Too many pending requests (possible stuck state)
+    // 2. A toast has been visible for too long without being processed
+    // 3. Approval queue is backing up
+
+    let tooManyPendingRequests = pendingRequests.count > configuration.maxConcurrentRequests
+    let queueBackedUp = approvalQueue.count > 10  // Arbitrary threshold
+
+    // Check if toast has been visible for an unreasonably long time
+    let toastStuck: Bool
+    if let startTime = toastDisplayStartTime {
+      let toastDuration = Date().timeIntervalSince(startTime)
+      // If toast visible for more than 10 minutes, something is wrong
+      toastStuck = toastDuration > 600.0
+    } else {
+      toastStuck = false
+    }
+
+    return !tooManyPendingRequests && !queueBackedUp && !toastStuck
+  }
   
   public func getApprovalStatus(for toolUseId: String) -> ApprovalStatus? {
     if pendingRequests[toolUseId] != nil {

@@ -24,21 +24,29 @@ public protocol CustomPermissionService: Sendable {
   ///   - request: The approval request with tool details
   /// - Returns: The approval response
   func requestApproval(for request: ApprovalRequest) async throws -> ApprovalResponse
-  
+
   /// Cancels all pending approval requests
   func cancelAllRequests()
-  
+
+  /// Resets the approval service state - clears all pending requests and cached data
+  /// This is useful for recovering from error states where approval requests are stuck
+  func resetState()
+
+  /// Checks if the approval system is in a healthy state
+  /// Returns false if there are issues that might require recovery (e.g., stuck requests)
+  var isHealthy: Bool { get }
+
   /// Gets the current approval status for a specific tool use ID
   /// - Parameter toolUseId: The tool use identifier
   /// - Returns: The approval status if available
   func getApprovalStatus(for toolUseId: String) -> ApprovalStatus?
-  
+
   /// Sets up a custom permission prompt tool for MCP integration
   /// - Parameters:
   ///   - toolName: Name of the MCP tool (typically "approval_prompt")
   ///   - handler: The handler function for processing approval requests
   func setupMCPTool(toolName: String, handler: @escaping (ApprovalRequest) async throws -> ApprovalResponse)
-  
+
   /// Processes an MCP tool call for approval
   /// - Parameter toolCallData: Raw tool call data from MCP
   /// - Returns: JSON-encoded approval response

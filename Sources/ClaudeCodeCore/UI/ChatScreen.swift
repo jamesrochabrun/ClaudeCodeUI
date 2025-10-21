@@ -123,7 +123,13 @@ public struct ChatScreen: View {
   @Environment(GlobalPreferencesStorage.self) var globalPreferences
 
   public var body: some View {
-    VStack {
+    VStack(spacing: 0) {
+      // Health banner - only shows when approval system is unhealthy
+      ApprovalSystemHealthBanner(
+        permissionService: customPermissionService,
+        approvalBridge: nil
+      )
+
       // Always show the messages list (WelcomeRow will handle empty state)
       messagesListView
         .padding(.bottom, 8)
