@@ -27,6 +27,8 @@ public struct ErrorInfo: Identifiable, Equatable {
         return message
       case .invalidOutput(let message):
         return "Invalid output: \(message)"
+      case .invalidConfiguration(let message):
+        return "Invalid configuration: \(message)"
       case .notInstalled:
         return "Claude Code is not installed. Please install with 'npm install -g @anthropic/claude-code'"
       case .jsonParsingError(let error):
@@ -317,7 +319,7 @@ extension ErrorInfo {
     case .timeout(let duration):
       severity = .warning
       operation = .apiCall
-      context = "Timeout"
+      context = "Timeout after duration: \(duration)"
       suggestion = "Try a simpler request or check your connection."
 
     case .rateLimitExceeded(let retryAfter):
@@ -341,6 +343,12 @@ extension ErrorInfo {
       operation = .fileOperation
       context = "Permission Denied"
       suggestion = nil // The error message has the details
+
+    case .invalidConfiguration:
+      severity = .error
+      operation = .configuration
+      context = "Invalid Configuration"
+      suggestion = "Check your configuration settings and try again."
     }
 
     return ErrorInfo(

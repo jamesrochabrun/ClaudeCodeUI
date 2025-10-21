@@ -7,7 +7,7 @@ import SwiftUI
 public struct ClaudeCodeContainer: View {
   
   // MARK: Lifecycle
-
+  
   public init(
     claudeCodeConfiguration: ClaudeCodeConfiguration,
     uiConfiguration: UIConfiguration,
@@ -29,7 +29,9 @@ public struct ClaudeCodeContainer: View {
   
   public var body: some View {
     Group {
-      if
+      if let error = initializationError {
+        errorMessageView(error)
+      } else if
         isInitialized,
         let chatViewModel,
         let globalPreferences,
@@ -49,12 +51,16 @@ public struct ClaudeCodeContainer: View {
       }
     }
     .task {
-      await initializeClaudeCodeUI()
+      do {
+        try await initializeClaudeCodeUI()
+      } catch {
+        initializationError = error
+      }
     }
   }
   
   // MARK: Internal
-
+  
   let customStorage: SessionStorageProtocol
   let claudeCodeConfiguration: ClaudeCodeConfiguration
   let uiConfiguration: UIConfiguration
@@ -79,16 +85,17 @@ public struct ClaudeCodeContainer: View {
   @State private var showDeleteAllConfirmation = false
   @State private var deleteAllError: Error?
   @State private var showDeleteAllError = false
+  @State private var initializationError: Error?
   
-  private func initializeClaudeCodeUI() async {
-
+  private func initializeClaudeCodeUI() async throws {
+    
     let globalPrefs = GlobalPreferencesStorage()
-
+    
     // Update MCP configuration to ensure approval server path is correct
     await MainActor.run {
       let mcpConfigManager = MCPConfigurationManager()
       mcpConfigManager.updateApprovalServerPath()
-
+      
       // Ensure the MCP config path is set in global preferences
       if globalPrefs.mcpConfigPath.isEmpty {
         if let configPath = mcpConfigManager.getConfigurationPath() {
@@ -97,7 +104,7 @@ public struct ClaudeCodeContainer: View {
         }
       }
     }
-
+    
     // Always sync command lock state with configuration
     // This ensures proper behavior when config changes between custom and default
     if claudeCodeConfiguration.command != "claude" {
@@ -112,31 +119,31 @@ public struct ClaudeCodeContainer: View {
       }
       globalPrefs.isClaudeCommandFromConfig = false
     }
-
+    
     // Now create the proper session manager with global preferences
     sessionManager = SimplifiedSessionManager(
       claudeCodeStorage: customStorage,
       globalPreferences: globalPrefs
     )
-
+    
     let deps = ClaudeCodeCore.DependencyContainer(
       globalPreferences: globalPrefs,
       customSessionStorage: customStorage,
     )
-
+    
     var config = claudeCodeConfiguration
     // Use the command from global preferences (which may have been updated above)
     // This ensures we respect both injected config AND user preferences
     config.command = globalPrefs.claudeCommand
-
+    
     // If the configuration has disallowedTools set, merge them with preferences
     if let configDisallowedTools = config.disallowedTools, !configDisallowedTools.isEmpty {
       // Merge configuration's disallowed tools with preferences
       let combinedDisallowedTools = Set(configDisallowedTools).union(Set(globalPrefs.disallowedTools))
       globalPrefs.disallowedTools = Array(combinedDisallowedTools)
     }
-
-    let claudeClient = ClaudeCodeClient(configuration: config)
+    
+    let claudeClient = try ClaudeCodeClient(configuration: config)
     
     let viewModel = ClaudeCodeCore.ChatViewModel(
       claudeClient: claudeClient,
@@ -153,7 +160,7 @@ public struct ClaudeCodeContainer: View {
       },
       onUserMessageSent: onUserMessageSent
     )
-
+    
     // Initialize global preference from configuration if not already set
     // This allows configuration to suggest a default path on first launch
     // Once set, user's global preference takes precedence (won't be overridden by config changes)
@@ -162,17 +169,17 @@ public struct ClaudeCodeContainer: View {
        !configPath.isEmpty {
       globalPrefs.defaultWorkingDirectory = configPath
     }
-
+    
     // Set the default working directory from global preferences on app launch
     if !globalPrefs.defaultWorkingDirectory.isEmpty {
       claudeClient.configuration.workingDirectory = globalPrefs.defaultWorkingDirectory
       viewModel.projectPath = globalPrefs.defaultWorkingDirectory
       deps.settingsStorage.setProjectPath(globalPrefs.defaultWorkingDirectory)
     }
-
+    
     // Apply stored claudePath from preferences to ensure it persists across app restarts
     viewModel.updateClaudeCommand(from: globalPrefs)
-
+    
     await MainActor.run {
       chatViewModel = viewModel
       globalPreferences = globalPrefs
@@ -231,10 +238,10 @@ public struct ClaudeCodeContainer: View {
       onRestoreSession: { session in
         Task {
           await sessionManager.restoreSession(session: session, chatViewModel: chatViewModel)
-
+          
           // Reload sessions to get fresh data after restoration
           await loadAvailableSessions()
-
+          
           await MainActor.run {
             showSessionPicker = false
           }
@@ -289,15 +296,48 @@ public struct ClaudeCodeContainer: View {
     }
   }
   
+  private func errorMessageView(_ error: Error) -> some View {
+    VStack(spacing: 16) {
+      Image(systemName: "exclamationmark.triangle.fill")
+        .font(.system(size: 48))
+        .foregroundStyle(.red)
+      
+      Text("Initialization Failed")
+        .font(.title2)
+        .fontWeight(.semibold)
+      
+      Text(error.localizedDescription)
+        .font(.body)
+        .foregroundStyle(.secondary)
+        .multilineTextAlignment(.center)
+        .padding(.horizontal)
+      
+      Button("Retry") {
+        initializationError = nil
+        isInitialized = false
+        Task {
+          do {
+            try await initializeClaudeCodeUI()
+          } catch {
+            initializationError = error
+          }
+        }
+      }
+      .buttonStyle(.borderedProminent)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .padding()
+  }
+  
   private func loadAvailableSessions() async {
     await MainActor.run {
       isLoadingSessions = true
       sessionLoadError = nil
     }
-
+    
     do {
       var sessions = try await sessionManager.loadAvailableSessions()
-
+      
       // Check if current session exists and update its message count from in-memory store
       if let currentId = await MainActor.run { currentSessionId } {
         if let index = sessions.firstIndex(where: { $0.id == currentId }) {
@@ -325,7 +365,7 @@ public struct ClaudeCodeContainer: View {
           }
         }
       }
-
+      
       await MainActor.run {
         availableSessions = sessions
         isLoadingSessions = false
@@ -352,11 +392,11 @@ public struct ClaudeCodeContainer: View {
           }
         }
       }
-
+      
       try await sessionManager.deleteSession(sessionId: session.id)
-
+      
       await loadAvailableSessions()
-
+      
       await MainActor.run {
         sessionToDelete = nil
       }
