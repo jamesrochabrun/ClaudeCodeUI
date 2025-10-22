@@ -124,7 +124,6 @@ public struct ChatScreen: View {
 
   public var body: some View {
     VStack {
-      // Always show the messages list (WelcomeRow will handle empty state)
       messagesListView
         .padding(.bottom, 8)
       

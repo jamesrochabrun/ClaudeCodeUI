@@ -78,7 +78,7 @@ public final class MockCustomPermissionService: CustomPermissionService {
   
   public func cancelAllRequests() {
     cancelAllRequestsCallCount += 1
-    
+
     // Mark all pending requests as cancelled
     for (key, status) in approvalStatuses {
       if case .pending = status {
@@ -86,7 +86,7 @@ public final class MockCustomPermissionService: CustomPermissionService {
       }
     }
   }
-  
+
   public func getApprovalStatus(for toolUseId: String) -> ApprovalStatus? {
     getApprovalStatusCallCount += 1
     return approvalStatuses[toolUseId]
