@@ -123,7 +123,7 @@ public struct ChatScreen: View {
   @Environment(GlobalPreferencesStorage.self) var globalPreferences
 
   public var body: some View {
-    VStack(spacing: 0) {
+    VStack {
       messagesListView
         .padding(.bottom, 8)
       

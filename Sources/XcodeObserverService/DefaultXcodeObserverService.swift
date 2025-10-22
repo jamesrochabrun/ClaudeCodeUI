@@ -250,7 +250,6 @@ public final class DefaultXcodeObserver: XcodeObserver, @unchecked Sendable {
   @MainActor
   private func updateStateWith(instances: [InstanceState]) {
     #if DEBUG
-    print("[ACCESSIBILITY] DefaultXcodeObserver updating state with \(instances.count) instances")
     #endif
     if case .known(let currentKnownState) = state {
       if currentKnownState != instances {

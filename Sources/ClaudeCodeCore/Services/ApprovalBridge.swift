@@ -17,17 +17,6 @@ public final class ApprovalBridge: ObservableObject {
   private static let approvalRequestNotification = "ClaudeCodeUIApprovalRequest"
   private static let approvalResponseNotification = "ClaudeCodeUIApprovalResponse"
   
-  // Timeout for approval requests (prevent hanging indefinitely)
-  private let approvalTimeout: TimeInterval = 60.0  // 60 seconds
-  
-  // Track processed request IDs to prevent duplicate processing (keep for 5 minutes)
-  private var processedRequestIds: Set<String> = []
-  private var lastCleanupTime = Date()
-  private let cleanupInterval: TimeInterval = 300.0  // 5 minutes
-  
-  // Track active approval tasks for cancellation
-  private var activeApprovalTasks: [String: Task<Void, Never>] = [:]
-  
   public init(permissionService: CustomPermissionService) {
     self.permissionService = permissionService
     setupNotificationListeners()
@@ -36,25 +25,6 @@ public final class ApprovalBridge: ObservableObject {
   
   deinit {
     notificationCenter.removeObserver(self)
-    // Cancel all active approval tasks
-    activeApprovalTasks.values.forEach { $0.cancel() }
-    activeApprovalTasks.removeAll()
-  }
-  
-  /// Reset the approval bridge state - useful for recovery from error states
-  @MainActor
-  public func resetState() {
-    logger.info("ApprovalBridge Resetting ApprovalBridge state")
-    
-    // Cancel all active tasks
-    activeApprovalTasks.values.forEach { $0.cancel() }
-    activeApprovalTasks.removeAll()
-    
-    // Clear processed IDs
-    processedRequestIds.removeAll()
-    lastCleanupTime = Date()
-    
-    logger.info("ApprovalBridge state reset complete")
   }
   
   /// Set up distributed notification listeners for IPC
@@ -77,9 +47,6 @@ public final class ApprovalBridge: ObservableObject {
   @objc private func handleApprovalRequest(_ notification: Notification) {
     logger.info("ApprovalBridge Received approval request via IPC")
     
-    // Cleanup old processed IDs periodically
-    cleanupProcessedRequestIds()
-    
     guard let userInfo = notification.userInfo,
           let requestData = userInfo["request"] as? Data else {
       logger.error("ApprovalBridge Invalid approval request format")
@@ -94,22 +61,10 @@ public final class ApprovalBridge: ObservableObject {
       
       logger.info("ApprovalBridge Processing approval request for tool: \(ipcRequest.toolName), ID: \(ipcRequest.toolUseId)")
       
-      // Check if we've already processed this request (deduplication)
-      if processedRequestIds.contains(ipcRequest.toolUseId) {
-        logger.warning("ApprovalBridge Duplicate approval request detected for ID: \(ipcRequest.toolUseId), ignoring")
-        return
-      }
-      
-      // Mark as processed
-      processedRequestIds.insert(ipcRequest.toolUseId)
-      
       // Process the request asynchronously on main actor for UI updates
-      let task = Task { @MainActor in
+      Task { @MainActor in
         await processApprovalRequest(ipcRequest)
       }
-      
-      // Track the task for potential cancellation
-      activeApprovalTasks[ipcRequest.toolUseId] = task
       
     } catch {
       logger.error("ApprovalBridge Failed to decode approval request: \(error)")
@@ -117,25 +72,7 @@ public final class ApprovalBridge: ObservableObject {
     }
   }
   
-  /// Cleanup old processed request IDs to prevent memory growth
-  private func cleanupProcessedRequestIds() {
-    let now = Date()
-    if now.timeIntervalSince(lastCleanupTime) > cleanupInterval {
-      let log = "ApprovalBridge Cleaning up processed request IDs (count: \(processedRequestIds.count))"
-      logger.info("\(log)")
-      processedRequestIds.removeAll()
-      lastCleanupTime = now
-    }
-  }
-  
-  /// Process the approval request using CustomPermissionService
-  @MainActor
   private func processApprovalRequest(_ ipcRequest: IPCRequest) async {
-    // Cleanup task from tracking when done
-    defer {
-      activeApprovalTasks.removeValue(forKey: ipcRequest.toolUseId)
-    }
-    
     do {
       // IMPORTANT: Activate the app to ensure toast visibility when triggered via notifications.
       // When ICP requests come via DistributedNotificationCenter from background processes,
@@ -159,39 +96,8 @@ public final class ApprovalBridge: ObservableObject {
         context: createContext(for: ipcRequest.toolName, input: ipcRequest.input)
       )
       
-      // Request approval with timeout to prevent hanging indefinitely
-      let response: ApprovalResponse
-      
-      do {
-        response = try await withThrowingTaskGroup(of: ApprovalResponse.self) { group in
-          // Task 1: Actual approval request
-          group.addTask {
-            try await self.permissionService.requestApproval(for: approvalRequest)
-          }
-          
-          // Task 2: Timeout watchdog
-          group.addTask {
-            try await Task.sleep(nanoseconds: UInt64(self.approvalTimeout * 1_000_000_000))
-            throw CustomPermissionError.requestTimedOut
-          }
-          
-          // Return the first result (either approval or timeout)
-          let result = try await group.next()!
-          
-          // Cancel the other task
-          group.cancelAll()
-          
-          return result
-        }
-      } catch is CancellationError {
-        // Task was cancelled - treat as denial
-        logger.warning("ApprovalBridge Approval request cancelled for \(ipcRequest.toolUseId)")
-        throw CustomPermissionError.requestCancelled
-      } catch let error as CustomPermissionError {
-        // Timeout or other custom permission error
-        logger.error("ApprovalBridge Approval request error for \(ipcRequest.toolUseId): \(error.localizedDescription)")
-        throw error
-      }
+      // Request approval through the permission service (this will show UI)
+      let response = try await permissionService.requestApproval(for: approvalRequest)
       
       // Send response back to MCP server
       let ipcResponse = IPCResponse(
@@ -203,46 +109,18 @@ public final class ApprovalBridge: ObservableObject {
       
       sendApprovalResponse(ipcResponse)
       
-      logger.info("ApprovalBridge Approval request processed successfully for \(ipcRequest.toolUseId)")
-      
-    } catch let error as CustomPermissionError {
-      // Handle custom permission errors with better context
-      logger.error("ApprovalBridge Permission error for \(ipcRequest.toolUseId): \(error.localizedDescription)")
-      
-      let contextualMessage: String
-      switch error {
-      case .requestTimedOut:
-        contextualMessage = "Approval request timed out after \(Int(approvalTimeout)) seconds. The approval dialog may not have been visible or the system was unresponsive."
-      case .requestCancelled:
-        contextualMessage = "Approval request was cancelled. This may occur if the conversation was stopped or the approval system was reset."
-      case .invalidRequest(let details):
-        contextualMessage = "Invalid approval request: \(details)"
-      case .processingError(let details):
-        contextualMessage = "Error processing approval: \(details)"
-      case .mcpIntegrationError(let details):
-        contextualMessage = "MCP integration error: \(details)"
-      }
-      
-      let errorResponse = IPCResponse(
-        toolUseId: ipcRequest.toolUseId,
-        behavior: "deny",
-        updatedInput: ipcRequest.input,
-        message: contextualMessage
-      )
-      
-      sendApprovalResponse(errorResponse)
+      logger.info("ApprovalBridge Approval request processed successfully for \\(ipcRequest.toolUseId)")
       
     } catch {
-      // Handle other unexpected errors
-      logger.error("ApprovalBridge Unexpected error processing approval for \(ipcRequest.toolUseId): \(error)")
-
+      logger.error("ApprovalBridge Failed to process approval request for \(ipcRequest.toolUseId): \(error)")
+      
       let errorResponse = IPCResponse(
         toolUseId: ipcRequest.toolUseId,
         behavior: "deny",
         updatedInput: ipcRequest.input,
-        message: "Approval processing failed: \(error.localizedDescription). If this persists, try resetting the approval system."
+        message: "Approval processing failed: \(error.localizedDescription)"
       )
-
+      
       sendApprovalResponse(errorResponse)
     }
   }
