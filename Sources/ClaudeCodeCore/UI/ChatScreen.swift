@@ -124,15 +124,6 @@ public struct ChatScreen: View {
 
   public var body: some View {
     VStack(spacing: 0) {
-      // Health banner - only shows when approval system is unhealthy
-      if !customPermissionService.isHealthy {
-        ApprovalSystemHealthBanner(
-          permissionService: customPermissionService,
-          approvalBridge: nil
-        )
-      }
-
-      // Always show the messages list (WelcomeRow will handle empty state)
       messagesListView
         .padding(.bottom, 8)
       

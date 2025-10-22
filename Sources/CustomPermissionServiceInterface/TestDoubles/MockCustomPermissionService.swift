@@ -87,18 +87,6 @@ public final class MockCustomPermissionService: CustomPermissionService {
     }
   }
 
-  public func resetState() {
-    // Reset all internal state
-    approvalStatuses.removeAll()
-    // Call cancelAllRequests to properly clean up
-    cancelAllRequests()
-  }
-
-  public var isHealthy: Bool {
-    // Mock is always healthy unless configured otherwise
-    return !shouldThrowError
-  }
-
   public func getApprovalStatus(for toolUseId: String) -> ApprovalStatus? {
     getApprovalStatusCallCount += 1
     return approvalStatuses[toolUseId]

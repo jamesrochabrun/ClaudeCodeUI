@@ -28,14 +28,6 @@ public protocol CustomPermissionService: Sendable {
   /// Cancels all pending approval requests
   func cancelAllRequests()
 
-  /// Resets the approval service state - clears all pending requests and cached data
-  /// This is useful for recovering from error states where approval requests are stuck
-  func resetState()
-
-  /// Checks if the approval system is in a healthy state
-  /// Returns false if there are issues that might require recovery (e.g., stuck requests)
-  var isHealthy: Bool { get }
-
   /// Gets the current approval status for a specific tool use ID
   /// - Parameter toolUseId: The tool use identifier
   /// - Returns: The approval status if available
