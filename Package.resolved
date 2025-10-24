@@ -1,5 +1,5 @@
 {
-  "originHash" : "89ad31099923691e9b106265db6b78d17b3134737e801c385dd35844bdfae888",
+  "originHash" : "4acea2986e0a7938831f201f4677591e0b68022d37e92e5bff0e083d62c8d793",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/jamesrochabrun/ClaudeCodeSDK",
       "state" : {
-        "revision" : "da2ceabba088b176baa60168a5dc987b07a5252f",
-        "version" : "1.1.8"
+        "branch" : "sdk-migration",
+        "revision" : "76ae86e238256179984e049b55d42406326d066f"
       }
     },
     {
@@ -159,8 +159,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-http-types.git",
       "state" : {
-        "revision" : "a0a57e949a8903563aba4615869310c0ebf14c03",
-        "version" : "1.4.0"
+        "revision" : "45eb0224913ea070ec4fba17291b9e7ecf4749ca",
+        "version" : "1.5.1"
       }
     },
     {
