@@ -62,7 +62,11 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
   /// The approval status for plan messages (ExitPlanMode tool)
   /// - Note: Used to track whether a plan has been approved, denied, or approved with auto-accept
   public var planApprovalStatus: PlanApprovalStatus?
-  
+
+  /// Question data for AskUserQuestion tool messages
+  /// - Note: Only populated for askUserQuestion message types
+  public var questionSet: QuestionSet?
+
   public init(
     id: UUID = UUID(),
     role: MessageRole,
@@ -78,7 +82,8 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
     wasCancelled: Bool = false,
     taskGroupId: UUID? = nil,
     isTaskContainer: Bool = false,
-    planApprovalStatus: PlanApprovalStatus? = nil
+    planApprovalStatus: PlanApprovalStatus? = nil,
+    questionSet: QuestionSet? = nil
   ) {
     self.id = id
     self.role = role
@@ -95,6 +100,7 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
     self.taskGroupId = taskGroupId
     self.isTaskContainer = isTaskContainer
     self.planApprovalStatus = planApprovalStatus
+    self.questionSet = questionSet
   }
   
   public static func == (lhs: ChatMessage, rhs: ChatMessage) -> Bool {
@@ -110,7 +116,8 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
     lhs.wasCancelled == rhs.wasCancelled &&
     lhs.taskGroupId == rhs.taskGroupId &&
     lhs.isTaskContainer == rhs.isTaskContainer &&
-    lhs.planApprovalStatus == rhs.planApprovalStatus
+    lhs.planApprovalStatus == rhs.planApprovalStatus &&
+    lhs.questionSet == rhs.questionSet
   }
 }
 
@@ -130,6 +137,8 @@ public enum MessageType: String, Codable {
   case thinking
   /// Web search results
   case webSearch
+  /// Questions posed to the user requiring input
+  case askUserQuestion
 }
 
 /// Defines who sent the message or what generated it
@@ -150,6 +159,8 @@ public enum MessageRole: String, Codable {
   case toolDenied
   /// Assistant's thinking process
   case thinking
+  /// Questions posed to user
+  case askUserQuestion
 }
 
 /// Structured data extracted from tool inputs for enhanced UI display
