@@ -130,6 +130,8 @@ public enum MessageType: String, Codable {
   case thinking
   /// Web search results
   case webSearch
+  /// Code execution results
+  case codeExecution
 }
 
 /// Defines who sent the message or what generated it

@@ -155,11 +155,11 @@ struct MessageContentView: View {
   }
   
   /// Determines if the message type should be displayed in a collapsible format.
-  /// Tool-related messages (toolUse, toolResult, toolError, toolDenied, thinking, webSearch) are collapsible,
+  /// Tool-related messages (toolUse, toolResult, toolError, toolDenied, thinking, webSearch, codeExecution) are collapsible,
   /// while plain text messages are not.
   private var isCollapsible: Bool {
     switch message.messageType {
-    case .toolUse, .toolResult, .toolError, .toolDenied, .thinking, .webSearch:
+    case .toolUse, .toolResult, .toolError, .toolDenied, .thinking, .webSearch, .codeExecution:
       return true
     case .text:
       return false
