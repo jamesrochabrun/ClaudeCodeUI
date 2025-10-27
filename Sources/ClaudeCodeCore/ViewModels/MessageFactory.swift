@@ -137,6 +137,70 @@ public struct MessageFactory {
       messageType: .webSearch
     )
   }
+
+  /// Creates a code execution result message
+  /// - Parameters:
+  ///   - content: The execution result content from the tool
+  ///   - type: The type of code execution result (e.g., "bash_code_execution_tool_result")
+  ///   - taskGroupId: Optional group ID for Task tool execution tracking
+  /// - Returns: A ChatMessage configured as a code execution result
+  static func codeExecutionMessage(content: MessageResponse.Content.DynamicContent, type: String, taskGroupId: UUID? = nil) -> ChatMessage {
+    // Extract content from DynamicContent
+    let contentString: String
+    switch content {
+    case .string(let stringValue):
+      contentString = stringValue
+    case .dictionary(let dict):
+      // Format dictionary content for display
+      var formatted = "CODE EXECUTION RESULT (\(type)):\n"
+      for (key, value) in dict {
+        formatted += "\(key): \(formatDynamicContent(value))\n"
+      }
+      contentString = formatted
+    case .array(let items):
+      // Format array content
+      var formatted = "CODE EXECUTION RESULT (\(type)):\n"
+      for (index, item) in items.enumerated() {
+        formatted += "[\(index)]: \(formatDynamicContent(item))\n"
+      }
+      contentString = formatted
+    case .integer(let intValue):
+      contentString = "CODE EXECUTION RESULT (\(type)): \(intValue)"
+    case .double(let doubleValue):
+      contentString = "CODE EXECUTION RESULT (\(type)): \(doubleValue)"
+    case .bool(let boolValue):
+      contentString = "CODE EXECUTION RESULT (\(type)): \(boolValue)"
+    case .null:
+      contentString = "CODE EXECUTION RESULT (\(type)): (no output)"
+    }
+
+    return ChatMessage(
+      role: .assistant,
+      content: contentString,
+      messageType: .codeExecution,
+      taskGroupId: taskGroupId
+    )
+  }
+
+  /// Helper method to format DynamicContent for display
+  private static func formatDynamicContent(_ content: MessageResponse.Content.DynamicContent) -> String {
+    switch content {
+    case .string(let stringValue):
+      return stringValue
+    case .integer(let intValue):
+      return "\(intValue)"
+    case .double(let doubleValue):
+      return "\(doubleValue)"
+    case .bool(let boolValue):
+      return "\(boolValue)"
+    case .null:
+      return "null"
+    case .dictionary(let dict):
+      return dict.map { "\($0.key): \(formatDynamicContent($0.value))" }.joined(separator: ", ")
+    case .array(let items):
+      return "[\(items.map { formatDynamicContent($0) }.joined(separator: ", "))]"
+    }
+  }
 }
 
 extension ContentItem {

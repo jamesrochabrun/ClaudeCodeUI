@@ -534,6 +534,14 @@ final class StreamProcessor {
       case .webSearchToolResult(let searchResult):
         let searchMessage = MessageFactory.webSearchMessage(resultCount: searchResult.content.count)
         messageStore.addMessage(searchMessage)
+      case .codeExecutionToolResult(let executionResult):
+        ClaudeCodeLogger.shared.stream("Handling codeExecutionToolResult: \(executionResult.type)")
+        let codeExecutionMessage = MessageFactory.codeExecutionMessage(
+          content: executionResult.content,
+          type: executionResult.type,
+          taskGroupId: state.currentTaskGroupId
+        )
+        messageStore.addMessage(codeExecutionMessage)
       }
     }
   }

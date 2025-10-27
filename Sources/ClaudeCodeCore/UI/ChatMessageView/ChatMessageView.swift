@@ -269,7 +269,7 @@ struct ChatMessageView: View {
   
   private var isCollapsible: Bool {
     switch message.messageType {
-    case .toolUse, .toolResult, .toolError, .toolDenied, .thinking, .webSearch:
+    case .toolUse, .toolResult, .toolError, .toolDenied, .thinking, .webSearch, .codeExecution:
       return true
     case .text:
       return false
