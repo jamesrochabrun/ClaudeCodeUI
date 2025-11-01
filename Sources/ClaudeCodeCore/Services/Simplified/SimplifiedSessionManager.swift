@@ -66,8 +66,12 @@ public final class SimplifiedSessionManager: SimplifiedSessionManagerProtocol {
   public func deleteSession(sessionId: String) async throws {
     try await claudeCodeStorage.deleteSession(id: sessionId)
   }
-    
+
+  public func deleteAllSessions() async throws {
+    try await claudeCodeStorage.deleteAllSessions()
+  }
+
   private let claudeCodeStorage: SessionStorageProtocol
   private let globalPreferences: GlobalPreferencesStorage
-  
+
 }

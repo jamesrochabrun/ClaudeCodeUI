@@ -76,6 +76,9 @@ public struct ClaudeCodeContainer: View {
   
   @State private var showDeleteConfirmation = false
   @State private var sessionToDelete: StoredSession?
+  @State private var showDeleteAllConfirmation = false
+  @State private var deleteAllError: Error?
+  @State private var showDeleteAllError = false
   
   private func initializeClaudeCodeUI() async {
 
@@ -241,6 +244,9 @@ public struct ClaudeCodeContainer: View {
         sessionToDelete = session
         showDeleteConfirmation = true
       },
+      onDeleteAll: {
+        showDeleteAllConfirmation = true
+      }
     )
     .alert("Delete Session", isPresented: $showDeleteConfirmation) {
       Button("Cancel", role: .cancel) {
@@ -256,6 +262,29 @@ public struct ClaudeCodeContainer: View {
     } message: {
       if let session = sessionToDelete {
         Text("Are you sure you want to delete the session \"\(session.firstUserMessage.truncateIntelligently(to: 100))\"? This action cannot be undone.")
+      }
+    }
+    .alert("Delete All Sessions", isPresented: $showDeleteAllConfirmation) {
+      Button("Cancel", role: .cancel) { }
+      Button("Delete All", role: .destructive) {
+        Task {
+          await deleteAllSessions()
+        }
+      }
+    } message: {
+      if availableSessions.count > 10 {
+        Text("You are about to delete \(availableSessions.count) sessions. This is a large number and they won't be recovered. Are you absolutely sure?")
+      } else {
+        Text("You are about to delete \(availableSessions.count) session\(availableSessions.count == 1 ? "" : "s"). They won't be recovered. Are you sure?")
+      }
+    }
+    .alert("Failed to Delete Sessions", isPresented: $showDeleteAllError) {
+      Button("OK", role: .cancel) {
+        deleteAllError = nil
+      }
+    } message: {
+      if let error = deleteAllError {
+        Text("An error occurred while deleting sessions: \(error.localizedDescription)")
       }
     }
   }
@@ -335,6 +364,33 @@ public struct ClaudeCodeContainer: View {
       await MainActor.run {
         sessionToDelete = nil
       }
+    }
+  }
+
+  private func deleteAllSessions() async {
+    do {
+      // Clear current session since we're deleting all
+      await MainActor.run {
+        currentSessionId = nil
+      }
+
+      // Clear the chat interface
+      if let viewModel = chatViewModel {
+        await MainActor.run {
+          viewModel.clearConversation()
+        }
+      }
+
+      try await sessionManager.deleteAllSessions()
+
+      await loadAvailableSessions()
+    } catch {
+      // Show error alert to user
+      await MainActor.run {
+        deleteAllError = error
+        showDeleteAllError = true
+      }
+      ClaudeCodeLogger.shared.log(.container, "[ClaudeCodeContainer] Error deleting all sessions: \(error.localizedDescription)")
     }
   }
 }
