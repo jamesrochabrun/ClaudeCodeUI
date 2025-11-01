@@ -1,8 +1,10 @@
 # ClaudeCodeUI
 
-A beautiful, native macOS Swift Package providing a graphical interface for Claude Code conversations. Integrate it directly into your own macOS applications.
+**A Swift Package library for integrating Claude Code UI into your macOS apps.**
 
-Example App that uses this package can be downloaded [here](https://github.com/jamesrochabrun/Olive/releases/download/v1.0.0/Olive-1.0.0.dmg)
+ClaudeCodeUI is a dependency-only library that provides a beautiful, native macOS graphical interface for Claude Code conversations. It is designed to be integrated directly into your own macOS applications as a Swift Package — it is not distributed as a standalone app.
+
+**See it in action:** Download [Olive](https://github.com/jamesrochabrun/Olive/releases/download/v1.0.0/Olive-1.0.0.dmg), an example app built with ClaudeCodeUI.
 
 ⚠️ **Note**: This is not an official Anthropic product.
 
