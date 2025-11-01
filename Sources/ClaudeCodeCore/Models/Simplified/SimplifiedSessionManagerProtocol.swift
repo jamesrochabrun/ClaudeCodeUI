@@ -9,4 +9,6 @@ public protocol SimplifiedSessionManagerProtocol {
   func loadAvailableSessions() async throws -> [StoredSession]
 
   func deleteSession(sessionId: String) async throws
+
+  func deleteAllSessions() async throws
 }
