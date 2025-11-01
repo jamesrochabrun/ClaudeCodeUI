@@ -77,6 +77,34 @@ public struct ApprovalToast: View {
     ["Edit", "MultiEdit", "Write"].contains(request.toolName)
   }
 
+  /// Extracts the most relevant parameter to display for this tool type
+  private func extractRelevantParameter() -> (key: String, value: String)? {
+    // Define tool-specific parameter priorities
+    let parameterKey: String
+    switch request.toolName.lowercased() {
+    case "bash":
+      parameterKey = "command"
+    case "edit", "write", "read", "multiedit":
+      parameterKey = "file_path"
+    default:
+      // For other tools, use the first available parameter
+      guard let firstKey = request.input.keys.sorted().first else { return nil }
+      parameterKey = firstKey
+    }
+
+    // Get the value for the selected parameter
+    guard let value = request.input[parameterKey] else {
+      // Fallback to first available parameter if the expected one doesn't exist
+      guard let firstKey = request.input.keys.sorted().first,
+            let firstValue = request.input[firstKey] else {
+        return nil
+      }
+      return (key: firstKey, value: firstValue.description)
+    }
+
+    return (key: parameterKey, value: value.description)
+  }
+
   private var mainCompactView: some View {
     HStack(spacing: 12) {
       riskIndicator
@@ -98,7 +126,7 @@ public struct ApprovalToast: View {
       HStack {
         Text("Permission Request")
           .font(.system(size: 13, weight: .medium))
-        
+
         if queueCount > 0 {
           Text("(\(queueCount) more pending)")
             .font(.system(size: 11))
@@ -121,7 +149,22 @@ public struct ApprovalToast: View {
       Text(request.toolName)
         .font(.system(size: 12))
         .foregroundColor(.secondary)
+
+      // Show the most relevant parameter detail
+      if let parameter = extractRelevantParameter() {
+        parameterDetailView(value: parameter.value)
+      }
     }
+  }
+
+  /// View for displaying the key parameter detail in collapsed state
+  private func parameterDetailView(value: String) -> some View {
+    Text(value)
+      .font(.system(size: 11, design: .monospaced))
+      .foregroundColor(.secondary.opacity(0.8))
+      .lineLimit(3)
+      .truncationMode(.tail)
+      .padding(.top, 2)
   }
 
   private var actionButtonsSection: some View {
