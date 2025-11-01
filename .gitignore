@@ -14,20 +14,6 @@ DerivedData/
 # macOS
 .DS_Store
 
-# IMPORTANT: Security - Never commit these files!
-scripts/signing_config.sh
-Scripts/signing_config.sh
-*.p12
-*.cer
-*.key
-*.certSigningRequest
-DeveloperID_*
-
-# Build artifacts
-*.dmg
-*.app
-*.xcarchive
-
 # Temporary files
 *.swp
 *.tmp
