@@ -348,7 +348,7 @@ extension ErrorInfo {
       severity = .error
       operation = .configuration
       context = "Invalid Configuration"
-      suggestion = "Check your configuration settings and try again."
+      suggestion = "Check configuration settings. If using Agent SDK backend, ensure Node.js is installed and run: npm install -g @anthropic-ai/claude-agent-sdk"
     }
 
     return ErrorInfo(
