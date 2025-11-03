@@ -86,7 +86,8 @@ final class StreamProcessor {
     firstMessageInSession: String? = nil,
     onError: ((Error) -> Void)? = nil,
     onTokenUsageUpdate: ((Int, Int) -> Void)? = nil,
-    onCostUpdate: ((Double) -> Void)? = nil
+    onCostUpdate: ((Double) -> Void)? = nil,
+    onResultReceived: (() -> Void)? = nil
   ) async {
     // Reset the continuation resumed flag for this new stream
     continuationResumed = false
@@ -139,7 +140,7 @@ final class StreamProcessor {
               continuation.resume()
               return
             }
-            
+
             switch completion {
             case .finished:
               // Check if we received any data at all
@@ -225,7 +226,7 @@ final class StreamProcessor {
             hasReceivedData = true // Mark that we received data
             timeoutTask?.cancel() // Cancel timeout when data arrives
             guard let self = self else { return }
-            self.processChunk(chunk, messageId: messageId, state: state, firstMessageInSession: firstMessageInSession, onTokenUsageUpdate: onTokenUsageUpdate, onCostUpdate: onCostUpdate)
+            self.processChunk(chunk, messageId: messageId, state: state, firstMessageInSession: firstMessageInSession, onTokenUsageUpdate: onTokenUsageUpdate, onCostUpdate: onCostUpdate, onResultReceived: onResultReceived)
           }
         )
       
@@ -235,19 +236,19 @@ final class StreamProcessor {
     }
   }
   
-  private func processChunk(_ chunk: ResponseChunk, messageId: UUID, state: StreamState, firstMessageInSession: String?, onTokenUsageUpdate: ((Int, Int) -> Void)?, onCostUpdate: ((Double) -> Void)?) {
+  private func processChunk(_ chunk: ResponseChunk, messageId: UUID, state: StreamState, firstMessageInSession: String?, onTokenUsageUpdate: ((Int, Int) -> Void)?, onCostUpdate: ((Double) -> Void)?, onResultReceived: (() -> Void)?) {
     switch chunk {
     case .initSystem(let initMessage):
       handleInitSystem(initMessage, firstMessageInSession: firstMessageInSession)
-      
+
     case .assistant(let message):
       handleAssistantMessage(message, messageId: messageId, state: state, onTokenUsageUpdate: onTokenUsageUpdate)
-      
+
     case .user(let userMessage):
       handleUserMessage(userMessage, state: state)
-      
+
     case .result(let resultMessage):
-      handleResult(resultMessage, firstMessageInSession: firstMessageInSession, onTokenUsageUpdate: onTokenUsageUpdate, onCostUpdate: onCostUpdate)
+      handleResult(resultMessage, firstMessageInSession: firstMessageInSession, onTokenUsageUpdate: onTokenUsageUpdate, onCostUpdate: onCostUpdate, onResultReceived: onResultReceived)
     }
   }
   
@@ -586,7 +587,7 @@ final class StreamProcessor {
     }
   }
   
-  private func handleResult(_ resultMessage: ResultMessage, firstMessageInSession: String?, onTokenUsageUpdate: ((Int, Int) -> Void)?, onCostUpdate: ((Double) -> Void)?) {
+  private func handleResult(_ resultMessage: ResultMessage, firstMessageInSession: String?, onTokenUsageUpdate: ((Int, Int) -> Void)?, onCostUpdate: ((Double) -> Void)?, onResultReceived: (() -> Void)?) {
     if sessionManager.currentSessionId == nil {
       ClaudeCodeLogger.shared.stream("handleResult - No current session, starting new with ID: \(resultMessage.sessionId)")
       let firstMessage = firstMessageInSession ?? "New conversation"
@@ -595,7 +596,7 @@ final class StreamProcessor {
     } else {
       ClaudeCodeLogger.shared.stream("handleResult - Result received for session: \(resultMessage.sessionId), current: \(sessionManager.currentSessionId ?? "nil")")
     }
-    
+
     // Update token usage if available
     if let usage = resultMessage.usage {
       let log = "Token usage - input: \(usage.inputTokens), output: \(usage.outputTokens)"
@@ -604,9 +605,12 @@ final class StreamProcessor {
     } else {
       // No usage data in result message
     }
-    
+
     // Update cost
     onCostUpdate?(resultMessage.totalCostUsd)
+
+    // Notify that result has been received (content is complete)
+    onResultReceived?()
   }
   
   /// Checks if an assistant message contains text content

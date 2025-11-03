@@ -1275,15 +1275,19 @@ EOF
           Task { @MainActor in
             self?.updateCost(costUSD)
           }
+        },
+        onResultReceived: { [weak self] in
+          Task { @MainActor in
+            self?.isLoading = false
+            self?.streamingStartTime = nil
+          }
         }
       )
       await MainActor.run {
-        self.isLoading = false
-        self.streamingStartTime = nil
         // Clear first message after it's been saved
         self.firstMessageInSession = nil
       }
-      
+
       // Save messages after streaming completes
       await saveCurrentSessionMessages()
       
