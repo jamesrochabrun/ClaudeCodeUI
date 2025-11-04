@@ -8,6 +8,7 @@
 import SwiftUI
 import AppKit
 import CCPermissionsServiceInterface
+import ClaudeCodeSDK
 
 struct GlobalSettingsView: View {
   let uiConfiguration: UIConfiguration
@@ -100,6 +101,7 @@ struct GlobalSettingsView: View {
       let claudeTools = ClaudeCodeTool.allCases.map { $0.rawValue }
       selectedTools = Set(globalPreferences.allowedTools.filter { claudeTools.contains($0) })
       selectedMCPTools = globalPreferences.selectedMCPTools
+      initialBackend = globalPreferences.preferredBackend
     }
   }
   
@@ -218,6 +220,7 @@ struct GlobalSettingsView: View {
           xcodeIntegrationSection
         }
         claudeCodeConfigurationSection
+        backendSelectionSection
         debugSection
         resetSection
       }
@@ -291,7 +294,109 @@ struct GlobalSettingsView: View {
       .padding(.vertical, 8)
     }
   }
-  
+
+  // MARK: - Backend Selection Section
+  private var backendSelectionSection: some View {
+    @Bindable var preferences = globalPreferences
+
+    return Section {
+      Picker("Backend:", selection: $preferences.preferredBackend) {
+        Text("Headless (Default)").tag(BackendType.headless)
+        Text("Agent SDK (Faster)").tag(BackendType.agentSDK)
+      }
+      .pickerStyle(.segmented)
+
+      if preferences.preferredBackend == .headless {
+        Text("Uses Claude CLI directly. Requires: Claude CLI installed and authenticated (claude login)")
+          .font(.caption)
+          .foregroundColor(.secondary)
+          .padding(.top, 4)
+      } else {
+        agentSDKRequirementsView
+      }
+
+      if backendChanged {
+        Label("Restart app for changes to take effect", systemImage: "exclamationmark.triangle")
+          .foregroundColor(.orange)
+          .padding(.top, 8)
+      }
+    } header: {
+      Text("Backend Selection")
+    } footer: {
+      Text("Agent SDK is 2-10x faster but requires additional setup.")
+    }
+  }
+
+  @ViewBuilder
+  private var agentSDKRequirementsView: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      Text("Agent SDK Requirements:")
+        .font(.headline)
+        .padding(.top, 8)
+
+      RequirementRow(
+        title: "Node.js 18+",
+        isInstalled: BackendDetector.isNodeInstalled(),
+        installCommand: "brew install node"
+      )
+
+      RequirementRow(
+        title: "Agent SDK Package",
+        isInstalled: BackendDetector.isAgentSDKInstalled(),
+        installCommand: "npm install -g @anthropic-ai/claude-agent-sdk"
+      )
+
+      RequirementRow(
+        title: "Claude Authentication",
+        isInstalled: BackendDetector.isClaudeAuthenticated(),
+        installCommand: "claude login"
+      )
+
+      HStack(spacing: 12) {
+        Button("Copy All Commands") {
+          NSPasteboard.general.clearContents()
+          NSPasteboard.general.setString(BackendDetector.getSetupCommands(), forType: .string)
+        }
+        .buttonStyle(.bordered)
+
+        Button("Open in Terminal") {
+          openTerminalWithSetup()
+        }
+        .buttonStyle(.borderedProminent)
+      }
+      .padding(.top, 8)
+    }
+    .padding()
+    .background(Color.blue.opacity(0.05))
+    .cornerRadius(8)
+  }
+
+  @State private var initialBackend: BackendType?
+
+  private var backendChanged: Bool {
+    if let initial = initialBackend {
+      return initial != globalPreferences.preferredBackend
+    }
+    return false
+  }
+
+  private func openTerminalWithSetup() {
+    let script = """
+    #!/bin/bash
+    echo "Setting up Agent SDK for Claw..."
+    echo ""
+    \(BackendDetector.getSetupCommands())
+    echo ""
+    echo "Setup complete! Close this window and restart Claw."
+    read -p "Press Enter to close..."
+    """
+
+    let scriptPath = NSTemporaryDirectory() + "claw_setup_agent_sdk.command"
+    try? script.write(toFile: scriptPath, atomically: true, encoding: .utf8)
+    try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptPath)
+    NSWorkspace.shared.open(URL(fileURLWithPath: scriptPath))
+  }
+
   private var debugSection: some View {
     Section("Debug") {
       let hasCommandInfo = chatViewModel?.terminalReproductionCommand != nil

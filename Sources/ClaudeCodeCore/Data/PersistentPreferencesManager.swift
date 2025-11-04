@@ -319,6 +319,7 @@ public struct GeneralPreferences: Codable {
   public var maxConcurrentPermissionRequests: Int
   public var disallowedTools: [String]
   public var isClaudeCommandFromConfig: Bool
+  public var preferredBackend: String
 
   public init(
     autoApproveLowRisk: Bool = false,
@@ -332,7 +333,8 @@ public struct GeneralPreferences: Codable {
     permissionTimeoutEnabled: Bool = false,
     maxConcurrentPermissionRequests: Int = 5,
     disallowedTools: [String] = [],
-    isClaudeCommandFromConfig: Bool = false
+    isClaudeCommandFromConfig: Bool = false,
+    preferredBackend: String = "headless"
   ) {
     self.autoApproveLowRisk = autoApproveLowRisk
     self.claudeCommand = claudeCommand
@@ -346,6 +348,7 @@ public struct GeneralPreferences: Codable {
     self.maxConcurrentPermissionRequests = maxConcurrentPermissionRequests
     self.disallowedTools = disallowedTools
     self.isClaudeCommandFromConfig = isClaudeCommandFromConfig
+    self.preferredBackend = preferredBackend
   }
 
   // Custom decoding for backwards compatibility
@@ -364,5 +367,6 @@ public struct GeneralPreferences: Codable {
     disallowedTools = try container.decode([String].self, forKey: .disallowedTools)
     // Decode with default value for backwards compatibility
     isClaudeCommandFromConfig = try container.decodeIfPresent(Bool.self, forKey: .isClaudeCommandFromConfig) ?? false
+    preferredBackend = try container.decodeIfPresent(String.self, forKey: .preferredBackend) ?? "headless"
   }
 }

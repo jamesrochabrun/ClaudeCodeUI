@@ -8,6 +8,7 @@
 import Foundation
 import Observation
 import CCCustomPermissionServiceInterface
+import ClaudeCodeSDK
 
 @Observable
 @MainActor
@@ -76,6 +77,12 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
   }
 
   public var isClaudeCommandFromConfig: Bool {
+    didSet {
+      saveToPersistentStorage()
+    }
+  }
+
+  public var preferredBackend: BackendType {
     didSet {
       saveToPersistentStorage()
     }
@@ -156,7 +163,8 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       self.maxConcurrentPermissionRequests = general.maxConcurrentPermissionRequests
       self.disallowedTools = general.disallowedTools
       self.isClaudeCommandFromConfig = general.isClaudeCommandFromConfig
-      
+      self.preferredBackend = BackendType(rawValue: general.preferredBackend) ?? .headless
+
       // MCP config path - default to Claude's standard location
       let homeURL = FileManager.default.homeDirectoryForCurrentUser
       self.mcpConfigPath = homeURL
@@ -229,6 +237,7 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       self.claudeCommand = "claude"
       self.claudePath = ""
       self.isClaudeCommandFromConfig = false
+      self.preferredBackend = .headless
 
       // Default permission settings
       self.autoApproveLowRisk = false
@@ -427,7 +436,8 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
         permissionTimeoutEnabled: permissionTimeoutEnabled,
         maxConcurrentPermissionRequests: maxConcurrentPermissionRequests,
         disallowedTools: disallowedTools,
-        isClaudeCommandFromConfig: isClaudeCommandFromConfig
+        isClaudeCommandFromConfig: isClaudeCommandFromConfig,
+        preferredBackend: preferredBackend.rawValue
       )
     )
     
