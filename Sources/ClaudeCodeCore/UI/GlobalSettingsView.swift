@@ -334,28 +334,49 @@ struct GlobalSettingsView: View {
         .font(.headline)
         .padding(.top, 8)
 
-      RequirementRow(
-        title: "Node.js 18+",
-        isInstalled: BackendDetector.isNodeInstalled(),
-        installCommand: "brew install node"
-      )
+      VStack(alignment: .leading, spacing: 8) {
+        requirementItem(
+          title: "Node.js 18+",
+          command: "brew install node"
+        )
 
-      RequirementRow(
-        title: "Agent SDK Package",
-        isInstalled: BackendDetector.isAgentSDKInstalled(),
-        installCommand: "npm install -g @anthropic-ai/claude-agent-sdk"
-      )
+        requirementItem(
+          title: "Agent SDK Package",
+          command: "npm install -g @anthropic-ai/claude-agent-sdk"
+        )
 
-      RequirementRow(
-        title: "Claude Authentication",
-        isInstalled: BackendDetector.isClaudeAuthenticated(),
-        installCommand: "claude login"
-      )
+        requirementItem(
+          title: "Claude Authentication",
+          command: "claude login"
+        )
+      }
+
+      Text("Verify in Terminal by running:")
+        .font(.caption)
+        .foregroundColor(.secondary)
+        .padding(.top, 4)
+
+      Text("node --version && npm list -g @anthropic-ai/claude-agent-sdk && claude --version")
+        .font(.system(.caption, design: .monospaced))
+        .textSelection(.enabled)
+        .padding(8)
+        .background(Color.secondary.opacity(0.1))
+        .cornerRadius(4)
 
       HStack(spacing: 12) {
-        Button("Copy All Commands") {
+        Button("Copy All Setup Commands") {
+          let commands = """
+          # Install Node.js (if not installed)
+          brew install node
+
+          # Install Agent SDK package
+          npm install -g @anthropic-ai/claude-agent-sdk
+
+          # Authenticate with Claude (if not already logged in)
+          claude login
+          """
           NSPasteboard.general.clearContents()
-          NSPasteboard.general.setString(BackendDetector.getSetupCommands(), forType: .string)
+          NSPasteboard.general.setString(commands, forType: .string)
         }
         .buttonStyle(.bordered)
 
@@ -371,6 +392,33 @@ struct GlobalSettingsView: View {
     .cornerRadius(8)
   }
 
+  private func requirementItem(title: String, command: String) -> some View {
+    HStack(spacing: 12) {
+      Image(systemName: "chevron.right")
+        .foregroundColor(.secondary)
+        .imageScale(.small)
+
+      VStack(alignment: .leading, spacing: 4) {
+        Text(title)
+          .font(.body)
+
+        Text(command)
+          .font(.system(.caption, design: .monospaced))
+          .foregroundColor(.secondary)
+          .textSelection(.enabled)
+      }
+
+      Spacer()
+
+      Button("Copy") {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(command, forType: .string)
+      }
+      .buttonStyle(.borderless)
+    }
+    .padding(.vertical, 4)
+  }
+
   @State private var initialBackend: BackendType?
 
   private var backendChanged: Bool {
@@ -383,15 +431,22 @@ struct GlobalSettingsView: View {
   private func openTerminalWithSetup() {
     let script = """
     #!/bin/bash
-    echo "Setting up Agent SDK for Claw..."
+    echo "Setting up Agent SDK..."
     echo ""
-    \(BackendDetector.getSetupCommands())
+    echo "# Install Node.js (if not installed)"
+    brew install node
     echo ""
-    echo "Setup complete! Close this window and restart Claw."
+    echo "# Install Agent SDK package"
+    npm install -g @anthropic-ai/claude-agent-sdk
+    echo ""
+    echo "# Authenticate with Claude (if not already logged in)"
+    claude login
+    echo ""
+    echo "Setup complete! Close this window and restart the app."
     read -p "Press Enter to close..."
     """
 
-    let scriptPath = NSTemporaryDirectory() + "claw_setup_agent_sdk.command"
+    let scriptPath = NSTemporaryDirectory() + "agent_sdk_setup.command"
     try? script.write(toFile: scriptPath, atomically: true, encoding: .utf8)
     try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptPath)
     NSWorkspace.shared.open(URL(fileURLWithPath: scriptPath))
