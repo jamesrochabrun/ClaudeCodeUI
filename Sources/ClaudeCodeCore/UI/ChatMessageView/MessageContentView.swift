@@ -259,7 +259,7 @@ struct MessageContentView: View {
   
   @ViewBuilder
   private func editToolContent(rawParams: [String: String]) -> some View {
-    if let filePath = rawParams[JSONKeys.filePath],
+    if let _ = rawParams[JSONKeys.filePath],
        rawParams[JSONKeys.oldString] != nil,
        rawParams[JSONKeys.newString] != nil {
       diffView(editTool: .edit, rawParams: rawParams)
@@ -270,7 +270,7 @@ struct MessageContentView: View {
   
   @ViewBuilder
   private func multiEditToolContent(rawParams: [String: String]) -> some View {
-    if let filePath = rawParams[JSONKeys.filePath],
+    if let _ = rawParams[JSONKeys.filePath],
        rawParams[JSONKeys.edits] != nil {
       diffView(editTool: .multiEdit, rawParams: rawParams)
     } else {
@@ -280,7 +280,7 @@ struct MessageContentView: View {
   
   @ViewBuilder
   private func writeToolContent(rawParams: [String: String]) -> some View {
-    if let filePath = rawParams[JSONKeys.filePath],
+    if let _ = rawParams[JSONKeys.filePath],
        rawParams[JSONKeys.content] != nil {
       diffView(editTool: .write, rawParams: rawParams)
     } else {

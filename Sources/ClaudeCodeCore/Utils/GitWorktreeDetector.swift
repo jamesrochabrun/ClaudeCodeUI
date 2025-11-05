@@ -60,7 +60,7 @@ public class GitWorktreeDetector {
 
     if isWorktree {
       // Parse the .git file to get the main repo path
-      let mainRepoPath = await parseWorktreeGitFile(at: gitPath)
+      let mainRepoPath = parseWorktreeGitFile(at: gitPath)
       return GitWorktreeInfo(
         path: directoryPath,
         branch: branch,

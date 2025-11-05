@@ -120,7 +120,7 @@ extension MCPApprovalTool {
         var options = baseOptions ?? ClaudeCodeOptions()
         
         // Set working directory if provided
-        if let workingDirectory = workingDirectory {
+        if let _ = workingDirectory {
             // Note: This would need to be set on ClaudeCodeConfiguration instead
             // options.workingDirectory = workingDirectory
         }

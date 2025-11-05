@@ -47,7 +47,7 @@ struct TwoSideReviewPanel: View {
         sideLines = processSideLines()
       }
     }
-    .onChange(of: group) { _ in
+    .onChange(of: group) { _,_ in
       sideLines = processSideLines()
     }
   }

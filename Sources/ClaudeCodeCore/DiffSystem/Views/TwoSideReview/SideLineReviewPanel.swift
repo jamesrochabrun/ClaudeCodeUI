@@ -124,8 +124,6 @@ private struct DiffStyleCalculator {
       true
     case (.deleted, .right), (.inserted, .left):
       true
-    default:
-      false
     }
   }
   

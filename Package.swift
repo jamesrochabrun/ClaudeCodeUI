@@ -17,7 +17,7 @@ let package = Package(
     ],
     dependencies: [
         // External dependencies
-        .package(path: "../ClaudeCodeSDK"),  // Temporary: using local for development
+        .package(url: "https://github.com/jamesrochabrun/ClaudeCodeSDK", exact: "1.2.2"),
         .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic", exact: "2.2.0"),
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.3.0"),
         .package(url: "https://github.com/jamesrochabrun/Down", exact: "1.0.0"),
