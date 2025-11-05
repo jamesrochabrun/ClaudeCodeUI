@@ -62,7 +62,7 @@ final class StreamProcessor {
   /// Cancels the current stream processing
   func cancelStream() {
     // Discard any pending session ID since the stream was cancelled
-    if let pending = pendingSessionId {
+    if let _ = pendingSessionId {
       // Discarding pending session ID since stream was cancelled
       pendingSessionId = nil
     }
@@ -187,7 +187,7 @@ final class StreamProcessor {
               self.logger.error("Stream failed with error: \(error.localizedDescription)")
               
               // Discard pending session ID since stream failed
-              if let pending = self.pendingSessionId {
+              if let _ = self.pendingSessionId {
                 // Discarding pending session ID since stream failed
                 self.pendingSessionId = nil
               }
@@ -481,10 +481,7 @@ final class StreamProcessor {
           
           // Formatted value extracted for parameters
         }
-        
-        // Get formatted description for display
-        let formattedDesc = toolUse.input.formattedDescription()
-        
+                
         let toolMessage = MessageFactory.toolUseMessage(
           toolName: toolUse.name,
           input: toolUse.input.formattedDescription(),

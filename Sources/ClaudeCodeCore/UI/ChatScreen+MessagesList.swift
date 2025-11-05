@@ -157,7 +157,7 @@ extension ChatScreen {
       .listStyle(.plain)
       .listRowBackground(Color.clear)
       .scrollContentBackground(.hidden)
-      .onChange(of: viewModel.messages) { newMessages in
+      .onChange(of: viewModel.messages) { _,_ in
         // Scroll to bottom when new messages are added
         if let lastMessage = viewModel.messages.last {
           withAnimation {
@@ -165,7 +165,7 @@ extension ChatScreen {
           }
         }
       }
-      .onChange(of: globalPreferences.defaultWorkingDirectory) { _ in
+      .onChange(of: globalPreferences.defaultWorkingDirectory) { _, _ in
         // Update the current session's working directory if there's no session-specific path
         let newDefault = globalPreferences.defaultWorkingDirectory
         if viewModel.projectPath.isEmpty && !newDefault.isEmpty {

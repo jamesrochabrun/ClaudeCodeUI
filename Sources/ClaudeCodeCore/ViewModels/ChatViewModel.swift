@@ -1386,9 +1386,10 @@ EOF
   /// Validates the working directory before launching subprocess
   /// Throws an error if the directory is invalid, doesn't exist, or has git worktree issues
   private func validateWorkingDirectory() throws {
-    guard let workingDir = claudeClient.configuration.workingDirectory else {
-      // No working directory set - this is OK
-      return
+    guard let workingDir = claudeClient.configuration.workingDirectory, !workingDir.isEmpty else {
+      // No working directory set - this should not happen as we always set a fallback
+      ClaudeCodeLogger.shared.log(.chat, "[ChatViewModel] WARNING: No working directory configured")
+      throw ClaudeCodeError.executionFailed("No working directory set. Please select a directory in Settings or restart the application.")
     }
 
     // Check if directory exists

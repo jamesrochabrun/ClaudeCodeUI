@@ -24,7 +24,7 @@ public struct TerminalLauncher {
     projectPath: String
   ) -> Error? {
     // Get the claude command from configuration
-    let claudeCommand = claudeClient.configuration.command ?? "claude"
+    let claudeCommand = claudeClient.configuration.command
     
     // Find the full path to the claude executable
     guard let claudeExecutablePath = findClaudeExecutable(

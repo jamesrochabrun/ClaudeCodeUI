@@ -80,5 +80,4 @@ private struct LineContentView: View {
     LineView(line: .init(text: "}", type: .unchanged, lineNumber: 13))
   }
   .padding()
-  .previewLayout(.sizeThatFits)
 }

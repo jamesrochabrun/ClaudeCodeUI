@@ -135,16 +135,36 @@ public struct ClaudeCodeContainer: View {
     // Use the command from global preferences (which may have been updated above)
     // This ensures we respect both injected config AND user preferences
     config.command = globalPrefs.claudeCommand
-    
+
     // If the configuration has disallowedTools set, merge them with preferences
     if let configDisallowedTools = config.disallowedTools, !configDisallowedTools.isEmpty {
       // Merge configuration's disallowed tools with preferences
       let combinedDisallowedTools = Set(configDisallowedTools).union(Set(globalPrefs.disallowedTools))
       globalPrefs.disallowedTools = Array(combinedDisallowedTools)
     }
-    
+
+    // CRITICAL: Set working directory BEFORE creating client so backend is initialized with correct directory
+    // Priority: 1) Global preferences (user's explicit selection), 2) Config default, 3) Home directory fallback
+    let workingDirectory: String
+    if !globalPrefs.defaultWorkingDirectory.isEmpty {
+      // User has explicitly set a working directory in preferences
+      workingDirectory = globalPrefs.defaultWorkingDirectory
+      ClaudeCodeLogger.shared.log(.container, "[ClaudeCodeContainer] Using working directory from preferences: \(workingDirectory)")
+    } else if let configPath = claudeCodeConfiguration.workingDirectory, !configPath.isEmpty {
+      // Config provides a default working directory (but don't save to preferences - let user explicitly set it)
+      workingDirectory = configPath
+      ClaudeCodeLogger.shared.log(.container, "[ClaudeCodeContainer] Using working directory from config: \(workingDirectory)")
+    } else {
+      // Fallback to home directory if no working directory is configured
+      workingDirectory = NSHomeDirectory()
+      ClaudeCodeLogger.shared.log(.container, "[ClaudeCodeContainer] No working directory set, using home directory: \(workingDirectory)")
+    }
+
+    // Apply working directory to config before creating client
+    config.workingDirectory = workingDirectory
+
     let claudeClient = try ClaudeCodeClient(configuration: config)
-    
+
     let viewModel = ClaudeCodeCore.ChatViewModel(
       claudeClient: claudeClient,
       sessionStorage: customStorage,
@@ -160,22 +180,10 @@ public struct ClaudeCodeContainer: View {
       },
       onUserMessageSent: onUserMessageSent
     )
-    
-    // Initialize global preference from configuration if not already set
-    // This allows configuration to suggest a default path on first launch
-    // Once set, user's global preference takes precedence (won't be overridden by config changes)
-    if globalPrefs.defaultWorkingDirectory.isEmpty,
-       let configPath = claudeCodeConfiguration.workingDirectory,
-       !configPath.isEmpty {
-      globalPrefs.defaultWorkingDirectory = configPath
-    }
-    
-    // Set the default working directory from global preferences on app launch
-    if !globalPrefs.defaultWorkingDirectory.isEmpty {
-      claudeClient.configuration.workingDirectory = globalPrefs.defaultWorkingDirectory
-      viewModel.projectPath = globalPrefs.defaultWorkingDirectory
-      deps.settingsStorage.setProjectPath(globalPrefs.defaultWorkingDirectory)
-    }
+
+    // Set working directory in view model and settings storage
+    viewModel.projectPath = workingDirectory
+    deps.settingsStorage.setProjectPath(workingDirectory)
     
     // Apply stored claudePath from preferences to ensure it persists across app restarts
     viewModel.updateClaudeCommand(from: globalPrefs)
