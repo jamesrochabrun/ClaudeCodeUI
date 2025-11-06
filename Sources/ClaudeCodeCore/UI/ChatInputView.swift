@@ -39,7 +39,13 @@ struct ChatInputView: View {
   @State private var fileSearchViewModel: FileSearchViewModel? = nil
   @State private var fileSearchAnchor: CGPoint = .zero
   @State private var isUpdatingFileSearch = false
-  
+
+  // Command search properties
+  @State private var showingCommandSearch = false
+  @State private var commandSearchRange: NSRange? = nil
+  @State private var commandSearchViewModel: CommandSearchViewModel? = nil
+  @State private var isUpdatingCommandSearch = false
+
   private let processor = AttachmentProcessor()
   
   // MARK: - Constants
@@ -95,7 +101,34 @@ struct ChatInputView: View {
           ))
         }
       }
-      
+
+      // Command search UI - shown when / is typed at start of message
+      if showingCommandSearch {
+        if let viewModel = commandSearchViewModel {
+          CommandSearchView(
+            viewModel: viewModel,
+            onSelect: { result in
+              insertCommand(result)
+            },
+            onDismiss: {
+              dismissCommandSearch()
+            }
+          )
+          .background(Color(NSColor.controlBackgroundColor))
+          .clipShape(RoundedRectangle(cornerRadius: 12))
+          .overlay(
+            RoundedRectangle(cornerRadius: 12)
+              .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+          )
+          .padding(.horizontal, 12)
+          .padding(.bottom, 8)
+          .transition(.asymmetric(
+            insertion: .move(edge: .bottom).combined(with: .opacity),
+            removal: .move(edge: .bottom).combined(with: .opacity)
+          ))
+        }
+      }
+
       // Main input area
       VStack(alignment: .leading, spacing: 8) {
         VStack(alignment: .leading, spacing: 2) {
@@ -280,10 +313,11 @@ extension ChatInputView {
         .onChange(of: text) { oldValue, newValue in
           // Simple check to avoid freezing
           if newValue.count > 1000 {
-            print("[ChatInputView] Text too long, skipping @ detection")
+            print("[ChatInputView] Text too long, skipping @ and / detection")
             return
           }
           detectAtMention(oldText: oldValue, newText: newValue)
+          detectSlashCommand(oldText: oldValue, newText: newValue)
         }
         .onKeyPress { key in
           handleKeyPress(key)
@@ -312,8 +346,29 @@ extension ChatInputView {
   
   /// Handle keyboard events
   private func handleKeyPress(_ key: KeyPress) -> KeyPress.Result {
+    // When command search is showing, handle navigation keys
+    if showingCommandSearch {
+      switch key.key {
+      case .return:
+        if let result = commandSearchViewModel?.getSelectedResult() {
+          insertCommand(result)
+        }
+        return .handled
+      case .escape:
+        dismissCommandSearch()
+        return .handled
+      case .downArrow:
+        commandSearchViewModel?.selectNext()
+        return .handled
+      case .upArrow:
+        commandSearchViewModel?.selectPrevious()
+        return .handled
+      default:
+        return .ignored
+      }
+    }
     // When file search is showing, handle navigation keys
-    if showingFileSearch {
+    else if showingFileSearch {
       switch key.key {
       case .return:
         if let result = fileSearchViewModel?.getSelectedResult() {
@@ -846,6 +901,152 @@ extension ChatInputView {
     showingFileSearch = false
     fileSearchRange = nil
     fileSearchViewModel?.clearSearch()
+  }
+}
+
+// MARK: - Command Search
+
+extension ChatInputView {
+
+  /// Detect / at start of message and trigger command search
+  private func detectSlashCommand(oldText: String, newText: String) {
+    // Prevent recursive updates
+    guard !isUpdatingCommandSearch else {
+      return
+    }
+
+    // If text was deleted and we're showing search, check if / was deleted
+    if showingCommandSearch && newText.count < oldText.count {
+      // Check if the / character is still present at the search location
+      if let searchRange = commandSearchRange {
+        let nsString = newText as NSString
+        if searchRange.location >= nsString.length ||
+            (searchRange.location < nsString.length && nsString.character(at: searchRange.location) != 47) { // 47 is /
+          dismissCommandSearch()
+          return
+        }
+      }
+    }
+
+    // Check if / was just typed at the start of the message
+    let oldCount = oldText.filter { $0 == "/" }.count
+    let newCount = newText.filter { $0 == "/" }.count
+
+    if newCount > oldCount {
+      // Find the position of the newly typed /
+      if let slashIndex = findNewSlashPosition(oldText: oldText, newText: newText) {
+        // Only trigger if / is at the start (position 0) or after a newline
+        if slashIndex == 0 || (slashIndex > 0 && newText[newText.index(newText.startIndex, offsetBy: slashIndex - 1)] == "\n") {
+          // Initialize command search view model if needed
+          if commandSearchViewModel == nil {
+            commandSearchViewModel = CommandSearchViewModel(projectPath: viewModel.projectPath)
+          }
+
+          // Start command search
+          commandSearchRange = NSRange(location: slashIndex, length: 1)
+          showingCommandSearch = true
+          commandSearchViewModel?.startSearch(query: "")
+        }
+      }
+    } else if showingCommandSearch && !newText.isEmpty {
+      // Update search query if we're already searching
+      updateCommandSearchQuery()
+    } else if newText.isEmpty && showingCommandSearch {
+      // All text deleted, dismiss search
+      dismissCommandSearch()
+    }
+  }
+
+  /// Find position of newly typed / character
+  private func findNewSlashPosition(oldText: String, newText: String) -> Int? {
+    let oldChars = Array(oldText)
+    let newChars = Array(newText)
+
+    // Find where the texts differ
+    var i = 0
+    while i < oldChars.count && i < newChars.count && oldChars[i] == newChars[i] {
+      i += 1
+    }
+
+    // Check if / was inserted at position i
+    if i < newChars.count && newChars[i] == "/" {
+      return i
+    }
+
+    return nil
+  }
+
+  /// Update command search query based on text after /
+  private func updateCommandSearchQuery() {
+    guard let searchRange = commandSearchRange else { return }
+
+    // Validate search range
+    let nsString = text as NSString
+    guard searchRange.location < nsString.length else {
+      dismissCommandSearch()
+      return
+    }
+
+    // The search range starts at / character
+    let slashLocation = searchRange.location
+
+    // Find the end of the search query (until space, newline, or end of text)
+    var queryEnd = slashLocation + 1 // Start after the / symbol
+    while queryEnd < nsString.length {
+      let char = nsString.character(at: queryEnd)
+      if char == 32 || char == 10 { // space or newline
+        break
+      }
+      queryEnd += 1
+    }
+
+    // Extract the full query after / (not including /)
+    let queryStart = slashLocation + 1
+    let queryLength = queryEnd - queryStart
+
+    if queryStart <= nsString.length && queryLength >= 0 && queryStart + queryLength <= nsString.length {
+      let query = nsString.substring(with: NSRange(location: queryStart, length: queryLength))
+      commandSearchViewModel?.searchQuery = query
+
+      // Update the search range to include / and the query
+      commandSearchRange = NSRange(location: slashLocation, length: queryEnd - slashLocation)
+    }
+  }
+
+  /// Insert selected command into text
+  private func insertCommand(_ result: CommandResult) {
+    guard let searchRange = commandSearchRange else { return }
+
+    // Validate that the range is still valid
+    let nsString = text as NSString
+    guard searchRange.location >= 0,
+          searchRange.location + searchRange.length <= nsString.length else {
+      dismissCommandSearch()
+      return
+    }
+
+    // Set flag to prevent onChange from triggering command search
+    isUpdatingCommandSearch = true
+
+    // Replace the /query with /command-name followed by space
+    let replacement = result.displayName + " "
+    let newText = nsString.replacingCharacters(in: searchRange, with: replacement)
+    text = newText
+
+    // Dismiss search
+    dismissCommandSearch()
+
+    // Reset flag after a short delay
+    DispatchQueue.main.async {
+      self.isUpdatingCommandSearch = false
+    }
+  }
+
+  /// Dismiss command search and clear state
+  private func dismissCommandSearch() {
+    showingCommandSearch = false
+    commandSearchRange = nil
+    commandSearchViewModel?.clearSearch()
   }
 }
 
