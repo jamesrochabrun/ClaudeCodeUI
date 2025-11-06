@@ -27,21 +27,16 @@ final class CommandScanner: CommandScannerProtocol {
   private(set) var projectPath: String?
 
   func loadCommands(projectPath: String?) async {
-    print("[CommandScanner] Loading commands with projectPath: \(projectPath ?? "nil")")
     self.projectPath = projectPath
     await scanAllCommands()
-    print("[CommandScanner] Loaded \(allCommands.count) total commands")
   }
 
   func searchCommands(query: String, maxResults: Int) -> [SlashCommand] {
     let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    print("[CommandScanner] Searching with query: '\(trimmedQuery)' (total commands: \(allCommands.count))")
 
     // If query is empty, return all commands (up to maxResults)
     if trimmedQuery.isEmpty {
-      let results = Array(allCommands.prefix(maxResults))
-      print("[CommandScanner] Returning \(results.count) commands (empty query)")
-      return results
+      return Array(allCommands.prefix(maxResults))
     }
 
     // Filter commands by name (substring match)
@@ -50,7 +45,6 @@ final class CommandScanner: CommandScannerProtocol {
       command.fullName.lowercased().contains(trimmedQuery)
     }
 
-    print("[CommandScanner] Returning \(filtered.count) filtered commands")
     return Array(filtered.prefix(maxResults))
   }
 
@@ -68,45 +62,32 @@ final class CommandScanner: CommandScannerProtocol {
 
   /// Scans both user and project command directories
   private func scanAllCommands() async {
-    print("[CommandScanner] Starting scan of all command directories")
     var commands: [SlashCommand] = []
 
     // Scan user commands
     let userCommands = await scanCommandDirectory(scope: .user)
-    print("[CommandScanner] Found \(userCommands.count) user commands")
     commands.append(contentsOf: userCommands)
 
     // Scan project commands if projectPath is available
     if projectPath != nil {
       let projectCommands = await scanCommandDirectory(scope: .project)
-      print("[CommandScanner] Found \(projectCommands.count) project commands")
       commands.append(contentsOf: projectCommands)
-    } else {
-      print("[CommandScanner] No projectPath set, skipping project commands")
     }
 
     // Sort by name for consistent ordering
     allCommands = commands.sorted { $0.name < $1.name }
-    print("[CommandScanner] Total commands after sorting: \(allCommands.count)")
-    for cmd in allCommands {
-      print("[CommandScanner]   - \(cmd.displayFullName) (\(cmd.scope.displayName))")
-    }
   }
 
   /// Scans a single command directory (user or project)
   private func scanCommandDirectory(scope: CommandScope) -> [SlashCommand] {
     guard let commandsPath = commandsDirectoryPath(for: scope) else {
-      print("[CommandScanner] No path for scope: \(scope.displayName)")
       return []
     }
-
-    print("[CommandScanner] Scanning \(scope.displayName) directory: \(commandsPath)")
 
     // Check if directory exists
     var isDirectory: ObjCBool = false
     guard FileManager.default.fileExists(atPath: commandsPath, isDirectory: &isDirectory),
           isDirectory.boolValue else {
-      print("[CommandScanner] Directory does not exist or is not a directory: \(commandsPath)")
       return []
     }
 

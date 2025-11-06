@@ -21,7 +21,6 @@ public final class CommandSearchViewModel {
   public var searchQuery: String = "" {
     didSet {
       if searchQuery != oldValue {
-        print("[CommandSearchViewModel] searchQuery changed from '\(oldValue)' to '\(searchQuery)'")
         performSearch()
       }
     }
@@ -29,7 +28,6 @@ public final class CommandSearchViewModel {
 
   public var searchResults: [CommandResult] = [] {
     didSet {
-      print("[CommandSearchViewModel] searchResults didSet called: \(searchResults.count) results (was \(oldValue.count))")
       // Reset selection when results change
       if searchResults.isEmpty {
         selectedIndex = 0
@@ -48,15 +46,12 @@ public final class CommandSearchViewModel {
   // MARK: - Initialization
 
   public init(projectPath: String? = nil) {
-    print("[CommandSearchViewModel] Initializing with projectPath: \(projectPath ?? "nil")")
     self.projectPath = projectPath
     self.commandScanner = CommandScanner(projectPath: projectPath)
 
     // Load commands asynchronously on init
     loadTask = Task { @MainActor in
-      print("[CommandSearchViewModel] Starting command loading task")
       await commandScanner.loadCommands(projectPath: projectPath)
-      print("[CommandSearchViewModel] Command loading task completed")
     }
   }
 
@@ -71,7 +66,6 @@ public final class CommandSearchViewModel {
   }
 
   public func startSearch(query: String) {
-    print("[CommandSearchViewModel] startSearch called with query: '\(query)'")
     searchQuery = query
     // Force search even if query hasn't changed (e.g., from "" to "")
     performSearch()
@@ -115,7 +109,6 @@ public final class CommandSearchViewModel {
   // MARK: - Private Methods
 
   private func performSearch() {
-    print("[CommandSearchViewModel] performSearch called with query: '\(searchQuery)'")
     // Cancel any existing search
     searchTask?.cancel()
 
@@ -123,14 +116,11 @@ public final class CommandSearchViewModel {
 
     searchTask = Task { @MainActor in
       do {
-        print("[CommandSearchViewModel] Waiting for command loading to complete...")
         // Wait for initial command loading to complete if it's still running
         await loadTask?.value
-        print("[CommandSearchViewModel] Command loading complete, proceeding with search")
 
         // Add debounce only if there's a query
         if !searchQuery.isEmpty {
-          print("[CommandSearchViewModel] Debouncing search...")
           try await Task.sleep(nanoseconds: 150_000_000) // 0.15 seconds
           try Task.checkCancellation()
         }
@@ -138,7 +128,6 @@ public final class CommandSearchViewModel {
         // Search commands (synchronous operation, but wrapped in Task for consistency)
         // Empty query returns all commands
         let commands = commandScanner.searchCommands(query: searchQuery, maxResults: 100)
-        print("[CommandSearchViewModel] Got \(commands.count) commands from scanner")
 
         // Convert to CommandResult
         let results = commands.map { command in
@@ -146,18 +135,15 @@ public final class CommandSearchViewModel {
         }
 
         if !Task.isCancelled {
-          print("[CommandSearchViewModel] Setting \(results.count) results")
           self.searchResults = results
           self.selectedIndex = results.isEmpty ? 0 : 0
         }
       } catch is CancellationError {
-        print("[CommandSearchViewModel] Search cancelled")
+        // Search cancelled, no action needed
       } catch {
-        print("[CommandSearchViewModel] Search error: \(error)")
         self.searchResults = []
       }
       self.isSearching = false
-      print("[CommandSearchViewModel] Search completed, isSearching = false")
     }
   }
 }
