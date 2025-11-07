@@ -7,6 +7,42 @@
 
 import Foundation
 
+/// Tracks the lifecycle state of diffs for Edit/Write/MultiEdit tools
+///
+/// This struct maintains the state of which diffs have been applied or rejected,
+/// along with timestamps for each action. It enables auto-collapsing diffs in the UI
+/// to improve performance in long sessions.
+public struct DiffLifecycleState: Codable, Equatable {
+  /// Set of diff group IDs that have been applied
+  public var appliedDiffGroupIDs: Set<String>
+
+  /// Set of diff group IDs that have been rejected
+  public var rejectedDiffGroupIDs: Set<String>
+
+  /// Timestamps when each diff was applied (keyed by group ID)
+  public var appliedTimestamps: [String: Date]
+
+  /// Timestamps when each diff was rejected (keyed by group ID)
+  public var rejectedTimestamps: [String: Date]
+
+  /// Last time this state was modified
+  public var lastModified: Date
+
+  public init(
+    appliedDiffGroupIDs: Set<String> = [],
+    rejectedDiffGroupIDs: Set<String> = [],
+    appliedTimestamps: [String: Date] = [:],
+    rejectedTimestamps: [String: Date] = [:],
+    lastModified: Date = Date()
+  ) {
+    self.appliedDiffGroupIDs = appliedDiffGroupIDs
+    self.rejectedDiffGroupIDs = rejectedDiffGroupIDs
+    self.appliedTimestamps = appliedTimestamps
+    self.rejectedTimestamps = rejectedTimestamps
+    self.lastModified = lastModified
+  }
+}
+
 /// Represents a single message in the chat conversation
 ///
 /// ChatMessage encapsulates all the information needed to display and manage
@@ -62,7 +98,11 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
   /// The approval status for plan messages (ExitPlanMode tool)
   /// - Note: Used to track whether a plan has been approved, denied, or approved with auto-accept
   public var planApprovalStatus: PlanApprovalStatus?
-  
+
+  /// Lifecycle state for diffs (Edit/Write/MultiEdit tools)
+  /// - Note: Tracks which diffs have been applied/rejected for auto-collapse behavior
+  public var diffLifecycleState: DiffLifecycleState?
+
   public init(
     id: UUID = UUID(),
     role: MessageRole,
@@ -78,7 +118,8 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
     wasCancelled: Bool = false,
     taskGroupId: UUID? = nil,
     isTaskContainer: Bool = false,
-    planApprovalStatus: PlanApprovalStatus? = nil
+    planApprovalStatus: PlanApprovalStatus? = nil,
+    diffLifecycleState: DiffLifecycleState? = nil
   ) {
     self.id = id
     self.role = role
@@ -95,6 +136,7 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
     self.taskGroupId = taskGroupId
     self.isTaskContainer = isTaskContainer
     self.planApprovalStatus = planApprovalStatus
+    self.diffLifecycleState = diffLifecycleState
   }
   
   public static func == (lhs: ChatMessage, rhs: ChatMessage) -> Bool {

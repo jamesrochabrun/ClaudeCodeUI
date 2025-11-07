@@ -34,7 +34,10 @@ public struct ClaudeCodeEditsView: View {
   
   /// Shared diff store from parent - required to avoid duplicate processing
   let diffStore: DiffStateManager?
-  
+
+  /// Diff lifecycle state for showing compact views for applied/rejected diffs
+  let diffLifecycleState: DiffLifecycleState?
+
   @State private var isProcessing = false
   @State private var processingError: String?
   @State private var viewMode: DiffViewMode = .grouped
@@ -63,7 +66,8 @@ public struct ClaudeCodeEditsView: View {
     terminalService: TerminalService,
     projectPath: String? = nil,
     onExpandRequest: (() -> Void)? = nil,
-    diffStore: DiffStateManager? = nil
+    diffStore: DiffStateManager? = nil,
+    diffLifecycleState: DiffLifecycleState? = nil
   ) {
     self.messageID = messageID
     self.editTool = editTool
@@ -72,6 +76,7 @@ public struct ClaudeCodeEditsView: View {
     self.projectPath = projectPath
     self.onExpandRequest = onExpandRequest
     self.diffStore = diffStore
+    self.diffLifecycleState = diffLifecycleState
   }
   
   public var body: some View {
@@ -87,7 +92,8 @@ public struct ClaudeCodeEditsView: View {
           state: activeDiffStore.getState(for: messageID),
           viewMode: $viewMode,
           toolParameters: toolParameters,
-          onExpandRequest: onExpandRequest)
+          onExpandRequest: onExpandRequest,
+          diffLifecycleState: diffLifecycleState)
           .transition(.asymmetric(
             insertion: .opacity.combined(with: .move(edge: .top)),
             removal: .opacity
@@ -148,7 +154,8 @@ private struct DiffContentView: View {
   @Binding var viewMode: ClaudeCodeEditsView.DiffViewMode
   let toolParameters: [String: String]
   let onExpandRequest: (() -> Void)?
-  
+  let diffLifecycleState: DiffLifecycleState?
+
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       HeaderView(
@@ -165,19 +172,43 @@ private struct DiffContentView: View {
         ScrollView {
           LazyVStack(spacing: 16) { // Changed to LazyVStack for better performance
             ForEach(state.diffGroups) { group in
-              DiffGroupView(
-                group: group,
-                state: state,
-                viewMode: viewMode,
-                toolParameters: toolParameters
-              )
-              .padding(.horizontal)
-              .id(group.id) // Ensure proper view identity
+              diffGroupContent(for: group)
             }
           }
           .padding(.vertical, 8) // Add vertical padding to the container
         }
       }
+    }
+  }
+
+  @ViewBuilder
+  private func diffGroupContent(for group: DiffTerminalService.DiffGroup) -> some View {
+    let groupIDString = group.id.uuidString
+
+    // Check if this diff has been reviewed (collapsed)
+    if let lifecycle = diffLifecycleState,
+       lifecycle.appliedDiffGroupIDs.contains(groupIDString) {
+      // Show compact reviewed view
+      CompactDiffStatusView(
+        fileName: toolParameters[ParameterKeys.filePath] ?? "Unknown file",
+        timestamp: lifecycle.appliedTimestamps[groupIDString],
+        onTapToExpand: {
+          // Expand to show full diff in modal
+          onExpandRequest?()
+        }
+      )
+      .padding(.horizontal)
+      .id(group.id)
+    } else {
+      // Show full diff (pending or no lifecycle state)
+      DiffGroupView(
+        group: group,
+        state: state,
+        viewMode: viewMode,
+        toolParameters: toolParameters
+      )
+      .padding(.horizontal)
+      .id(group.id) // Ensure proper view identity
     }
   }
 }

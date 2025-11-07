@@ -165,7 +165,32 @@ struct MessageContentView: View {
       return false
     }
   }
-  
+
+  /// Determines if diffs for Edit/Write/MultiEdit tools should be shown in compact form.
+  /// Returns true if there are any messages after this tool's result in the conversation,
+  /// indicating the user has moved on (either accepted, rejected, or sent a new message).
+  private var shouldCollapseDiff: Bool {
+    guard let viewModel = viewModel,
+          message.messageType == .toolUse,
+          let toolName = message.toolName,
+          ["Edit", "Write", "MultiEdit"].contains(toolName) else {
+      return false
+    }
+
+    // Get all messages in the conversation
+    let allMessages = viewModel.getCurrentMessages()
+
+    // Find the index of this tool use message
+    guard let currentIndex = allMessages.firstIndex(where: { $0.id == message.id }) else {
+      return false
+    }
+
+    // Check if there are at least 2 more messages after this one:
+    // - Next message should be the tool result
+    // - Any message after that means user has moved on
+    return currentIndex + 2 < allMessages.count
+  }
+
   var body: some View {
     contentView
       .sheet(item: $modalDiffData) { data in
@@ -176,6 +201,7 @@ struct MessageContentView: View {
           terminalService: terminalService,
           projectPath: projectPath,
           diffStore: diffStateManager,
+          diffLifecycleState: nil,
           onDismiss: {
             modalDiffData = nil
           }
@@ -301,7 +327,8 @@ struct MessageContentView: View {
           onExpandRequest: {
             modalDiffData = DiffModalData(messageID: message.id, tool: editTool, params: rawParams)
           },
-          diffStore: diffStore
+          diffStore: diffStore,
+          diffLifecycleState: effectiveDiffLifecycleState
         )
         .id(message.id) // Force view recreation on message change
         .transition(.asymmetric(
@@ -315,7 +342,30 @@ struct MessageContentView: View {
     }
     .animation(.easeInOut(duration: 0.2), value: diffStateManager != nil)
   }
-  
+
+  /// Computes the effective diff lifecycle state based on message position.
+  /// If the user has moved on (subsequent messages exist), auto-collapse all diffs.
+  private var effectiveDiffLifecycleState: DiffLifecycleState? {
+    if shouldCollapseDiff {
+      guard let diffStore = diffStateManager else { return nil }
+      let diffState = diffStore.getState(for: message.id)
+      guard !diffState.diffGroups.isEmpty else { return nil }
+
+      var autoCollapseState = DiffLifecycleState()
+      for group in diffState.diffGroups {
+        let groupIDString = group.id.uuidString
+        // Mark as applied - changes have been reviewed
+        autoCollapseState.appliedDiffGroupIDs.insert(groupIDString)
+        autoCollapseState.appliedTimestamps[groupIDString] = Date()
+      }
+      autoCollapseState.lastModified = Date()
+      return autoCollapseState
+    }
+
+    // Return persisted state if it exists (for future use)
+    return message.diffLifecycleState
+  }
+
   /// Default display for tool messages that don't have specialized views.
   /// Uses ToolDisplayView for consistent formatting of tool parameters and results.
   @ViewBuilder
