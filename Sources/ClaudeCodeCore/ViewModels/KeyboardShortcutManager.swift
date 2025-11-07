@@ -8,16 +8,26 @@
 import SwiftUI
 import KeyboardShortcuts
 import AppKit
+import Combine
+import CCXcodeObserverServiceInterface
 
 @Observable
 class KeyboardShortcutManager {
   var capturedText: String = ""
   var showCaptureAnimation = false
   var shouldFocusTextEditor = false
-  
-  init() {
+
+  private let xcodeObserver: XcodeObserver
+  private var stateSubscription: AnyCancellable?
+
+  init(xcodeObserver: XcodeObserver) {
+    self.xcodeObserver = xcodeObserver
     setupShortcuts()
-    KeyboardShortcuts.enable([.captureWithI])
+    setupXcodeObservation()
+  }
+
+  deinit {
+    stateSubscription?.cancel()
   }
   
   private func setupShortcuts() {
@@ -28,7 +38,30 @@ class KeyboardShortcutManager {
       }
     }
   }
-  
+
+  private func setupXcodeObservation() {
+    // Subscribe to Xcode state changes to enable/disable cmd+i hotkey
+    stateSubscription = xcodeObserver.statePublisher
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] state in
+        self?.updateHotkeyState(for: state)
+      }
+
+    // Set initial state
+    updateHotkeyState(for: xcodeObserver.state)
+  }
+
+  private func updateHotkeyState(for state: XcodeObserver.State) {
+    // Enable cmd+i only when at least one Xcode instance is active
+    let hasActiveXcode = state.knownState?.contains(where: { $0.isActive }) ?? false
+
+    if hasActiveXcode {
+      KeyboardShortcuts.enable([.captureWithI])
+    } else {
+      KeyboardShortcuts.disable([.captureWithI])
+    }
+  }
+
   private func captureSelectedText() {
     // Get current selection from system clipboard
     let pasteboard = NSPasteboard.general

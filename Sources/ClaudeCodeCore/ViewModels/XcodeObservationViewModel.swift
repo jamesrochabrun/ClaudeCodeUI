@@ -45,8 +45,15 @@ public final class XcodeObservationViewModel {
     startPermissionCheck()
   }
   
+  // MARK: - Public Properties
+
+  /// Exposes the underlying XcodeObserver for other components
+  public var observer: XcodeObserver {
+    xcodeObserver
+  }
+
   // MARK: - Public Methods
-  
+
   /// Cleans up resources (should be called before deallocation)
   func cleanup() {
     permissionCheckTimer?.invalidate()
