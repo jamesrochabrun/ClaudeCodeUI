@@ -192,6 +192,7 @@ public struct ChatScreen: View {
     }
     .onChange(of: keyboardManager.capturedText, keyboardTextChanged)
     .onChange(of: keyboardManager.shouldFocusTextEditor, focusTextEditorChanged)
+    .onChange(of: keyboardManager.shouldRefreshObservation, refreshObservationChanged)
   }
   
   // MARK: - Subviews
@@ -297,9 +298,6 @@ public struct ChatScreen: View {
       // Clear chat button
       clearChatButton
 
-      // Refresh Xcode observation button
-      refreshObservationButton
-
       // Settings button
       settingsButton
     }
@@ -327,19 +325,6 @@ public struct ChatScreen: View {
         .font(.title2)
     }
     .disabled(viewModel.messages.isEmpty)
-  }
-
-  @ViewBuilder
-  private var refreshObservationButton: some View {
-    if xcodeObservationViewModel.hasAccessibilityPermission {
-      Button(action: {
-        xcodeObservationViewModel.restartObservation()
-      }) {
-        Image(systemName: "eye.circle")
-          .font(.title2)
-      }
-      .help("Refresh Xcode observation")
-    }
   }
 
   @ViewBuilder
@@ -390,6 +375,15 @@ public struct ChatScreen: View {
       triggerTextEditorFocus = true
       // Reset the flag after using it
       keyboardManager.shouldFocusTextEditor = false
+    }
+  }
+
+  private func refreshObservationChanged(_: Bool, shouldRefresh: Bool) {
+    if shouldRefresh {
+      // Restart observation (clears dismissed files and refreshes)
+      xcodeObservationViewModel.restartObservation()
+      // Reset the flag after using it
+      keyboardManager.shouldRefreshObservation = false
     }
   }
   

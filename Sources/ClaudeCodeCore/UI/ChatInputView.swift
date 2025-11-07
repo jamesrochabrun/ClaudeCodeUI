@@ -46,6 +46,9 @@ struct ChatInputView: View {
   @State private var commandSearchViewModel: CommandSearchViewModel? = nil
   @State private var isUpdatingCommandSearch = false
 
+  // Tip preferences
+  @StateObject private var tipManager = TipPreferencesManager()
+
   private let processor = AttachmentProcessor()
   
   // MARK: - Constants
@@ -150,6 +153,21 @@ struct ChatInputView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(inputBorder)
         PermissionModeButton(mode: $viewModel.permissionMode)
+
+        // Dismissable tip about cmd+i functionality
+        if !tipManager.isDismissed(.cmdITipV1) {
+          TipBannerView(
+            message: TipPreferencesManager.TipID.cmdITipV1.displayMessage,
+            icon: TipPreferencesManager.TipID.cmdITipV1.iconName,
+            onDismiss: {
+              withAnimation(.easeInOut(duration: 0.2)) {
+                tipManager.dismiss(.cmdITipV1)
+              }
+            }
+          )
+          .padding(.top, 4)
+          .transition(.move(edge: .top).combined(with: .opacity))
+        }
       }
       .padding(.horizontal, 12)
       .padding(.bottom, 12)
@@ -158,6 +176,7 @@ struct ChatInputView: View {
     .animation(.easeInOut(duration: 0.2), value: xcodeObservationViewModel.workspaceModel.activeFile?.name)
     .animation(.easeInOut(duration: 0.2), value: contextManager.context.codeSelections.count)
     .animation(.easeInOut(duration: 0.15), value: viewModel.permissionMode)
+    .animation(.easeInOut(duration: 0.2), value: tipManager.isDismissed(.cmdITipV1))
     .onChange(of: viewModel.projectPath) { oldValue, newValue in
       if !newValue.isEmpty && newValue != oldValue {
         fileSearchViewModel?.updateProjectPath(newValue)
@@ -470,8 +489,8 @@ extension ChatInputView {
           isRemovable: true
         ),
         onRemove: {
-          // Clear the active file from workspace observation
-          xcodeObservationViewModel.clearActiveFile()
+          // Dismiss the active file and prevent re-observation
+          xcodeObservationViewModel.dismissActiveFile()
         },
         isPinned: false,
         onTogglePin: {
