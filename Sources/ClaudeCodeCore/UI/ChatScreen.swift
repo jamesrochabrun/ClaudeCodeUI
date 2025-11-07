@@ -58,6 +58,7 @@ public struct ChatScreen: View {
     _customPermissionService = State(initialValue: customPermissionService)
     _columnVisibility = columnVisibility
     self.uiConfiguration = uiConfiguration
+    _keyboardManager = State(initialValue: KeyboardShortcutManager(xcodeObserver: xcodeObservationViewModel.observer))
   }
   
   /// The view model managing the chat conversation state, messages, and streaming
@@ -103,7 +104,7 @@ public struct ChatScreen: View {
   @State var settingsTypeToShow: SettingsType = .session
   
   /// Manages keyboard shortcuts and captures text from external sources
-  @State private var keyboardManager = KeyboardShortcutManager()
+  @State private var keyboardManager: KeyboardShortcutManager
   
   /// Triggers focus on the text editor when keyboard shortcuts are activated
   @State private var triggerTextEditorFocus = false
