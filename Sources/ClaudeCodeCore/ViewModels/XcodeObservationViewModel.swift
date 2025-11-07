@@ -32,10 +32,13 @@ public final class XcodeObservationViewModel {
   private(set) var hasAccessibilityPermission: Bool = false
   
   // MARK: - Private Properties
-  
+
   private let xcodeObserver: XcodeObserver
   private var stateSubscription: AnyCancellable?
   private var permissionCheckTimer: Timer?
+
+  /// Set of file paths that user has dismissed (session-only tracking)
+  private var dismissedFilePaths: Set<String> = []
   
   // MARK: - Initialization
   
@@ -83,13 +86,16 @@ public final class XcodeObservationViewModel {
   
   /// Restarts the entire observation system
   func restartObservation() {
-    
+
+    // Clear dismissed files so they can be observed again
+    dismissedFilePaths.removeAll()
+
     // Clear current workspace model
     workspaceModel = XcodeWorkspaceModel()
-    
+
     // Restart the observer
     xcodeObserver.restartObservation()
-    
+
     // The state will be updated via the subscription when observation restarts
   }
   
@@ -102,6 +108,25 @@ public final class XcodeObservationViewModel {
       selectedText: workspaceModel.selectedText,
       timestamp: workspaceModel.timestamp
     )
+  }
+
+  /// Dismisses the active file and adds it to the dismissed files set
+  func dismissActiveFile() {
+    // Add to dismissed set if there's an active file
+    if let activePath = workspaceModel.activeFile?.path {
+      dismissedFilePaths.insert(activePath)
+    }
+
+    // Clear from workspace model
+    clearActiveFile()
+  }
+
+  /// Restores a dismissed file by removing it from the dismissed set and forcing re-observation
+  func restoreDismissedFile(path: String) {
+    dismissedFilePaths.remove(path)
+
+    // Force a refresh to re-observe the file if it's currently focused in Xcode
+    refresh()
   }
   
   /// Gets the current selection from Xcode
@@ -167,17 +192,22 @@ public final class XcodeObservationViewModel {
     // Extract workspace name
     let workspaceName = workspace.documentURL?.deletingPathExtension().lastPathComponent
     
-    // Extract active file
+    // Extract active file (skip if user has dismissed it)
     let activeFile: FileInfo? = workspace.editors
       .first(where: { $0.isFocussed })
       .flatMap { editor in
         guard let url = editor.activeTabURL else {
           return nil
         }
-        
+
+        // Skip if this file path has been dismissed by the user
+        if dismissedFilePaths.contains(url.path) {
+          return nil
+        }
+
         // Use activeTab if available, otherwise extract filename from URL
         let fileName = editor.activeTab ?? url.lastPathComponent
-        
+
         return FileInfo(
           path: url.path,
           name: fileName,
