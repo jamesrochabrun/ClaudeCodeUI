@@ -18,7 +18,8 @@ public struct DiffModalView: View {
   let terminalService: TerminalService
   let projectPath: String?
   let diffStore: DiffStateManager? // Shared from parent, never creates its own
-  
+  let diffLifecycleState: DiffLifecycleState?
+
   let onDismiss: () -> Void
   
   @State private var viewMode: ClaudeCodeEditsView.DiffViewMode = .grouped
@@ -33,6 +34,7 @@ public struct DiffModalView: View {
     terminalService: TerminalService,
     projectPath: String? = nil,
     diffStore: DiffStateManager? = nil,
+    diffLifecycleState: DiffLifecycleState? = nil,
     onDismiss: @escaping () -> Void
   ) {
     self.messageID = messageID
@@ -41,6 +43,7 @@ public struct DiffModalView: View {
     self.terminalService = terminalService
     self.projectPath = projectPath
     self.diffStore = diffStore
+    self.diffLifecycleState = diffLifecycleState
     self.onDismiss = onDismiss
   }
   
@@ -69,7 +72,8 @@ public struct DiffModalView: View {
         toolParameters: toolParameters,
         terminalService: terminalService,
         projectPath: projectPath,
-        diffStore: diffStore
+        diffStore: diffStore,
+        diffLifecycleState: diffLifecycleState
       )
       .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
