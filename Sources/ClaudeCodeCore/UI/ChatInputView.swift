@@ -318,11 +318,6 @@ extension ChatInputView {
         .onAppear {
           isFocused = true
         }
-        .onChange(of: isFocused) { _, newValue in
-          if newValue {
-            xcodeObservationViewModel.restartObservation()
-          }
-        }
         .onChange(of: triggerFocus) { _, shouldFocus in
           if shouldFocus {
             isFocused = true

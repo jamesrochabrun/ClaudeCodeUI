@@ -104,11 +104,11 @@ final class StreamProcessor {
       var subscription: AnyCancellable?
       
       timeoutTask = Task { [weak self] in
-        try? await Task.sleep(nanoseconds: 25_000_000_000) // 25 seconds
+        try? await Task.sleep(nanoseconds: 120_000_000_000) // 120 seconds
         if !hasReceivedData && !Task.isCancelled {
           guard let self = self else { return }
-          self.logger.error("Stream timeout - no data received within 25 seconds")
-          
+          self.logger.error("Stream timeout - no data received within 120 seconds")
+
           // Cancel the stream subscription to prevent completion handler from running
           subscription?.cancel()
           self.cancellables.removeAll()
@@ -125,7 +125,7 @@ final class StreamProcessor {
           self.activeContinuation = nil
 
           // Call error handler and resume continuation
-          onError?(ClaudeCodeError.timeout(25.0))
+          onError?(ClaudeCodeError.timeout(120.0))
           continuation.resume()
         }
       }
