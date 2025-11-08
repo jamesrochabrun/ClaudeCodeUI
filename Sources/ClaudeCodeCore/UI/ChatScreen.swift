@@ -120,6 +120,12 @@ public struct ChatScreen: View {
   /// Controls the visibility of the delete confirmation dialog
   @State private var showDeleteConfirmation = false
 
+  /// Controls the visibility of the session options dialog (terminal vs new session)
+  @State private var showSessionOptions = false
+
+  /// Controls the visibility of the session resumed alert
+  @State private var showResumeAlert = false
+
   /// Global preferences storage for observing default working directory changes
   @Environment(GlobalPreferencesStorage.self) var globalPreferences
 
@@ -189,6 +195,24 @@ public struct ChatScreen: View {
       } else {
         Text("Are you sure you want to clear the conversation? This action cannot be undone.")
       }
+    }
+    .confirmationDialog("Continue Session", isPresented: $showSessionOptions) {
+      Button("Resume in New Session") {
+        resumeInNewSession()
+      }
+      Button("Follow on Terminal") {
+        if let sessionId = viewModel.activeSessionId {
+          launchTerminalWithSession(sessionId)
+        }
+      }
+      Button("Cancel", role: .cancel) { }
+    } message: {
+      Text("Choose how to continue this conversation")
+    }
+    .alert("Session Resumed!", isPresented: $showResumeAlert) {
+      // No buttons - will auto-dismiss
+    } message: {
+      Text("You can now continue your conversation")
     }
     .onChange(of: keyboardManager.capturedText, keyboardTextChanged)
     .onChange(of: keyboardManager.shouldFocusTextEditor, focusTextEditorChanged)
@@ -305,14 +329,14 @@ public struct ChatScreen: View {
   
   @ViewBuilder
   private var copySessionButton: some View {
-    if let sessionId = viewModel.activeSessionId {
+    if viewModel.activeSessionId != nil {
       Button(action: {
-        launchTerminalWithSession(sessionId)
+        showSessionOptions = true
       }) {
-        Image(systemName: isCopied ? "checkmark" : "terminal")
+        Image(systemName: isCopied ? "checkmark" : "ellipsis.vertical.bubble")
           .font(.title2)
       }
-      .help("Continue in Terminal")
+      .help("Continue Session")
       .disabled(isCopied)
     }
   }
@@ -404,13 +428,50 @@ public struct ChatScreen: View {
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(text, forType: .string)
 #endif
-    
+
     isCopied = true
-    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+    Task { @MainActor in
+      try? await Task.sleep(for: .seconds(2))
       isCopied = false
     }
   }
   
+  private func resumeInNewSession() {
+    guard let sessionId = viewModel.activeSessionId else { return }
+
+    // Get the current working directory
+    let workingDirectory = viewModel.projectPath
+
+    // Clear the current conversation UI (removes all visible messages)
+    viewModel.clearConversation()
+
+    // Keep the session ID active so next message continues this conversation
+    viewModel.sessionManager.selectSession(id: sessionId)
+
+    // Set the working directory
+    if !workingDirectory.isEmpty {
+      viewModel.claudeClient.configuration.workingDirectory = workingDirectory
+      viewModel.projectPath = workingDirectory
+      viewModel.settingsStorage.setProjectPath(workingDirectory)
+    }
+
+    // Show success alert
+    showResumeAlert = true
+
+    // Auto-dismiss alert after 1.5 seconds
+    Task { @MainActor in
+      try? await Task.sleep(for: .seconds(1.5))
+      showResumeAlert = false
+    }
+
+    // Show checkmark on button
+    isCopied = true
+    Task { @MainActor in
+      try? await Task.sleep(for: .seconds(2))
+      isCopied = false
+    }
+  }
+
   private func launchTerminalWithSession(_ sessionId: String) {
     // Use the TerminalLauncher helper to launch Terminal
     if let error = TerminalLauncher.launchTerminalWithSession(
@@ -423,7 +484,8 @@ public struct ChatScreen: View {
     } else {
       // Show success indicator
       isCopied = true
-      DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+      Task { @MainActor in
+        try? await Task.sleep(for: .seconds(2))
         isCopied = false
       }
     }
