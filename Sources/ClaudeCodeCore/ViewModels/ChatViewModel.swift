@@ -346,7 +346,9 @@ EOF
   ///   - onSessionChange: Optional callback when session changes
   /// Convenience initializer for simple integration (uses defaults)
   public convenience init() {
-    let claudeClient = ClaudeCode()
+    // Create Claude Code client with default configuration
+    // This will use the Claude CLI as a subprocess - no API key needed
+    let claudeClient = (try? ClaudeCodeClient()) ?? ClaudeCodeClient(configuration: .default)!
     let sessionStorage = NoOpSessionStorage()
     let settingsStorage = SettingsStorageManager()
     let globalPreferences = GlobalPreferencesStorage()
