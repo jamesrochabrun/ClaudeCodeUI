@@ -79,9 +79,9 @@ public final class ChatViewModel {
   private var currentMessageId: UUID?
   
   // MARK: - Published Properties
-  
+
   /// All messages in the conversation
-  var messages: [ChatMessage] {
+  public var messages: [ChatMessage] {
     messageStore.messages
   }
   
