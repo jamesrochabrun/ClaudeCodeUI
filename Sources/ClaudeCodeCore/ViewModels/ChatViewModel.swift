@@ -348,7 +348,7 @@ EOF
   public convenience init() {
     // Create Claude Code client with default configuration
     // This will use the Claude CLI as a subprocess - no API key needed
-    let claudeClient = (try? ClaudeCodeClient()) ?? ClaudeCodeClient(configuration: .default)!
+    let claudeClient = (try? ClaudeCodeClient()) ?? (try! ClaudeCodeClient(configuration: .default))
     let sessionStorage = NoOpSessionStorage()
     let settingsStorage = SettingsStorageManager()
     let globalPreferences = GlobalPreferencesStorage()
