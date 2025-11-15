@@ -344,6 +344,27 @@ EOF
   ///   - shouldManageSessions: Whether to manage sessions (load, save, switch). Default is true for backward compatibility.
   ///                           Set to false when using ChatScreen directly without session management needs.
   ///   - onSessionChange: Optional callback when session changes
+  /// Convenience initializer for simple integration (uses defaults)
+  public convenience init() {
+    let claudeClient = ClaudeCode()
+    let sessionStorage = NoOpSessionStorage()
+    let settingsStorage = SettingsStorageManager()
+    let globalPreferences = GlobalPreferencesStorage()
+    let permissionService = DefaultCustomPermissionService()
+
+    self.init(
+      claudeClient: claudeClient,
+      sessionStorage: sessionStorage,
+      settingsStorage: settingsStorage,
+      globalPreferences: globalPreferences,
+      customPermissionService: permissionService,
+      systemPromptPrefix: nil,
+      shouldManageSessions: false,
+      onSessionChange: nil,
+      onUserMessageSent: nil
+    )
+  }
+
   public init(
     claudeClient: ClaudeCode,
     sessionStorage: SessionStorageProtocol,
