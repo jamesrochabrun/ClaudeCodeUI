@@ -88,7 +88,18 @@ class KeyboardShortcutManager {
     // Small delay to allow Xcode observation to update before clipboard capture
     // This ensures .focusedUIElementChanged notifications have time to process
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) { [weak self] in
-      self?.performClipboardCapture()
+      guard let self = self else { return }
+
+      // Guard: Ensure all conditions are met before proceeding
+      // This prevents crashes if handler fires during state transitions
+      Task { @MainActor in
+        guard self.xcodeObservationViewModel.hasAccessibilityPermission,
+              self.globalPreferences.enableXcodeShortcut else {
+          return
+        }
+
+        self.performClipboardCapture()
+      }
     }
   }
 
