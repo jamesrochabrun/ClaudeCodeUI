@@ -10,6 +10,7 @@ import KeyboardShortcuts
 import AppKit
 import Combine
 import CCXcodeObserverServiceInterface
+import Carbon.HIToolbox
 
 @Observable
 class KeyboardShortcutManager {
@@ -19,10 +20,18 @@ class KeyboardShortcutManager {
   var shouldRefreshObservation = false
 
   private let xcodeObserver: XcodeObserver
+  private let xcodeObservationViewModel: XcodeObservationViewModel
+  private let globalPreferences: GlobalPreferencesStorage
   private var stateSubscription: AnyCancellable?
 
-  init(xcodeObserver: XcodeObserver) {
+  init(
+    xcodeObserver: XcodeObserver,
+    xcodeObservationViewModel: XcodeObservationViewModel,
+    globalPreferences: GlobalPreferencesStorage
+  ) {
     self.xcodeObserver = xcodeObserver
+    self.xcodeObservationViewModel = xcodeObservationViewModel
+    self.globalPreferences = globalPreferences
     setupShortcuts()
     setupXcodeObservation()
   }
@@ -45,18 +54,31 @@ class KeyboardShortcutManager {
     stateSubscription = xcodeObserver.statePublisher
       .receive(on: DispatchQueue.main)
       .sink { [weak self] state in
-        self?.updateHotkeyState(for: state)
+        Task { @MainActor in
+          self?.updateHotkeyState(for: state)
+        }
       }
 
     // Set initial state
-    updateHotkeyState(for: xcodeObserver.state)
+    Task { @MainActor in
+      updateHotkeyState(for: xcodeObserver.state)
+    }
   }
 
+  @MainActor
   private func updateHotkeyState(for state: XcodeObserver.State) {
-    // Enable cmd+i only when at least one Xcode instance is active
-    let hasActiveXcode = state.knownState?.contains(where: { $0.isActive }) ?? false
+    // Enable cmd+i only when ALL conditions are met:
+    // 1. User has enabled the shortcut in preferences
+    // 2. Accessibility permissions are granted
+    // 3. At least one Xcode instance is active
 
-    if hasActiveXcode {
+    let hasActiveXcode = state.knownState?.contains(where: { $0.isActive }) ?? false
+    let hasPermission = xcodeObservationViewModel.hasAccessibilityPermission
+    let isEnabledInPreferences = globalPreferences.enableXcodeShortcut
+
+    let shouldEnable = isEnabledInPreferences && hasPermission && hasActiveXcode
+
+    if shouldEnable {
       KeyboardShortcuts.enable([.captureWithI])
     } else {
       KeyboardShortcuts.disable([.captureWithI])
@@ -67,7 +89,18 @@ class KeyboardShortcutManager {
     // Small delay to allow Xcode observation to update before clipboard capture
     // This ensures .focusedUIElementChanged notifications have time to process
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) { [weak self] in
-      self?.performClipboardCapture()
+      guard let self = self else { return }
+
+      // Guard: Ensure all conditions are met before proceeding
+      // This prevents crashes if handler fires during state transitions
+      Task { @MainActor in
+        guard self.xcodeObservationViewModel.hasAccessibilityPermission,
+              self.globalPreferences.enableXcodeShortcut else {
+          return
+        }
+
+        self.performClipboardCapture()
+      }
     }
   }
 
@@ -128,6 +161,12 @@ class KeyboardShortcutManager {
 
 // Define the keyboard shortcuts
 extension KeyboardShortcuts.Name {
-  static let captureWithI = Self("captureWithI", default: .init(.i, modifiers: [.command]))
+  static let captureWithI = Self(
+    "captureWithI",
+    default: .init(
+      carbonKeyCode: Int(kVK_ANSI_I),  // Physical key position 0x22
+      carbonModifiers: cmdKey           // Carbon modifier for Command key
+    )
+  )
 }
 

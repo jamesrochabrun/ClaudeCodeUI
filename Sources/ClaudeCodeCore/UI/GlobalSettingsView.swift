@@ -256,7 +256,8 @@ struct GlobalSettingsView: View {
   }
 
   private var xcodeIntegrationSection: some View {
-    Section("Xcode Integration") {
+    @Bindable var preferences = globalPreferences
+    return Section("Xcode Integration") {
       VStack(alignment: .leading, spacing: 12) {
         Text("Accessibility Permission")
           .font(.headline)
@@ -284,9 +285,32 @@ struct GlobalSettingsView: View {
           }
         }
 
-        Text("Use ⌘I to capture code selections from Xcode")
-          .font(.caption)
-          .foregroundColor(.secondary)
+        Divider()
+
+        // Keyboard Shortcut Toggle
+        VStack(alignment: .leading, spacing: 8) {
+          Toggle("Enable ⌘I Keyboard Shortcut", isOn: $preferences.enableXcodeShortcut)
+            .toggleStyle(.switch)
+            .disabled(!(xcodeObservationViewModel?.hasAccessibilityPermission ?? false))
+
+          if !(xcodeObservationViewModel?.hasAccessibilityPermission ?? false) {
+            HStack(spacing: 8) {
+              Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.orange)
+                .imageScale(.small)
+              Text("Accessibility permission required to use keyboard shortcut")
+                .font(.caption)
+                .foregroundColor(.orange)
+            }
+            .padding(8)
+            .background(Color.orange.opacity(0.1))
+            .cornerRadius(6)
+          } else {
+            Text("Press ⌘I in Xcode to capture code selections")
+              .font(.caption)
+              .foregroundColor(.secondary)
+          }
+        }
       }
       .padding(.vertical, 8)
     }
