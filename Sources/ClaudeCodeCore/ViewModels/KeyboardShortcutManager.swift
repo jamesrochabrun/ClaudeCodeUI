@@ -10,6 +10,7 @@ import KeyboardShortcuts
 import AppKit
 import Combine
 import CCXcodeObserverServiceInterface
+import Carbon.HIToolbox
 
 @Observable
 class KeyboardShortcutManager {
@@ -19,16 +20,32 @@ class KeyboardShortcutManager {
   var shouldRefreshObservation = false
 
   private let xcodeObserver: XcodeObserver
+  private let xcodeObservationViewModel: XcodeObservationViewModel
+  private let globalPreferences: GlobalPreferencesStorage
   private var stateSubscription: AnyCancellable?
+  private var permissionSubscription: AnyCancellable?
+  private var preferenceSubscription: AnyCancellable?
+  private var cancellables = Set<AnyCancellable>()
 
-  init(xcodeObserver: XcodeObserver) {
+  init(
+    xcodeObserver: XcodeObserver,
+    xcodeObservationViewModel: XcodeObservationViewModel,
+    globalPreferences: GlobalPreferencesStorage
+  ) {
     self.xcodeObserver = xcodeObserver
+    self.xcodeObservationViewModel = xcodeObservationViewModel
+    self.globalPreferences = globalPreferences
     setupShortcuts()
     setupXcodeObservation()
+    setupPermissionMonitoring()
+    setupPreferenceMonitoring()
   }
 
   deinit {
     stateSubscription?.cancel()
+    permissionSubscription?.cancel()
+    preferenceSubscription?.cancel()
+    cancellables.removeAll()
   }
   
   private func setupShortcuts() {
@@ -45,18 +62,48 @@ class KeyboardShortcutManager {
     stateSubscription = xcodeObserver.statePublisher
       .receive(on: DispatchQueue.main)
       .sink { [weak self] state in
-        self?.updateHotkeyState(for: state)
+        Task { @MainActor in
+          self?.updateHotkeyState(for: state)
+        }
       }
 
     // Set initial state
-    updateHotkeyState(for: xcodeObserver.state)
+    Task { @MainActor in
+      updateHotkeyState(for: xcodeObserver.state)
+    }
   }
 
-  private func updateHotkeyState(for state: XcodeObserver.State) {
-    // Enable cmd+i only when at least one Xcode instance is active
-    let hasActiveXcode = state.knownState?.contains(where: { $0.isActive }) ?? false
+  private func setupPermissionMonitoring() {
+    // React to accessibility permission changes
+    // Note: XcodeObservationViewModel already polls every 2 seconds, so we reuse that
+    Task { @MainActor in
+      // Monitor permission state reactively
+      // Since hasAccessibilityPermission is @Observable, we can watch it
+      // However, Observation framework doesn't provide publisher directly,
+      // so we trigger updates when Xcode state changes (which also checks permissions)
+    }
+  }
 
-    if hasActiveXcode {
+  private func setupPreferenceMonitoring() {
+    // React to user preference changes
+    // Since globalPreferences is @Observable, changes will trigger updates automatically
+    // when updateHotkeyState is called from the Xcode state subscription
+  }
+
+  @MainActor
+  private func updateHotkeyState(for state: XcodeObserver.State) {
+    // Enable cmd+i only when ALL conditions are met:
+    // 1. User has enabled the shortcut in preferences
+    // 2. Accessibility permissions are granted
+    // 3. At least one Xcode instance is active
+
+    let hasActiveXcode = state.knownState?.contains(where: { $0.isActive }) ?? false
+    let hasPermission = xcodeObservationViewModel.hasAccessibilityPermission
+    let isEnabledInPreferences = globalPreferences.enableXcodeShortcut
+
+    let shouldEnable = isEnabledInPreferences && hasPermission && hasActiveXcode
+
+    if shouldEnable {
       KeyboardShortcuts.enable([.captureWithI])
     } else {
       KeyboardShortcuts.disable([.captureWithI])
@@ -127,7 +174,14 @@ class KeyboardShortcutManager {
 }
 
 // Define the keyboard shortcuts
+// Uses virtual key code for layout-independent registration (fixes Dvorak keyboard issue)
 extension KeyboardShortcuts.Name {
-  static let captureWithI = Self("captureWithI", default: .init(.i, modifiers: [.command]))
+  static let captureWithI = Self(
+    "captureWithI",
+    default: .init(
+      carbonKeyCode: Int(kVK_ANSI_I),
+      carbonModifiers: cmdKey  // Carbon modifier for Command key
+    )
+  )
 }
 

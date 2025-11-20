@@ -58,7 +58,8 @@ public struct ChatScreen: View {
     _customPermissionService = State(initialValue: customPermissionService)
     _columnVisibility = columnVisibility
     self.uiConfiguration = uiConfiguration
-    _keyboardManager = State(initialValue: KeyboardShortcutManager(xcodeObserver: xcodeObservationViewModel.observer))
+    // Note: KeyboardShortcutManager will be initialized in onAppear
+    // after GlobalPreferencesStorage is available from @Environment
   }
   
   /// The view model managing the chat conversation state, messages, and streaming
@@ -104,7 +105,8 @@ public struct ChatScreen: View {
   @State var settingsTypeToShow: SettingsType = .session
   
   /// Manages keyboard shortcuts and captures text from external sources
-  @State private var keyboardManager: KeyboardShortcutManager
+  /// Initialized in onAppear after GlobalPreferencesStorage is available
+  @State private var keyboardManager: KeyboardShortcutManager?
   
   /// Triggers focus on the text editor when keyboard shortcuts are activated
   @State private var triggerTextEditorFocus = false
@@ -214,9 +216,21 @@ public struct ChatScreen: View {
     } message: {
       Text("You can now continue your conversation")
     }
-    .onChange(of: keyboardManager.capturedText, keyboardTextChanged)
-    .onChange(of: keyboardManager.shouldFocusTextEditor, focusTextEditorChanged)
-    .onChange(of: keyboardManager.shouldRefreshObservation, refreshObservationChanged)
+    .onChange(of: keyboardManager?.capturedText ?? "", keyboardTextChanged)
+    .onChange(of: keyboardManager?.shouldFocusTextEditor ?? false, focusTextEditorChanged)
+    .onChange(of: keyboardManager?.shouldRefreshObservation ?? false, refreshObservationChanged)
+    .onAppear(perform: initializeKeyboardManager)
+  }
+
+  private func initializeKeyboardManager() {
+    // Initialize KeyboardShortcutManager with environment dependencies
+    if keyboardManager == nil {
+      keyboardManager = KeyboardShortcutManager(
+        xcodeObserver: xcodeObservationViewModel.observer,
+        xcodeObservationViewModel: xcodeObservationViewModel,
+        globalPreferences: globalPreferences
+      )
+    }
   }
   
   // MARK: - Subviews
@@ -398,7 +412,7 @@ public struct ChatScreen: View {
     if shouldFocus {
       triggerTextEditorFocus = true
       // Reset the flag after using it
-      keyboardManager.shouldFocusTextEditor = false
+      keyboardManager?.shouldFocusTextEditor = false
     }
   }
 
@@ -407,7 +421,7 @@ public struct ChatScreen: View {
       // Restart observation (clears dismissed files and refreshes)
       xcodeObservationViewModel.restartObservation()
       // Reset the flag after using it
-      keyboardManager.shouldRefreshObservation = false
+      keyboardManager?.shouldRefreshObservation = false
     }
   }
   

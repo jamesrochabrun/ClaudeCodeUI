@@ -112,7 +112,15 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       saveToPersistentStorage()
     }
   }
-  
+
+  // MARK: - Xcode Integration
+
+  public var enableXcodeShortcut: Bool {
+    didSet {
+      saveToPersistentStorage()
+    }
+  }
+
   // MARK: - MCP Tools Discovery
   
   /// Discovered MCP tools by server name
@@ -156,7 +164,8 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       self.maxConcurrentPermissionRequests = general.maxConcurrentPermissionRequests
       self.disallowedTools = general.disallowedTools
       self.isClaudeCommandFromConfig = general.isClaudeCommandFromConfig
-      
+      self.enableXcodeShortcut = general.enableXcodeShortcut
+
       // MCP config path - default to Claude's standard location
       let homeURL = FileManager.default.homeDirectoryForCurrentUser
       self.mcpConfigPath = homeURL
@@ -236,7 +245,10 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       self.permissionRequestTimeout = 3600.0 // 1 hour
       self.permissionTimeoutEnabled = false
       self.maxConcurrentPermissionRequests = 5
-      
+
+      // Default Xcode integration settings
+      self.enableXcodeShortcut = true
+
       // Initialize empty MCP tools
       self.mcpServerTools = [:]
       self.selectedMCPTools = [:]
@@ -351,6 +363,10 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     permissionRequestTimeout = 3600.0
     permissionTimeoutEnabled = false
     maxConcurrentPermissionRequests = 50
+
+    // Reset Xcode integration settings
+    enableXcodeShortcut = true
+
     mcpServerTools = [:]
     selectedMCPTools = [:]
     
@@ -427,7 +443,8 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
         permissionTimeoutEnabled: permissionTimeoutEnabled,
         maxConcurrentPermissionRequests: maxConcurrentPermissionRequests,
         disallowedTools: disallowedTools,
-        isClaudeCommandFromConfig: isClaudeCommandFromConfig
+        isClaudeCommandFromConfig: isClaudeCommandFromConfig,
+        enableXcodeShortcut: enableXcodeShortcut
       )
     )
     
