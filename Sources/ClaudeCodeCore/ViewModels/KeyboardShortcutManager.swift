@@ -10,7 +10,6 @@ import KeyboardShortcuts
 import AppKit
 import Combine
 import CCXcodeObserverServiceInterface
-import Carbon.HIToolbox
 
 @Observable
 class KeyboardShortcutManager {
@@ -174,14 +173,7 @@ class KeyboardShortcutManager {
 }
 
 // Define the keyboard shortcuts
-// Uses virtual key code for layout-independent registration (fixes Dvorak keyboard issue)
 extension KeyboardShortcuts.Name {
-  static let captureWithI = Self(
-    "captureWithI",
-    default: .init(
-      carbonKeyCode: Int(kVK_ANSI_I),
-      carbonModifiers: cmdKey  // Carbon modifier for Command key
-    )
-  )
+  static let captureWithI = Self("captureWithI", default: .init(.i, modifiers: [.command]))
 }
 
