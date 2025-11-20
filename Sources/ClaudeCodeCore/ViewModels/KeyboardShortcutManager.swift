@@ -10,6 +10,7 @@ import KeyboardShortcuts
 import AppKit
 import Combine
 import CCXcodeObserverServiceInterface
+import Carbon.HIToolbox
 
 @Observable
 class KeyboardShortcutManager {
@@ -160,6 +161,12 @@ class KeyboardShortcutManager {
 
 // Define the keyboard shortcuts
 extension KeyboardShortcuts.Name {
-  static let captureWithI = Self("captureWithI", default: .init(.i, modifiers: [.command]))
+  static let captureWithI = Self(
+    "captureWithI",
+    default: .init(
+      carbonKeyCode: Int(kVK_ANSI_I),  // Physical key position 0x22
+      carbonModifiers: cmdKey           // Carbon modifier for Command key
+    )
+  )
 }
 
