@@ -22,9 +22,6 @@ class KeyboardShortcutManager {
   private let xcodeObservationViewModel: XcodeObservationViewModel
   private let globalPreferences: GlobalPreferencesStorage
   private var stateSubscription: AnyCancellable?
-  private var permissionSubscription: AnyCancellable?
-  private var preferenceSubscription: AnyCancellable?
-  private var cancellables = Set<AnyCancellable>()
 
   init(
     xcodeObserver: XcodeObserver,
@@ -36,15 +33,10 @@ class KeyboardShortcutManager {
     self.globalPreferences = globalPreferences
     setupShortcuts()
     setupXcodeObservation()
-    setupPermissionMonitoring()
-    setupPreferenceMonitoring()
   }
 
   deinit {
     stateSubscription?.cancel()
-    permissionSubscription?.cancel()
-    preferenceSubscription?.cancel()
-    cancellables.removeAll()
   }
   
   private func setupShortcuts() {
@@ -70,23 +62,6 @@ class KeyboardShortcutManager {
     Task { @MainActor in
       updateHotkeyState(for: xcodeObserver.state)
     }
-  }
-
-  private func setupPermissionMonitoring() {
-    // React to accessibility permission changes
-    // Note: XcodeObservationViewModel already polls every 2 seconds, so we reuse that
-    Task { @MainActor in
-      // Monitor permission state reactively
-      // Since hasAccessibilityPermission is @Observable, we can watch it
-      // However, Observation framework doesn't provide publisher directly,
-      // so we trigger updates when Xcode state changes (which also checks permissions)
-    }
-  }
-
-  private func setupPreferenceMonitoring() {
-    // React to user preference changes
-    // Since globalPreferences is @Observable, changes will trigger updates automatically
-    // when updateHotkeyState is called from the Xcode state subscription
   }
 
   @MainActor
