@@ -39,6 +39,9 @@ public struct UIConfiguration {
   /// Initial additional system prompt prefix that will be prepended to user's additional system prompt
   /// This is not shown in the preferences UI and is set programmatically
   public let initialAdditionalSystemPromptPrefix: String?
+
+  /// Whether to show the voice mode button (requires OpenAI API key for CodeWhisper)
+  public let showVoiceModeButton: Bool
   
   /// Default configuration for ClaudeCodeUI app
   public static var `default`: UIConfiguration {
@@ -52,7 +55,8 @@ public struct UIConfiguration {
       appIconAssetName: nil,
       showSystemPromptFields: false,
       showAdditionalSystemPromptField: true,
-      initialAdditionalSystemPromptPrefix: nil
+      initialAdditionalSystemPromptPrefix: nil,
+      showVoiceModeButton: false
     )
   }
 
@@ -68,7 +72,8 @@ public struct UIConfiguration {
       appIconAssetName: nil,
       showSystemPromptFields: false,
       showAdditionalSystemPromptField: true,
-      initialAdditionalSystemPromptPrefix: nil
+      initialAdditionalSystemPromptPrefix: nil,
+      showVoiceModeButton: false
     )
   }
   
@@ -83,7 +88,8 @@ public struct UIConfiguration {
     appIconAssetName: String? = nil,
     showSystemPromptFields: Bool = false,
     showAdditionalSystemPromptField: Bool = true,
-    initialAdditionalSystemPromptPrefix: String? = nil
+    initialAdditionalSystemPromptPrefix: String? = nil,
+    showVoiceModeButton: Bool = false
   ) {
     self.appName = appName
     self.showSettingsInNavBar = showSettingsInNavBar
@@ -95,5 +101,6 @@ public struct UIConfiguration {
     self.showSystemPromptFields = showSystemPromptFields
     self.showAdditionalSystemPromptField = showAdditionalSystemPromptField
     self.initialAdditionalSystemPromptPrefix = initialAdditionalSystemPromptPrefix
+    self.showVoiceModeButton = showVoiceModeButton
   }
 }

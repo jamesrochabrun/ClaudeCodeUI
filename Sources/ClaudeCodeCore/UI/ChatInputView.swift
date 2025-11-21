@@ -15,14 +15,15 @@ import UniformTypeIdentifiers
 import CodeWhisper
 
 struct ChatInputView: View {
-  
+
   // MARK: - Properties
-  
+
   @Binding var text: String
   @Binding var viewModel: ChatViewModel
   let contextManager: ContextManager
   let xcodeObservationViewModel: XcodeObservationViewModel
   let permissionsService: PermissionsService
+  let uiConfiguration: UIConfiguration
   
   @FocusState private var isFocused: Bool
   let placeholder: String
@@ -66,6 +67,7 @@ struct ChatInputView: View {
     contextManager: ContextManager,
     xcodeObservationViewModel: XcodeObservationViewModel,
     permissionsService: PermissionsService,
+    uiConfiguration: UIConfiguration = .default,
     placeholder: String = "↵ send new message, ⇧↵ new line",
     triggerFocus: Binding<Bool> = .constant(false))
   {
@@ -74,6 +76,7 @@ struct ChatInputView: View {
     self.contextManager = contextManager
     self.xcodeObservationViewModel = xcodeObservationViewModel
     self.permissionsService = permissionsService
+    self.uiConfiguration = uiConfiguration
     self.placeholder = placeholder
     _triggerFocus = triggerFocus
   }
@@ -147,10 +150,14 @@ struct ChatInputView: View {
           }
           HStack(alignment: .center) {
             attachmentButton
-            voiceModeButton
             textEditor
-            actionButton
+            if text.isEmpty && uiConfiguration.showVoiceModeButton {
+              voiceModeButton
+            } else {
+              actionButton
+            }
           }
+          .animation(.easeInOut, value: text.isEmpty)
         }
         .background(Color(NSColor.controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -242,11 +249,12 @@ extension ChatInputView {
     Button(action: {
       showingVoiceMode = true
     }) {
-      Image(systemName: "waveform")
-        .foregroundColor(.gray)
+      Image(systemName: "waveform.circle.fill")
+        .font(.title2)
+        .foregroundColor(.brandSecondary)
     }
+    .padding(10)
     .buttonStyle(.plain)
-    .padding(.leading, 4)
     .help("Open Voice Mode")
   }
   
@@ -1096,6 +1104,7 @@ struct VoiceModeWrapper: View {
   let chatViewModel: ChatViewModel
   @State private var settingsManager = SettingsManager()
   @State private var serviceManager = OpenAIServiceManager()
+  @State private var mcpServerManager = MCPServerManager()  // ADD THIS
 
   var body: some View {
     // Create adapter from existing ChatViewModel
@@ -1105,6 +1114,19 @@ struct VoiceModeWrapper: View {
     VoiceModeView(presentationMode: .presented, executor: adapter)
       .environment(settingsManager)
       .environment(serviceManager)
+      .environment(mcpServerManager)
+      .onAppear {
+        // Sync working directory from ChatViewModel
+        if !chatViewModel.projectPath.isEmpty {
+          settingsManager.setWorkingDirectory(chatViewModel.projectPath)
+        }
+        // Initialize service with current API key
+        serviceManager.updateService(apiKey: settingsManager.apiKey)
+      }
+      .onChange(of: settingsManager.apiKey) { _, newValue in
+        // Update service when API key changes in settings
+        serviceManager.updateService(apiKey: newValue)
+      }
   }
 }
 

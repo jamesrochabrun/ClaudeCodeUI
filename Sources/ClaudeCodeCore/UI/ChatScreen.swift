@@ -145,6 +145,7 @@ public struct ChatScreen: View {
         contextManager: contextManager,
         xcodeObservationViewModel: xcodeObservationViewModel,
         permissionsService: permissionsService,
+        uiConfiguration: uiConfiguration,
         triggerFocus: $triggerTextEditorFocus)
     }
     .onKeyPress { key in
