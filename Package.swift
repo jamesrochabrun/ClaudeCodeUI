@@ -24,6 +24,8 @@ let package = Package(
         .package(url: "https://github.com/appstefan/highlightswift", from: "1.1.0"),
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk", from: "0.9.0"),
         .package(url: "https://github.com/stephencelis/SQLite.swift", from: "0.15.3"),
+        // Local dependencies
+        .package(path: "../CodeWhisper"),
     ],
     targets: [
         // Foundation modules (no dependencies)
@@ -115,6 +117,7 @@ let package = Package(
                 .product(name: "HighlightSwift", package: "highlightswift"),
                 .product(name: "MCP", package: "swift-sdk"),
                 .product(name: "SQLite", package: "SQLite.swift"),
+                .product(name: "CodeWhisper", package: "CodeWhisper"),
 
                 // Internal module dependencies
                 "CCAccessibilityFoundation",
