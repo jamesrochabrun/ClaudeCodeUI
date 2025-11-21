@@ -1,5 +1,5 @@
 {
-  "originHash" : "f78f2780fe27c4beee94eed7672af0f95f6ca2fad91b1bf2f7bae089c241fe44",
+  "originHash" : "32b5e7838ddae66525e101714072933ff3d52d7575ebd2b29c8c021f23b6e095",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/jamesrochabrun/CodeWhisper",
       "state" : {
-        "branch" : "jroch-decouple",
-        "revision" : "8fc5522601094f73a8f26692869a6ec3dbed4e9a"
+        "revision" : "639c71b5cc0d73be70ff758f685b536c56274155",
+        "version" : "1.0.0"
       }
     },
     {
