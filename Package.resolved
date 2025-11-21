@@ -1,5 +1,5 @@
 {
-  "originHash" : "ce25430a73bd2189937c449956643ee1bb166080bd695c6e9c7796475f17a8b4",
+  "originHash" : "32b5e7838ddae66525e101714072933ff3d52d7575ebd2b29c8c021f23b6e095",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -17,6 +17,15 @@
       "state" : {
         "revision" : "de63ddc470d9a14fba0965b5bde7e5c61f5b9ef1",
         "version" : "1.2.3"
+      }
+    },
+    {
+      "identity" : "codewhisper",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/jamesrochabrun/CodeWhisper",
+      "state" : {
+        "revision" : "639c71b5cc0d73be70ff758f685b536c56274155",
+        "version" : "1.0.0"
       }
     },
     {
@@ -278,6 +287,15 @@
       "state" : {
         "revision" : "4f9e21b94e491138003903ff6c14ab4f04b6ba6c",
         "version" : "2.2.0"
+      }
+    },
+    {
+      "identity" : "swiftopenai",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/jamesrochabrun/SwiftOpenAI.git",
+      "state" : {
+        "revision" : "fe1bc41c9ae798b4f7bf2deaeaf29d8719adcc0c",
+        "version" : "4.4.4"
       }
     }
   ],

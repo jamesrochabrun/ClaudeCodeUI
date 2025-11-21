@@ -12,16 +12,18 @@ import CCXcodeObserverServiceInterface
 import CCAccessibilityFoundation
 import Combine
 import UniformTypeIdentifiers
+import CodeWhisper
 
 struct ChatInputView: View {
-  
+
   // MARK: - Properties
-  
+
   @Binding var text: String
   @Binding var viewModel: ChatViewModel
   let contextManager: ContextManager
   let xcodeObservationViewModel: XcodeObservationViewModel
   let permissionsService: PermissionsService
+  let uiConfiguration: UIConfiguration
   
   @FocusState private var isFocused: Bool
   let placeholder: String
@@ -32,7 +34,8 @@ struct ChatInputView: View {
   @State private var attachments: [FileAttachment] = []
   @State private var isDragging = false
   @State private var showingFilePicker = false
-  
+  @State private var showingVoiceMode = false
+
   // File search properties
   @State private var showingFileSearch = false
   @State private var fileSearchRange: NSRange? = nil
@@ -64,6 +67,7 @@ struct ChatInputView: View {
     contextManager: ContextManager,
     xcodeObservationViewModel: XcodeObservationViewModel,
     permissionsService: PermissionsService,
+    uiConfiguration: UIConfiguration = .default,
     placeholder: String = "↵ send new message, ⇧↵ new line",
     triggerFocus: Binding<Bool> = .constant(false))
   {
@@ -72,6 +76,7 @@ struct ChatInputView: View {
     self.contextManager = contextManager
     self.xcodeObservationViewModel = xcodeObservationViewModel
     self.permissionsService = permissionsService
+    self.uiConfiguration = uiConfiguration
     self.placeholder = placeholder
     _triggerFocus = triggerFocus
   }
@@ -146,8 +151,13 @@ struct ChatInputView: View {
           HStack(alignment: .center) {
             attachmentButton
             textEditor
-            actionButton
+            if text.isEmpty && uiConfiguration.showVoiceModeButton {
+              voiceModeButton
+            } else {
+              actionButton
+            }
           }
+          .animation(.easeInOut, value: text.isEmpty)
         }
         .background(Color(NSColor.controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -201,6 +211,10 @@ struct ChatInputView: View {
     .sheet(isPresented: $showingSettings) {
       settingsSheet
     }
+    .sheet(isPresented: $showingVoiceMode) {
+      voiceModeSheet
+        .frame(minWidth: 600, minHeight: 400)
+    }
     .fileImporter(
       isPresented: $showingFilePicker,
       allowedContentTypes: allowedFileTypes,
@@ -228,6 +242,20 @@ extension ChatInputView {
     .buttonStyle(.plain)
     .padding(.leading, 8)
     .help("Attach files")
+  }
+
+  /// Voice mode button
+  private var voiceModeButton: some View {
+    Button(action: {
+      showingVoiceMode = true
+    }) {
+      Image(systemName: "waveform.circle.fill")
+        .font(.title2)
+        .foregroundColor(.brandSecondary)
+    }
+    .padding(10)
+    .buttonStyle(.plain)
+    .help("Open Voice Mode")
   }
   
   /// Action button (send/cancel)
@@ -1061,6 +1089,44 @@ extension ChatInputView {
     showingCommandSearch = false
     commandSearchRange = nil
     commandSearchViewModel?.clearSearch()
+  }
+
+  /// Voice mode sheet
+  private var voiceModeSheet: some View {
+    VoiceModeWrapper(chatViewModel: viewModel)
+  }
+}
+
+// MARK: - Voice Mode Wrapper
+
+/// Wrapper view that initializes VoiceModeView with the ChatViewModel adapter
+struct VoiceModeWrapper: View {
+  let chatViewModel: ChatViewModel
+  @State private var settingsManager = SettingsManager()
+  @State private var serviceManager = OpenAIServiceManager()
+  @State private var mcpServerManager = MCPServerManager()  // ADD THIS
+
+  var body: some View {
+    // Create adapter from existing ChatViewModel
+    // This ensures voice mode uses the EXACT same configuration
+    let adapter = ChatViewModelAdapter(chatViewModel: chatViewModel)
+
+    VoiceModeView(presentationMode: .presented, executor: adapter)
+      .environment(settingsManager)
+      .environment(serviceManager)
+      .environment(mcpServerManager)
+      .onAppear {
+        // Sync working directory from ChatViewModel
+        if !chatViewModel.projectPath.isEmpty {
+          settingsManager.setWorkingDirectory(chatViewModel.projectPath)
+        }
+        // Initialize service with current API key
+        serviceManager.updateService(apiKey: settingsManager.apiKey)
+      }
+      .onChange(of: settingsManager.apiKey) { _, newValue in
+        // Update service when API key changes in settings
+        serviceManager.updateService(apiKey: newValue)
+      }
   }
 }
 
