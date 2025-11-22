@@ -218,6 +218,9 @@ struct GlobalSettingsView: View {
           xcodeIntegrationSection
         }
         claudeCodeConfigurationSection
+        if uiConfiguration.showVoiceModeButton {
+          experimentalFeaturesSection
+        }
         debugSection
         resetSection
       }
@@ -252,6 +255,23 @@ struct GlobalSettingsView: View {
       }
       allowedToolsRow
       mcpConfigurationRow
+    }
+  }
+
+  private var experimentalFeaturesSection: some View {
+    @Bindable var preferences = globalPreferences
+    return Section("Experimental") {
+      VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
+          Toggle("Voice Mode", isOn: $preferences.enableVoiceMode)
+            .toggleStyle(.switch)
+
+          Text("Experimental feature. OpenAI API key required.")
+            .font(.caption)
+            .foregroundColor(.secondary)
+        }
+      }
+      .padding(.vertical, 8)
     }
   }
 

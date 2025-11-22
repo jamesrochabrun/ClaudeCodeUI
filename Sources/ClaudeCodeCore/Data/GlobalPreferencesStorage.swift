@@ -121,6 +121,14 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
     }
   }
 
+  // MARK: - Experimental Features
+
+  public var enableVoiceMode: Bool {
+    didSet {
+      saveToPersistentStorage()
+    }
+  }
+
   // MARK: - MCP Tools Discovery
   
   /// Discovered MCP tools by server name
@@ -165,6 +173,7 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       self.disallowedTools = general.disallowedTools
       self.isClaudeCommandFromConfig = general.isClaudeCommandFromConfig
       self.enableXcodeShortcut = general.enableXcodeShortcut
+      self.enableVoiceMode = general.enableVoiceMode
 
       // MCP config path - default to Claude's standard location
       let homeURL = FileManager.default.homeDirectoryForCurrentUser
@@ -249,6 +258,9 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       // Default Xcode integration settings
       self.enableXcodeShortcut = true
 
+      // Default experimental features
+      self.enableVoiceMode = false
+
       // Initialize empty MCP tools
       self.mcpServerTools = [:]
       self.selectedMCPTools = [:]
@@ -322,7 +334,9 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
       self.maxConcurrentPermissionRequests = general.maxConcurrentPermissionRequests
       self.disallowedTools = general.disallowedTools
       self.isClaudeCommandFromConfig = general.isClaudeCommandFromConfig
-      
+      self.enableXcodeShortcut = general.enableXcodeShortcut
+      self.enableVoiceMode = general.enableVoiceMode
+
       // Restore tool preferences
       self.allowedTools = buildAllowedToolsList(from: restored.toolPreferences)
       // disallowedTools already loaded from general preferences above
@@ -366,6 +380,9 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
 
     // Reset Xcode integration settings
     enableXcodeShortcut = true
+
+    // Reset experimental features
+    enableVoiceMode = false
 
     mcpServerTools = [:]
     selectedMCPTools = [:]
@@ -444,10 +461,11 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
         maxConcurrentPermissionRequests: maxConcurrentPermissionRequests,
         disallowedTools: disallowedTools,
         isClaudeCommandFromConfig: isClaudeCommandFromConfig,
-        enableXcodeShortcut: enableXcodeShortcut
+        enableXcodeShortcut: enableXcodeShortcut,
+        enableVoiceMode: enableVoiceMode
       )
     )
-    
+
     // Save to persistent storage
     persistentManager.savePreferences(persistent)
     self.persistentPreferences = persistent
@@ -540,7 +558,9 @@ public final class GlobalPreferencesStorage: MCPConfigStorage {
         permissionRequestTimeout: permissionRequestTimeout,
         permissionTimeoutEnabled: permissionTimeoutEnabled,
         maxConcurrentPermissionRequests: maxConcurrentPermissionRequests,
-        isClaudeCommandFromConfig: isClaudeCommandFromConfig
+        isClaudeCommandFromConfig: isClaudeCommandFromConfig,
+        enableXcodeShortcut: enableXcodeShortcut,
+        enableVoiceMode: enableVoiceMode
       )
     )
     

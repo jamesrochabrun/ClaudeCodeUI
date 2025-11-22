@@ -320,6 +320,7 @@ public struct GeneralPreferences: Codable {
   public var disallowedTools: [String]
   public var isClaudeCommandFromConfig: Bool
   public var enableXcodeShortcut: Bool
+  public var enableVoiceMode: Bool
 
   public init(
     autoApproveLowRisk: Bool = false,
@@ -334,7 +335,8 @@ public struct GeneralPreferences: Codable {
     maxConcurrentPermissionRequests: Int = 5,
     disallowedTools: [String] = [],
     isClaudeCommandFromConfig: Bool = false,
-    enableXcodeShortcut: Bool = true
+    enableXcodeShortcut: Bool = true,
+    enableVoiceMode: Bool = false
   ) {
     self.autoApproveLowRisk = autoApproveLowRisk
     self.claudeCommand = claudeCommand
@@ -349,6 +351,7 @@ public struct GeneralPreferences: Codable {
     self.disallowedTools = disallowedTools
     self.isClaudeCommandFromConfig = isClaudeCommandFromConfig
     self.enableXcodeShortcut = enableXcodeShortcut
+    self.enableVoiceMode = enableVoiceMode
   }
 
   // Custom decoding for backwards compatibility
@@ -368,5 +371,6 @@ public struct GeneralPreferences: Codable {
     // Decode with default value for backwards compatibility
     isClaudeCommandFromConfig = try container.decodeIfPresent(Bool.self, forKey: .isClaudeCommandFromConfig) ?? false
     enableXcodeShortcut = try container.decodeIfPresent(Bool.self, forKey: .enableXcodeShortcut) ?? true
+    enableVoiceMode = try container.decodeIfPresent(Bool.self, forKey: .enableVoiceMode) ?? false
   }
 }
