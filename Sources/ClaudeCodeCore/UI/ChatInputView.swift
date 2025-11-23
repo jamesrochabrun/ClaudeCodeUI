@@ -1095,7 +1095,13 @@ extension ChatInputView {
   
   /// Voice mode sheet
   private var voiceModeSheet: some View {
-    VoiceModeWrapper(chatViewModel: viewModel)
+    VoiceModeWrapper(chatViewModel: resolvedViewModel())
+  }
+  
+  private func resolvedViewModel() -> ChatViewModel {
+    var resolvedViewModel = viewModel
+    resolvedViewModel.permissionMode = .bypassPermissions
+    return resolvedViewModel
   }
 }
 
