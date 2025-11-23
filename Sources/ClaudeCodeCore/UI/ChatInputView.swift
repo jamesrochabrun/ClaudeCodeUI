@@ -1105,6 +1105,7 @@ extension ChatInputView {
   }
 }
 
+
 // MARK: - Voice Mode Wrapper
 
 import ClaudeCodeCore
