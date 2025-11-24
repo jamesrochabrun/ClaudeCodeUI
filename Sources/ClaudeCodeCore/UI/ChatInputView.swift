@@ -15,15 +15,17 @@ import UniformTypeIdentifiers
 import CodeWhisper
 
 struct ChatInputView: View {
-
+  
   // MARK: - Properties
-
+  
   @Binding var text: String
   @Binding var viewModel: ChatViewModel
   let contextManager: ContextManager
   let xcodeObservationViewModel: XcodeObservationViewModel
   let permissionsService: PermissionsService
   let uiConfiguration: UIConfiguration
+  
+  @Environment(GlobalPreferencesStorage.self) private var globalPreferences
   
   @FocusState private var isFocused: Bool
   let placeholder: String
@@ -35,23 +37,23 @@ struct ChatInputView: View {
   @State private var isDragging = false
   @State private var showingFilePicker = false
   @State private var showingVoiceMode = false
-
+  
   // File search properties
   @State private var showingFileSearch = false
   @State private var fileSearchRange: NSRange? = nil
   @State private var fileSearchViewModel: FileSearchViewModel? = nil
   @State private var fileSearchAnchor: CGPoint = .zero
   @State private var isUpdatingFileSearch = false
-
+  
   // Command search properties
   @State private var showingCommandSearch = false
   @State private var commandSearchRange: NSRange? = nil
   @State private var commandSearchViewModel: CommandSearchViewModel? = nil
   @State private var isUpdatingCommandSearch = false
-
+  
   // Tip preferences
   @StateObject private var tipManager = TipPreferencesManager()
-
+  
   private let processor = AttachmentProcessor()
   
   // MARK: - Constants
@@ -109,7 +111,7 @@ struct ChatInputView: View {
           ))
         }
       }
-
+      
       // Command search UI - shown when / is typed at start of message
       if showingCommandSearch {
         if let viewModel = commandSearchViewModel {
@@ -136,7 +138,7 @@ struct ChatInputView: View {
           ))
         }
       }
-
+      
       // Main input area
       VStack(alignment: .leading, spacing: 8) {
         VStack(alignment: .leading, spacing: 2) {
@@ -151,7 +153,7 @@ struct ChatInputView: View {
           HStack(alignment: .center) {
             attachmentButton
             textEditor
-            if text.isEmpty && uiConfiguration.showVoiceModeButton {
+            if text.isEmpty && uiConfiguration.showVoiceModeButton && globalPreferences.enableVoiceMode && !viewModel.isLoading {
               voiceModeButton
             } else {
               actionButton
@@ -163,7 +165,7 @@ struct ChatInputView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(inputBorder)
         PermissionModeButton(mode: $viewModel.permissionMode)
-
+        
         // Dismissable tip about cmd+i functionality
         if !tipManager.isDismissed(.cmdITipV1) {
           TipBannerView(
@@ -223,7 +225,7 @@ struct ChatInputView: View {
       handleFileImport(result)
     }
   }
-
+  
   // MARK: - Computed Properties
 }
 
@@ -243,7 +245,7 @@ extension ChatInputView {
     .padding(.leading, 8)
     .help("Attach files")
   }
-
+  
   /// Voice mode button
   private var voiceModeButton: some View {
     Button(action: {
@@ -314,7 +316,7 @@ extension ChatInputView {
   /// Settings sheet
   private var settingsSheet: some View {
     SettingsView(chatViewModel: viewModel)
-    .frame(width: 700, height: 550)
+      .frame(width: 700, height: 550)
   }
   
   /// Placeholder view
@@ -659,7 +661,7 @@ extension ChatInputView {
         if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
           _ = provider.loadObject(ofClass: URL.self) { url, error in
             guard let url = url, error == nil else { return }
-
+            
             Task { @MainActor in
               // Check if it's a directory
               var isDirectory: ObjCBool = false
@@ -683,13 +685,13 @@ extension ChatInputView {
         else if provider.hasItemConformingToTypeIdentifier(UTType.png.identifier) {
           _ = provider.loadDataRepresentation(for: .png) { data, error in
             guard let data = data, error == nil else { return }
-
+            
             Task { @MainActor in
               // Save PNG data to temporary file
               let tempDirectory = FileManager.default.temporaryDirectory
               let fileName = "screenshot_\(UUID().uuidString).png"
               let tempURL = tempDirectory.appendingPathComponent(fileName)
-
+              
               do {
                 try data.write(to: tempURL)
                 let attachment = FileAttachment(url: tempURL, isTemporary: true)
@@ -705,13 +707,13 @@ extension ChatInputView {
         else if provider.hasItemConformingToTypeIdentifier(UTType.tiff.identifier) {
           _ = provider.loadDataRepresentation(for: .tiff) { data, error in
             guard let data = data, error == nil else { return }
-
+            
             Task { @MainActor in
               // Save TIFF data to temporary file
               let tempDirectory = FileManager.default.temporaryDirectory
               let fileName = "screenshot_\(UUID().uuidString).tiff"
               let tempURL = tempDirectory.appendingPathComponent(fileName)
-
+              
               do {
                 try data.write(to: tempURL)
                 let attachment = FileAttachment(url: tempURL, isTemporary: true)
@@ -727,13 +729,13 @@ extension ChatInputView {
         else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
           _ = provider.loadDataRepresentation(for: .image) { data, error in
             guard let data = data, error == nil else { return }
-
+            
             Task { @MainActor in
               // Save image data to temporary file
               let tempDirectory = FileManager.default.temporaryDirectory
               let fileName = "dropped_image_\(UUID().uuidString).png"
               let tempURL = tempDirectory.appendingPathComponent(fileName)
-
+              
               do {
                 try data.write(to: tempURL)
                 let attachment = FileAttachment(url: tempURL, isTemporary: true)
@@ -949,14 +951,14 @@ extension ChatInputView {
 // MARK: - Command Search
 
 extension ChatInputView {
-
+  
   /// Detect / at start of message and trigger command search
   private func detectSlashCommand(oldText: String, newText: String) {
     // Prevent recursive updates
     guard !isUpdatingCommandSearch else {
       return
     }
-
+    
     // If text was deleted and we're showing search, check if / was deleted
     if showingCommandSearch && newText.count < oldText.count {
       // Check if the / character is still present at the search location
@@ -969,11 +971,11 @@ extension ChatInputView {
         }
       }
     }
-
+    
     // Check if / was just typed at the start of the message
     let oldCount = oldText.filter { $0 == "/" }.count
     let newCount = newText.filter { $0 == "/" }.count
-
+    
     if newCount > oldCount {
       // Find the position of the newly typed /
       if let slashIndex = findNewSlashPosition(oldText: oldText, newText: newText) {
@@ -983,7 +985,7 @@ extension ChatInputView {
           if commandSearchViewModel == nil {
             commandSearchViewModel = CommandSearchViewModel(projectPath: viewModel.projectPath)
           }
-
+          
           // Start command search
           commandSearchRange = NSRange(location: slashIndex, length: 1)
           showingCommandSearch = true
@@ -998,40 +1000,40 @@ extension ChatInputView {
       dismissCommandSearch()
     }
   }
-
+  
   /// Find position of newly typed / character
   private func findNewSlashPosition(oldText: String, newText: String) -> Int? {
     let oldChars = Array(oldText)
     let newChars = Array(newText)
-
+    
     // Find where the texts differ
     var i = 0
     while i < oldChars.count && i < newChars.count && oldChars[i] == newChars[i] {
       i += 1
     }
-
+    
     // Check if / was inserted at position i
     if i < newChars.count && newChars[i] == "/" {
       return i
     }
-
+    
     return nil
   }
-
+  
   /// Update command search query based on text after /
   private func updateCommandSearchQuery() {
     guard let searchRange = commandSearchRange else { return }
-
+    
     // Validate search range
     let nsString = text as NSString
     guard searchRange.location < nsString.length else {
       dismissCommandSearch()
       return
     }
-
+    
     // The search range starts at / character
     let slashLocation = searchRange.location
-
+    
     // Find the end of the search query (until space, newline, or end of text)
     var queryEnd = slashLocation + 1 // Start after the / symbol
     while queryEnd < nsString.length {
@@ -1041,24 +1043,24 @@ extension ChatInputView {
       }
       queryEnd += 1
     }
-
+    
     // Extract the full query after / (not including /)
     let queryStart = slashLocation + 1
     let queryLength = queryEnd - queryStart
-
+    
     if queryStart <= nsString.length && queryLength >= 0 && queryStart + queryLength <= nsString.length {
       let query = nsString.substring(with: NSRange(location: queryStart, length: queryLength))
       commandSearchViewModel?.searchQuery = query
-
+      
       // Update the search range to include / and the query
       commandSearchRange = NSRange(location: slashLocation, length: queryEnd - slashLocation)
     }
   }
-
+  
   /// Insert selected command into text
   private func insertCommand(_ result: CommandResult) {
     guard let searchRange = commandSearchRange else { return }
-
+    
     // Validate that the range is still valid
     let nsString = text as NSString
     guard searchRange.location >= 0,
@@ -1066,59 +1068,74 @@ extension ChatInputView {
       dismissCommandSearch()
       return
     }
-
+    
     // Set flag to prevent onChange from triggering command search
     isUpdatingCommandSearch = true
-
+    
     // Replace the /query with /command-name followed by space
     let replacement = result.displayName + " "
     let newText = nsString.replacingCharacters(in: searchRange, with: replacement)
     text = newText
-
+    
     // Dismiss search
     dismissCommandSearch()
-
+    
     // Reset flag after a short delay
     DispatchQueue.main.async {
       self.isUpdatingCommandSearch = false
     }
   }
-
+  
   /// Dismiss command search and clear state
   private func dismissCommandSearch() {
     showingCommandSearch = false
     commandSearchRange = nil
     commandSearchViewModel?.clearSearch()
   }
-
+  
   /// Voice mode sheet
   private var voiceModeSheet: some View {
-    VoiceModeWrapper(chatViewModel: viewModel)
+    VoiceModeWrapper(chatViewModel: resolvedViewModel())
+  }
+  
+  private func resolvedViewModel() -> ChatViewModel {
+    var resolvedViewModel = viewModel
+    resolvedViewModel.permissionMode = .bypassPermissions
+    return resolvedViewModel
   }
 }
 
+
 // MARK: - Voice Mode Wrapper
+
+import ClaudeCodeCore
+import ClaudeCodeSDK
+import CCCustomPermissionService
 
 /// Wrapper view that initializes VoiceModeView with the ChatViewModel adapter
 struct VoiceModeWrapper: View {
-  let chatViewModel: ChatViewModel
+  let chatViewModel: ChatViewModel?
   @State private var settingsManager = SettingsManager()
   @State private var serviceManager = OpenAIServiceManager()
-  @State private var mcpServerManager = MCPServerManager()  // ADD THIS
-
+  @State private var mcpServerManager = MCPServerManager()
+  
+  var resolvedViewModel: ChatViewModel {
+    chatViewModel ?? viewmodel()
+  }
+  
   var body: some View {
     // Create adapter from existing ChatViewModel
     // This ensures voice mode uses the EXACT same configuration
-    let adapter = ChatViewModelAdapter(chatViewModel: chatViewModel)
-
+    let adapter = ChatViewModelAdapter(chatViewModel: resolvedViewModel)
+    
     VoiceModeView(presentationMode: .presented, executor: adapter)
       .environment(settingsManager)
       .environment(serviceManager)
       .environment(mcpServerManager)
       .onAppear {
         // Sync working directory from ChatViewModel
-        if !chatViewModel.projectPath.isEmpty {
-          settingsManager.setWorkingDirectory(chatViewModel.projectPath)
+        if !resolvedViewModel.projectPath.isEmpty {
+          settingsManager.setWorkingDirectory(resolvedViewModel.projectPath)
         }
         // Initialize service with current API key
         serviceManager.updateService(apiKey: settingsManager.apiKey)
@@ -1127,6 +1144,66 @@ struct VoiceModeWrapper: View {
         // Update service when API key changes in settings
         serviceManager.updateService(apiKey: newValue)
       }
+  }
+  
+  func viewmodel() -> ChatViewModel {
+    do {
+      // Following ClaudeCodeContainer pattern for proper initialization
+      
+      // 1. Create configuration with working directory and debug logging
+      var config = ClaudeCodeConfiguration.withNvmSupport()
+      let homeDir = NSHomeDirectory()
+      config.workingDirectory = settingsManager.workingDirectory ?? homeDir
+      config.enableDebugLogging = true
+      // PRIORITY 1: Check for local Claude installation (usually the newest version)
+      // This is typically installed via the Claude installer, not npm
+      let localClaudePath = "\(homeDir)/.claude/local"
+      if FileManager.default.fileExists(atPath: localClaudePath) {
+        // Insert at beginning for highest priority
+        config.additionalPaths.insert(localClaudePath, at: 0)
+      }
+      // PRIORITY 2: Add essential system paths and common development tools
+      // The SDK uses /bin/zsh -l -c which loads the user's shell environment,
+      // so these are mainly fallbacks for tools installed in standard locations
+      config.additionalPaths.append(contentsOf: [
+        "/usr/local/bin",           // Homebrew on Intel Macs, common Unix tools
+        "/opt/homebrew/bin",        // Homebrew on Apple Silicon
+        "/usr/bin",                 // System binaries
+        "\(homeDir)/.bun/bin",      // Bun JavaScript runtime
+        "\(homeDir)/.deno/bin",     // Deno JavaScript runtime
+        "\(homeDir)/.cargo/bin",    // Rust cargo
+        "\(homeDir)/.local/bin"     // Python pip user installs
+      ])
+      // 2. Create Claude Code client with configuration
+      let claudeClient = try! ClaudeCodeClient(configuration: config)
+      
+      // 3. Create dependencies (following ClaudeCodeContainer pattern)
+      let sessionStorage = NoOpSessionStorage()
+      let settingsStorage = SettingsStorageManager()
+      let globalPreferences = GlobalPreferencesStorage()
+      let permissionService = DefaultCustomPermissionService()
+      
+      // 4. Create ChatViewModel with all dependencies
+      let chatViewModel = ChatViewModel(
+        claudeClient: claudeClient,
+        sessionStorage: sessionStorage,
+        settingsStorage: settingsStorage,
+        globalPreferences: globalPreferences,
+        customPermissionService: permissionService,
+        systemPromptPrefix: nil,
+        shouldManageSessions: false,
+        onSessionChange: nil,
+        onUserMessageSent: nil
+      )
+      
+      // 5. Set permission mode from settings
+      let permissionMode: ClaudeCodeSDK.PermissionMode = (settingsManager.bypassPermissions == true) ? .bypassPermissions : .default
+      chatViewModel.permissionMode = permissionMode
+      // 6. Set working directory in view model (following ClaudeCodeContainer pattern)
+      let workingDir = settingsManager.workingDirectory ?? ""
+      chatViewModel.projectPath = config.workingDirectory ?? ""
+      return chatViewModel
+    }
   }
 }
 
