@@ -24,7 +24,7 @@ let package = Package(
         .package(url: "https://github.com/appstefan/highlightswift", from: "1.1.0"),
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk", from: "0.9.0"),
         .package(url: "https://github.com/stephencelis/SQLite.swift", from: "0.15.3"),
-        .package(url: "https://github.com/jamesrochabrun/CodeWhisper", exact: "1.0.3"),
+        .package(url: "https://github.com/jamesrochabrun/CodeWhisper", exact: "1.0.4"),
     ],
     targets: [
         // Foundation modules (no dependencies)
