@@ -15,20 +15,37 @@ public protocol ToolFormatterProtocol {
   ///   - tool: The tool type information
   /// - Returns: A tuple containing the formatted string and content type
   func formatOutput(_ output: String, tool: ToolType) -> (String, ToolDisplayFormatter.ToolContentFormatter.ContentType)
-  
+
   /// Formats the tool's input arguments for display
   /// - Parameters:
   ///   - arguments: The raw arguments as a string (usually JSON)
   ///   - tool: The tool type information
   /// - Returns: The formatted arguments string
   func formatArguments(_ arguments: String, tool: ToolType) -> String
-  
+
   /// Extracts key parameters from arguments for compact header display
   /// - Parameters:
   ///   - arguments: The raw arguments as a string (usually JSON)
   ///   - tool: The tool type information
   /// - Returns: A formatted string of key parameters, or nil if none
   func extractKeyParameters(_ arguments: String, tool: ToolType) -> String?
+
+  /// Returns a compact summary of the tool result for minimal display
+  /// Used for compact and preview display styles
+  /// - Parameters:
+  ///   - result: The raw result from the tool
+  ///   - tool: The tool type information
+  /// - Returns: A compact summary string (e.g., "Read 100 lines", "Found 5 matches")
+  func compactSummary(_ result: String, tool: ToolType) -> String?
+
+  /// Returns a truncated preview of the tool result with line count
+  /// Used for preview display style (e.g., first few lines + "... +X lines")
+  /// - Parameters:
+  ///   - result: The raw result from the tool
+  ///   - tool: The tool type information
+  ///   - maxLines: Maximum number of lines to show in preview
+  /// - Returns: A tuple of (preview content, remaining line count) or nil
+  func previewContent(_ result: String, tool: ToolType, maxLines: Int) -> (preview: String, remainingLines: Int)?
 }
 
 /// Base implementation with default behavior
@@ -122,7 +139,7 @@ public extension ToolFormatterProtocol {
         return URL(fileURLWithPath: string).lastPathComponent
       }
       return string.truncateIntelligently(to: 30)
-      
+
     case let array as [Any]:
       // Special handling for todos array
       if key == "todos", let todos = array as? [[String: Any]] {
@@ -130,12 +147,28 @@ public extension ToolFormatterProtocol {
         return "\(completed)/\(todos.count) completed"
       }
       return "[\(array.count) items]"
-      
+
     case let dict as [String: Any]:
       return "{\(dict.count) properties}"
-      
+
     default:
       return String(describing: value).truncateIntelligently(to: 30)
     }
+  }
+
+  /// Default implementation returns nil - override in specific formatters
+  func compactSummary(_ result: String, tool: ToolType) -> String? {
+    nil
+  }
+
+  /// Default implementation for preview content
+  func previewContent(_ result: String, tool: ToolType, maxLines: Int) -> (preview: String, remainingLines: Int)? {
+    let lines = result.components(separatedBy: .newlines)
+    guard lines.count > 0 else { return nil }
+
+    let previewLines = Array(lines.prefix(maxLines))
+    let remainingCount = max(0, lines.count - maxLines)
+
+    return (previewLines.joined(separator: "\n"), remainingCount)
   }
 }

@@ -11,30 +11,33 @@ import SwiftUI
 public protocol ToolType {
   /// Unique identifier for the tool
   var identifier: String { get }
-  
+
   /// Human-readable name for display
   var friendlyName: String { get }
-  
+
   /// SF Symbol name for the tool icon
   var icon: String { get }
-  
+
   /// Whether this tool executes terminal commands
   var isTerminalTool: Bool { get }
-  
+
   /// Whether this tool modifies files
   var isEditTool: Bool { get }
-  
+
   /// The formatting style to use for this tool's output
   var formatType: ToolFormatType { get }
-  
+
   /// Whether this tool requires user approval
   var requiresApproval: Bool { get }
-  
+
   /// Priority parameters to display in headers (order matters)
   var priorityParameters: [String] { get }
-  
+
   /// Whether this tool should be expanded by default when displayed
   var defaultExpandedState: Bool { get }
+
+  /// How this tool should be displayed in the UI (compact, preview, or expanded)
+  var displayStyle: ToolDisplayStyle { get }
 }
 
 /// Defines how a tool's output should be formatted
@@ -49,6 +52,21 @@ public enum ToolFormatType {
   case webContent
   case searchResults
   case fileSystem
+}
+
+/// Defines how a tool should be displayed in the UI
+public enum ToolDisplayStyle {
+  /// Single line display with tool name and key parameter only (e.g., "Grep pattern")
+  /// No output preview, no expand/collapse
+  case compact
+
+  /// Shows truncated output preview with line count (e.g., "... +17 lines")
+  /// Has a sub-line with └ connector for preview content
+  case preview
+
+  /// Full collapsible content with expand/collapse capability
+  /// Used for Edit, Write, TodoWrite, Thinking, etc.
+  case expanded
 }
 
 /// Standard tools available in Claude Code
@@ -174,6 +192,20 @@ public enum ClaudeCodeTool: String, ToolType, CaseIterable {
       return false
     }
   }
+
+  public var displayStyle: ToolDisplayStyle {
+    switch self {
+    case .grep, .glob, .ls:
+      // Compact: just shows tool name + pattern, no output preview
+      return .compact
+    case .bash, .read, .webFetch, .webSearch, .notebookRead:
+      // Preview: shows truncated output with "+X lines" indicator
+      return .preview
+    case .edit, .multiEdit, .write, .notebookEdit, .todoWrite, .exitPlanMode, .task:
+      // Expanded: full collapsible content with expand/collapse
+      return .expanded
+    }
+  }
 }
 
 /// MCP (Model Context Protocol) tools
@@ -187,7 +219,8 @@ public struct MCPTool: ToolType {
   public let requiresApproval: Bool
   public let priorityParameters: [String]
   public let defaultExpandedState: Bool
-  
+  public let displayStyle: ToolDisplayStyle
+
   public init(
     identifier: String,
     friendlyName: String? = nil,
@@ -197,7 +230,8 @@ public struct MCPTool: ToolType {
     formatType: ToolFormatType = .plainText,
     requiresApproval: Bool = false,
     priorityParameters: [String] = [],
-    defaultExpandedState: Bool = false
+    defaultExpandedState: Bool = false,
+    displayStyle: ToolDisplayStyle = .preview
   ) {
     self.identifier = identifier
     self.friendlyName = friendlyName ?? identifier.replacingOccurrences(of: "_", with: " ").capitalized
@@ -208,6 +242,7 @@ public struct MCPTool: ToolType {
     self.requiresApproval = requiresApproval
     self.priorityParameters = priorityParameters
     self.defaultExpandedState = defaultExpandedState
+    self.displayStyle = displayStyle
   }
 }
 

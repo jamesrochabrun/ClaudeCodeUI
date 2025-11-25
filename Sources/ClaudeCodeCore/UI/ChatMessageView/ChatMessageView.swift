@@ -149,14 +149,28 @@ struct ChatMessageView: View {
   private var messageContent: some View {
     VStack(alignment: .leading, spacing: 0) {
       if isCollapsible {
-        collapsibleContent
+        // Route based on tool display style
+        switch toolDisplayStyle {
+        case .compact, .preview:
+          compactContent
+        case .expanded:
+          collapsibleContent
+        }
       } else {
         standardMessageContent
       }
     }
     .frame(maxWidth: .infinity, alignment: .leading)
   }
-  
+
+  /// Compact view for tools with .compact or .preview display style
+  private var compactContent: some View {
+    CompactToolResultView(
+      message: message,
+      fontSize: fontSize
+    )
+  }
+
   private var collapsibleContent: some View {
     VStack {
       CollapsibleHeaderView(
@@ -279,6 +293,29 @@ struct ChatMessageView: View {
   private var isEditTool: Bool {
     guard let toolName = message.toolName else { return false }
     return EditTool(rawValue: toolName) != nil
+  }
+
+  /// Returns the display style for the current tool
+  /// Defaults to .expanded for thinking, errors, and unknown tools
+  private var toolDisplayStyle: ToolDisplayStyle {
+    // Thinking messages always use expanded style
+    if message.messageType == .thinking {
+      return .expanded
+    }
+
+    // Errors and denied use expanded style to show full details
+    if message.messageType == .toolError || message.messageType == .toolDenied {
+      return .expanded
+    }
+
+    // Check the tool's configured display style
+    if let toolName = message.toolName,
+       let tool = ToolRegistry.shared.tool(for: toolName) {
+      return tool.displayStyle
+    }
+
+    // Default to expanded for unknown tools
+    return .expanded
   }
   
   private var contentBackgroundColor: SwiftUI.Color {

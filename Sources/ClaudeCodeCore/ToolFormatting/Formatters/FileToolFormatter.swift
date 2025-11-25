@@ -95,24 +95,67 @@ struct FileToolFormatter: ToolFormatterProtocol {
               let filePath = jsonDict["file_path"] as? String else {
       return nil
     }
-    
+
     let filename = URL(fileURLWithPath: filePath).lastPathComponent
-    
+
     switch tool.identifier {
     case "Read":
       if let offset = jsonDict["offset"], let limit = jsonDict["limit"] {
         return "\(filename) lines \(offset)-\(limit)"
       }
       return filename
-      
+
     case "Write":
       return filename
-      
+
     case "LS":
       return filename.isEmpty ? "current directory" : filename
-      
+
     default:
       return filename
     }
+  }
+
+  // MARK: - Compact Summary
+
+  /// Returns a compact summary like "Read 100 lines" for the preview display
+  func compactSummary(_ result: String, tool: ToolType) -> String? {
+    switch tool.identifier {
+    case "Read":
+      let lines = result.components(separatedBy: .newlines)
+      let lineCount = lines.count
+      return "Read \(lineCount) lines"
+
+    case "Write":
+      let success = !result.lowercased().contains("error") && !result.lowercased().contains("failed")
+      return success ? "File written" : "Write failed"
+
+    case "LS":
+      let items = result.components(separatedBy: .newlines).filter { !$0.isEmpty }
+      return "\(items.count) items"
+
+    default:
+      return nil
+    }
+  }
+
+  /// Returns preview content with truncated lines
+  func previewContent(_ result: String, tool: ToolType, maxLines: Int) -> (preview: String, remainingLines: Int)? {
+    let lines = result.components(separatedBy: .newlines)
+    guard !lines.isEmpty else { return nil }
+
+    // For Read tool, show first few lines with file content preview
+    let previewLines = Array(lines.prefix(maxLines))
+    let remainingCount = max(0, lines.count - maxLines)
+
+    // Truncate long lines for cleaner preview
+    let truncatedPreview = previewLines.map { line -> String in
+      if line.count > 80 {
+        return String(line.prefix(77)) + "..."
+      }
+      return line
+    }
+
+    return (truncatedPreview.joined(separator: "\n"), remainingCount)
   }
 }
