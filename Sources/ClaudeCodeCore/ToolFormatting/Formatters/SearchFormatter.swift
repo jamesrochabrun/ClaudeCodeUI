@@ -274,16 +274,26 @@ public struct SearchFormatter: ToolFormatterProtocol {
     }
   }
   
+  // MARK: - Compact Summary
+
+  /// Returns nil for Grep/Glob since they show just the tool name + pattern (compact style)
+  /// The pattern is already shown in the header via extractKeyParameters
+  public func compactSummary(_ result: String, tool: ToolType) -> String? {
+    // For compact display style tools (Grep, Glob, LS), we don't need additional summary
+    // The header already shows "Grep pattern" or "Glob pattern"
+    nil
+  }
+
   // MARK: - Private Helpers
-  
+
   private func extractURLs(from text: String) -> [String] {
     let pattern = #"https?://[^\s<>"{}|\\^`\[\]]+"#
     guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
       return []
     }
-    
+
     let matches = regex.matches(in: text, options: [], range: NSRange(location: 0, length: text.count))
-    
+
     return matches.compactMap { match in
       guard let range = Range(match.range, in: text) else { return nil }
       return String(text[range])

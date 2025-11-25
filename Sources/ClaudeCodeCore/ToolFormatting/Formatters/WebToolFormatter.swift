@@ -58,7 +58,7 @@ struct WebToolFormatter: ToolFormatterProtocol {
     guard let jsonDict = arguments.toDictionary() else {
       return nil
     }
-    
+
     switch tool.identifier {
     case "WebFetch":
       if let url = jsonDict["url"] as? String {
@@ -68,16 +68,60 @@ struct WebToolFormatter: ToolFormatterProtocol {
         }
         return url.truncateIntelligently(to: 40)
       }
-      
+
     case "WebSearch":
       if let query = jsonDict["query"] as? String {
         return query.truncateIntelligently(to: 40)
       }
-      
+
     default:
       break
     }
-    
+
     return nil
+  }
+
+  // MARK: - Compact Summary & Preview
+
+  /// Returns a compact summary for web tool results
+  func compactSummary(_ result: String, tool: ToolType) -> String? {
+    let lines = result.components(separatedBy: .newlines).filter { !$0.isEmpty }
+
+    switch tool.identifier {
+    case "WebFetch":
+      if result.isEmpty || result.lowercased().contains("error") {
+        return "Fetch failed"
+      }
+      return "Fetched content"
+
+    case "WebSearch":
+      if result.isEmpty {
+        return "No results"
+      }
+      // Count results based on common patterns
+      return "Search complete"
+
+    default:
+      return nil
+    }
+  }
+
+  /// Returns preview content for web results
+  func previewContent(_ result: String, tool: ToolType, maxLines: Int) -> (preview: String, remainingLines: Int)? {
+    let lines = result.components(separatedBy: .newlines)
+    guard !lines.isEmpty else { return nil }
+
+    let previewLines = Array(lines.prefix(maxLines))
+    let remainingCount = max(0, lines.count - maxLines)
+
+    // Truncate long lines
+    let truncatedPreview = previewLines.map { line -> String in
+      if line.count > 100 {
+        return String(line.prefix(97)) + "..."
+      }
+      return line
+    }
+
+    return (truncatedPreview.joined(separator: "\n"), remainingCount)
   }
 }
