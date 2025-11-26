@@ -57,7 +57,6 @@ public enum CommandParser {
 
   /// Extract namespace from the file path
   private static func extractNamespace(from filePath: String, scope: CommandScope) -> String? {
-    let url = URL(fileURLWithPath: filePath)
     let commandsDir = scope == .user ? "/.claude/commands/" : "/.claude/commands/"
 
     // Split path by commands directory

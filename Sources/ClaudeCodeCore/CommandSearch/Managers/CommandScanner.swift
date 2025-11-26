@@ -65,12 +65,12 @@ final class CommandScanner: CommandScannerProtocol {
     var commands: [SlashCommand] = []
 
     // Scan user commands
-    let userCommands = await scanCommandDirectory(scope: .user)
+    let userCommands = scanCommandDirectory(scope: .user)
     commands.append(contentsOf: userCommands)
 
     // Scan project commands if projectPath is available
     if projectPath != nil {
-      let projectCommands = await scanCommandDirectory(scope: .project)
+      let projectCommands = scanCommandDirectory(scope: .project)
       commands.append(contentsOf: projectCommands)
     }
 

@@ -108,7 +108,7 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
     let deletedCount = try database.run(deleteMessages.delete())
 
     // Insert new messages
-    for (index, message) in messages.enumerated() {
+    for (_, message) in messages.enumerated() {
       let insertMessage = messagesTable.insert(
         messageIdColumn <- message.id.uuidString,
         messageSessionIdColumn <- id,
