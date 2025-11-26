@@ -85,8 +85,6 @@ struct WebToolFormatter: ToolFormatterProtocol {
 
   /// Returns a compact summary for web tool results
   func compactSummary(_ result: String, tool: ToolType) -> String? {
-    let lines = result.components(separatedBy: .newlines).filter { !$0.isEmpty }
-
     switch tool.identifier {
     case "WebFetch":
       if result.isEmpty || result.lowercased().contains("error") {
