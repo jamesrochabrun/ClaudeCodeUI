@@ -74,47 +74,74 @@ public struct InlineVoiceModeViewWrapper: View {
   // MARK: - Body
 
   public var body: some View {
-    Group {
-      if mode == .sttWithTTS {
-        // Orchestrate STT → waiting → TTS phases
-        sttWithTTSBody
-      } else {
-        // For other modes, just pass through to InlineVoiceModeView
-        InlineVoiceModeView(
-          mode: mode,
-          height: height,
-          transcribedText: $transcribedText,
-          stopRecordingAction: $stopRecordingAction,
-          onTranscription: handleTranscription,
-          onDismiss: onDismiss,
-          ttsSpeaker: ttsSpeaker
-        )
-        .environment(settingsManager)
-        .environment(serviceManager)
-      }
+    mainContent
+      .onAppear(perform: handleOnAppear)
+      .onChange(of: settingsManager.apiKey, handleAPIKeyChange)
+      .onChange(of: settingsManager.ttsConfiguration, handleTTSConfigChange)
+      .onChange(of: chatViewModel.messages.count, handleMessagesCountChange)
+      .onChange(of: completedAssistantMessageCount, handleCompletedMessagesChange)
+      .onChange(of: ttsSpeaker.state, handleTTSStateChange)
+  }
+
+  @ViewBuilder
+  private var mainContent: some View {
+    if mode == .sttWithTTS {
+      sttWithTTSBody
+    } else {
+      otherModeBody
     }
-    .onAppear {
-      serviceManager.updateService(apiKey: settingsManager.apiKey)
+  }
+
+  private var otherModeBody: some View {
+    InlineVoiceModeView(
+      mode: mode,
+      height: height,
+      transcribedText: $transcribedText,
+      stopRecordingAction: $stopRecordingAction,
+      onTranscription: handleTranscription,
+      onDismiss: onDismiss,
+      ttsSpeaker: ttsSpeaker
+    )
+    .environment(settingsManager)
+    .environment(serviceManager)
+  }
+
+  // MARK: - Lifecycle Handlers
+
+  private func handleOnAppear() {
+    serviceManager.updateService(apiKey: settingsManager.apiKey)
+    ttsSpeaker.configuration = settingsManager.ttsConfiguration
+    if let service = serviceManager.service {
+      ttsSpeaker.configure(service: service)
     }
-    .onChange(of: settingsManager.apiKey) { _, newValue in
-      serviceManager.updateService(apiKey: newValue)
+  }
+
+  private func handleAPIKeyChange(_: String, _ newValue: String) {
+    serviceManager.updateService(apiKey: newValue)
+    if let service = serviceManager.service {
+      ttsSpeaker.configure(service: service)
     }
-    .onChange(of: chatViewModel.messages.count) { _, _ in
-      if waitingForResponse {
-        checkForAssistantResponse()
-      }
+  }
+
+  private func handleTTSConfigChange(_: TTSConfiguration, _ newConfig: TTSConfiguration) {
+    ttsSpeaker.configuration = newConfig
+  }
+
+  private func handleMessagesCountChange(_: Int, _: Int) {
+    if waitingForResponse {
+      checkForAssistantResponse()
     }
-    .onChange(of: completedAssistantMessageCount) { _, _ in
-      // Also check when any assistant message becomes complete
-      if waitingForResponse {
-        checkForAssistantResponse()
-      }
+  }
+
+  private func handleCompletedMessagesChange(_: Int, _: Int) {
+    if waitingForResponse {
+      checkForAssistantResponse()
     }
-    .onChange(of: ttsSpeaker.state) { _, newState in
-      // When TTS finishes speaking, dismiss completely
-      if currentPhase == .tts && !newState.isSpeaking {
-        onDismiss?()
-      }
+  }
+
+  private func handleTTSStateChange(_: TTSSpeakingState, _ newState: TTSSpeakingState) {
+    if currentPhase == .tts && !newState.isSpeaking {
+      onDismiss?()
     }
   }
 
