@@ -37,6 +37,10 @@ struct ChatInputView: View {
   @State private var isDragging = false
   @State private var showingFilePicker = false
   @State private var showingVoiceMode = false
+  @State private var selectedVoiceMode: VoiceMode = .stt
+  @State private var showingVoiceModePicker = false
+  @State private var sttStopAction: (() -> Void)? = nil
+  @State private var ttsSpeaker = TTSSpeaker()
   
   // File search properties
   @State private var showingFileSearch = false
@@ -139,6 +143,28 @@ struct ChatInputView: View {
         }
       }
       
+      // Inline voice mode - shown when voice mode is active and not realtime
+      if showingVoiceMode && uiConfiguration.showVoiceModeButton && globalPreferences.enableVoiceMode && selectedVoiceMode != .realtime {
+        InlineVoiceModeViewWrapper(
+          mode: selectedVoiceMode,
+          height: 42,
+          ttsSpeaker: ttsSpeaker,
+          stopRecordingAction: $sttStopAction,
+          onTranscription: { transcribedText in
+            // Insert text and send
+            text = transcribedText
+            sendMessage()
+          },
+          onDismiss: {
+            showingVoiceMode = false
+            sttStopAction = nil
+          }
+        )
+        .environment(viewModel)
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
+      }
+      
       // Main input area
       VStack(alignment: .leading, spacing: 8) {
         VStack(alignment: .leading, spacing: 2) {
@@ -153,7 +179,10 @@ struct ChatInputView: View {
           HStack(alignment: .center) {
             attachmentButton
             textEditor
-            if text.isEmpty && uiConfiguration.showVoiceModeButton && globalPreferences.enableVoiceMode && !viewModel.isLoading {
+            // Show voiceModeButton when voice mode is active (for stop control)
+            // or when idle with empty text
+            if uiConfiguration.showVoiceModeButton && globalPreferences.enableVoiceMode &&
+               (showingVoiceMode || (text.isEmpty && !viewModel.isLoading)) {
               voiceModeButton
             } else {
               actionButton
@@ -204,6 +233,15 @@ struct ChatInputView: View {
       if !viewModel.projectPath.isEmpty {
         fileSearchViewModel?.updateProjectPath(viewModel.projectPath)
       }
+
+      // Set up TTS callback for sttWithTTS mode
+      viewModel.onAssistantMessage = { [ttsSpeaker] text in
+        // Only speak if we're in sttWithTTS mode and voice mode is active
+        if selectedVoiceMode == .sttWithTTS && showingVoiceMode {
+          print("[ChatInputView] TTS: Speaking assistant response (\(text.count) chars)")
+          ttsSpeaker.speak(text: text)
+        }
+      }
     }
     .alert("No Working Directory Selected", isPresented: $showingProjectPathAlert) {
       workingDirectoryAlertButtons
@@ -213,7 +251,10 @@ struct ChatInputView: View {
     .sheet(isPresented: $showingSettings) {
       settingsSheet
     }
-    .sheet(isPresented: $showingVoiceMode) {
+    .sheet(isPresented: Binding(
+      get: { showingVoiceMode && selectedVoiceMode == .realtime },
+      set: { if !$0 { showingVoiceMode = false } }
+    )) {
       voiceModeSheet
         .frame(minWidth: 600, minHeight: 400)
     }
@@ -246,18 +287,40 @@ extension ChatInputView {
     .help("Attach files")
   }
   
-  /// Voice mode button
+  /// Voice mode button - tap to open, long-press to select mode
+  /// When STT is recording, shows red mic icon that stops recording on tap
   private var voiceModeButton: some View {
-    Button(action: {
-      showingVoiceMode = true
-    }) {
-      Image(systemName: "waveform.circle.fill")
-        .font(.title2)
-        .foregroundColor(.brandSecondary)
+    Group {
+      if showingVoiceMode && (selectedVoiceMode == .stt || selectedVoiceMode == .sttWithTTS) {
+        // Recording state - show red mic, tap to stop
+        Image(systemName: "mic.circle.fill")
+          .font(.title2)
+          .foregroundColor(.red)
+          .padding(10)
+          .contentShape(Rectangle())
+          .onTapGesture {
+            sttStopAction?()
+          }
+          .help("Tap to stop recording")
+      } else {
+        // Normal state - show waveform, tap to start, long-press to select mode
+        Image(systemName: "waveform.circle.fill")
+          .font(.title2)
+          .foregroundColor(.brandSecondary)
+          .padding(10)
+          .contentShape(Rectangle())
+          .onTapGesture {
+            showingVoiceMode = true
+          }
+          .onLongPressGesture(minimumDuration: 0.5) {
+            showingVoiceModePicker = true
+          }
+          .popover(isPresented: $showingVoiceModePicker) {
+            VoiceModePickerView(selectedMode: $selectedVoiceMode)
+          }
+          .help("Tap: Open Voice Mode | Hold: Select Mode")
+      }
     }
-    .padding(10)
-    .buttonStyle(.plain)
-    .help("Open Voice Mode")
   }
   
   /// Action button (send/cancel)
@@ -1203,6 +1266,75 @@ struct VoiceModeWrapper: View {
       let workingDir = settingsManager.workingDirectory ?? ""
       chatViewModel.projectPath = config.workingDirectory ?? ""
       return chatViewModel
+    }
+  }
+}
+
+
+// MARK: - Voice Mode Picker View
+
+/// Picker view for selecting voice mode, shown on long-press of voice button
+struct VoiceModePickerView: View {
+  @Binding var selectedMode: VoiceMode
+  @Environment(\.dismiss) private var dismiss
+  
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("Voice Mode")
+        .font(.headline)
+        .padding(.bottom, 4)
+      
+      ForEach(VoiceMode.allCases, id: \.self) { mode in
+        Button {
+          selectedMode = mode
+          dismiss()
+        } label: {
+          HStack {
+            Image(systemName: iconForMode(mode))
+              .frame(width: 24)
+            VStack(alignment: .leading) {
+              Text(titleForMode(mode))
+                .font(.body)
+              Text(descriptionForMode(mode))
+                .font(.caption)
+                .foregroundColor(.secondary)
+            }
+            Spacer()
+            if selectedMode == mode {
+              Image(systemName: "checkmark")
+                .foregroundColor(.accentColor)
+            }
+          }
+        }
+        .buttonStyle(.plain)
+        .padding(.vertical, 4)
+      }
+    }
+    .padding()
+    .frame(width: 280)
+  }
+  
+  private func iconForMode(_ mode: VoiceMode) -> String {
+    switch mode {
+    case .stt: return "mic.fill"
+    case .sttWithTTS: return "mic.and.signal.meter.fill"
+    case .realtime: return "waveform"
+    }
+  }
+  
+  private func titleForMode(_ mode: VoiceMode) -> String {
+    switch mode {
+    case .stt: return "Speech to Text"
+    case .sttWithTTS: return "Voice Chat"
+    case .realtime: return "Realtime Voice"
+    }
+  }
+  
+  private func descriptionForMode(_ mode: VoiceMode) -> String {
+    switch mode {
+    case .stt: return "Transcribe speech to text"
+    case .sttWithTTS: return "Speak input, hear responses"
+    case .realtime: return "Full bidirectional voice"
     }
   }
 }
