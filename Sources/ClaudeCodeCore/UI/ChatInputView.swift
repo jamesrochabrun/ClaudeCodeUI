@@ -233,15 +233,6 @@ struct ChatInputView: View {
       if !viewModel.projectPath.isEmpty {
         fileSearchViewModel?.updateProjectPath(viewModel.projectPath)
       }
-
-      // Set up TTS callback for sttWithTTS mode
-      viewModel.onAssistantMessage = { [ttsSpeaker] text in
-        // Only speak if we're in sttWithTTS mode and voice mode is active
-        if selectedVoiceMode == .sttWithTTS && showingVoiceMode {
-          print("[ChatInputView] TTS: Speaking assistant response (\(text.count) chars)")
-          ttsSpeaker.speak(text: text)
-        }
-      }
     }
     .alert("No Working Directory Selected", isPresented: $showingProjectPathAlert) {
       workingDirectoryAlertButtons

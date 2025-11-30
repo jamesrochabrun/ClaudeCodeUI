@@ -43,9 +43,6 @@ public final class ChatViewModel {
   /// Optional callback invoked when a user message is sent, used for external logging
   private let onUserMessageSent: ((String, [TextSelection]?, [FileAttachment]?) -> Void)?
 
-  /// Optional callback invoked when an assistant message is received (for TTS playback)
-  public var onAssistantMessage: ((String) -> Void)?
-
   /// Controls whether this view model should manage sessions (load, save, switch, etc.)
   /// Set to false when using ChatScreen directly without RootView to avoid unnecessary session operations
   public let shouldManageSessions: Bool
@@ -1306,12 +1303,6 @@ EOF
           Task { @MainActor in
             self?.isLoading = false
             self?.streamingStartTime = nil
-
-            // Invoke assistant message callback for TTS playback
-            if let lastMessage = self?.messages.last,
-               lastMessage.role == .assistant {
-              self?.onAssistantMessage?(lastMessage.content)
-            }
           }
         }
       )
