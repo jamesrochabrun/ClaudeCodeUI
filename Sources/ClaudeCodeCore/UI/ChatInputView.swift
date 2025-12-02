@@ -36,11 +36,10 @@ struct ChatInputView: View {
   @State private var attachments: [FileAttachment] = []
   @State private var isDragging = false
   @State private var showingFilePicker = false
-  @State private var showingVoiceMode = false
-  @State private var selectedVoiceMode: VoiceMode = .stt
-  @State private var showingVoiceModePicker = false
-  @State private var sttStopAction: (() -> Void)? = nil
-  @State private var ttsSpeaker = TTSSpeaker()
+
+  // Voice mode adapter for CodeWhisperButton
+  @State private var voiceModeAdapter: ChatViewModelVoiceModeAdapter?
+  @State private var isRealtimeSessionActive = false
   
   // File search properties
   @State private var showingFileSearch = false
@@ -143,28 +142,6 @@ struct ChatInputView: View {
         }
       }
       
-      // Inline voice mode - shown when voice mode is active and not realtime
-      if showingVoiceMode && uiConfiguration.showVoiceModeButton && globalPreferences.enableVoiceMode && selectedVoiceMode != .realtime {
-        InlineVoiceModeViewWrapper(
-          mode: selectedVoiceMode,
-          height: 42,
-          ttsSpeaker: ttsSpeaker,
-          stopRecordingAction: $sttStopAction,
-          onTranscription: { transcribedText in
-            // Insert text and send
-            text = transcribedText
-            sendMessage()
-          },
-          onDismiss: {
-            showingVoiceMode = false
-            sttStopAction = nil
-          }
-        )
-        .environment(viewModel)
-        .padding(.horizontal, 12)
-        .padding(.bottom, 8)
-      }
-      
       // Main input area
       VStack(alignment: .leading, spacing: 8) {
         VStack(alignment: .leading, spacing: 2) {
@@ -179,11 +156,11 @@ struct ChatInputView: View {
           HStack(alignment: .center) {
             attachmentButton
             textEditor
-            // Show voiceModeButton when voice mode is active (for stop control)
-            // or when idle with empty text
-            if uiConfiguration.showVoiceModeButton && globalPreferences.enableVoiceMode &&
-               (showingVoiceMode || (text.isEmpty && !viewModel.isLoading)) {
-              voiceModeButton
+            // Show CodeWhisperButton when voice mode is enabled and text is empty
+            // Keep button visible during loading only when realtime session is active (to prevent sheet dismissal)
+            // For STT/STT+TTS modes, show action button during loading so user can cancel
+            if uiConfiguration.showVoiceModeButton && globalPreferences.enableVoiceMode && text.isEmpty && (!viewModel.isLoading || isRealtimeSessionActive) {
+              codeWhisperButton
             } else {
               actionButton
             }
@@ -233,6 +210,10 @@ struct ChatInputView: View {
       if !viewModel.projectPath.isEmpty {
         fileSearchViewModel?.updateProjectPath(viewModel.projectPath)
       }
+      // Initialize voice mode adapter for CodeWhisperButton
+      if voiceModeAdapter == nil {
+        voiceModeAdapter = ChatViewModelVoiceModeAdapter(chatViewModel: viewModel)
+      }
     }
     .alert("No Working Directory Selected", isPresented: $showingProjectPathAlert) {
       workingDirectoryAlertButtons
@@ -241,13 +222,6 @@ struct ChatInputView: View {
     }
     .sheet(isPresented: $showingSettings) {
       settingsSheet
-    }
-    .sheet(isPresented: Binding(
-      get: { showingVoiceMode && selectedVoiceMode == .realtime },
-      set: { if !$0 { showingVoiceMode = false } }
-    )) {
-      voiceModeSheet
-        .frame(minWidth: 600, minHeight: 400)
     }
     .fileImporter(
       isPresented: $showingFilePicker,
@@ -278,40 +252,15 @@ extension ChatInputView {
     .help("Attach files")
   }
   
-  /// Voice mode button - tap to open, long-press to select mode
-  /// When STT is recording, shows red mic icon that stops recording on tap
-  private var voiceModeButton: some View {
-    Group {
-      if showingVoiceMode && (selectedVoiceMode == .stt || selectedVoiceMode == .sttWithTTS) {
-        // Recording state - show red mic, tap to stop
-        Image(systemName: "mic.circle.fill")
-          .font(.title2)
-          .foregroundColor(.red)
-          .padding(10)
-          .contentShape(Rectangle())
-          .onTapGesture {
-            sttStopAction?()
-          }
-          .help("Tap to stop recording")
-      } else {
-        // Normal state - show waveform, tap to start, long-press to select mode
-        Image(systemName: "waveform.circle.fill")
-          .font(.title2)
-          .foregroundColor(.brandSecondary)
-          .padding(10)
-          .contentShape(Rectangle())
-          .onTapGesture {
-            showingVoiceMode = true
-          }
-          .onLongPressGesture(minimumDuration: 0.5) {
-            showingVoiceModePicker = true
-          }
-          .popover(isPresented: $showingVoiceModePicker) {
-            VoiceModePickerView(selectedMode: $selectedVoiceMode)
-          }
-          .help("Tap: Open Voice Mode | Hold: Select Mode")
-      }
-    }
+  /// CodeWhisper button - tap to start voice mode, long-press to open settings
+  private var codeWhisperButton: some View {
+    CodeWhisperButton(
+      chatInterface: voiceModeAdapter,
+      executor: ChatViewModelAdapter(chatViewModel: viewModel),
+      configuration: .sttOnly,
+      isRealtimeSessionActive: $isRealtimeSessionActive
+    )
+    .padding(.trailing, 2)
   }
   
   /// Action button (send/cancel)
@@ -1147,186 +1096,5 @@ extension ChatInputView {
     commandSearchViewModel?.clearSearch()
   }
   
-  /// Voice mode sheet
-  private var voiceModeSheet: some View {
-    VoiceModeWrapper(chatViewModel: resolvedViewModel())
-  }
-  
-  private func resolvedViewModel() -> ChatViewModel {
-    var resolvedViewModel = viewModel
-    resolvedViewModel.permissionMode = .bypassPermissions
-    return resolvedViewModel
-  }
-}
-
-
-// MARK: - Voice Mode Wrapper
-
-import ClaudeCodeCore
-import ClaudeCodeSDK
-import CCCustomPermissionService
-
-/// Wrapper view that initializes VoiceModeView with the ChatViewModel adapter
-struct VoiceModeWrapper: View {
-  let chatViewModel: ChatViewModel?
-  @State private var settingsManager = SettingsManager()
-  @State private var serviceManager = OpenAIServiceManager()
-  @State private var mcpServerManager = MCPServerManager()
-  
-  var resolvedViewModel: ChatViewModel {
-    chatViewModel ?? viewmodel()
-  }
-  
-  var body: some View {
-    // Create adapter from existing ChatViewModel
-    // This ensures voice mode uses the EXACT same configuration
-    let adapter = ChatViewModelAdapter(chatViewModel: resolvedViewModel)
-    
-    VoiceModeView(presentationMode: .presented, executor: adapter)
-      .environment(settingsManager)
-      .environment(serviceManager)
-      .environment(mcpServerManager)
-      .onAppear {
-        // Sync working directory from ChatViewModel
-        if !resolvedViewModel.projectPath.isEmpty {
-          settingsManager.setWorkingDirectory(resolvedViewModel.projectPath)
-        }
-        // Initialize service with current API key
-        serviceManager.updateService(apiKey: settingsManager.apiKey)
-      }
-      .onChange(of: settingsManager.apiKey) { _, newValue in
-        // Update service when API key changes in settings
-        serviceManager.updateService(apiKey: newValue)
-      }
-  }
-  
-  func viewmodel() -> ChatViewModel {
-    do {
-      // Following ClaudeCodeContainer pattern for proper initialization
-      
-      // 1. Create configuration with working directory and debug logging
-      var config = ClaudeCodeConfiguration.withNvmSupport()
-      let homeDir = NSHomeDirectory()
-      config.workingDirectory = settingsManager.workingDirectory ?? homeDir
-      config.enableDebugLogging = true
-      // PRIORITY 1: Check for local Claude installation (usually the newest version)
-      // This is typically installed via the Claude installer, not npm
-      let localClaudePath = "\(homeDir)/.claude/local"
-      if FileManager.default.fileExists(atPath: localClaudePath) {
-        // Insert at beginning for highest priority
-        config.additionalPaths.insert(localClaudePath, at: 0)
-      }
-      // PRIORITY 2: Add essential system paths and common development tools
-      // The SDK uses /bin/zsh -l -c which loads the user's shell environment,
-      // so these are mainly fallbacks for tools installed in standard locations
-      config.additionalPaths.append(contentsOf: [
-        "/usr/local/bin",           // Homebrew on Intel Macs, common Unix tools
-        "/opt/homebrew/bin",        // Homebrew on Apple Silicon
-        "/usr/bin",                 // System binaries
-        "\(homeDir)/.bun/bin",      // Bun JavaScript runtime
-        "\(homeDir)/.deno/bin",     // Deno JavaScript runtime
-        "\(homeDir)/.cargo/bin",    // Rust cargo
-        "\(homeDir)/.local/bin"     // Python pip user installs
-      ])
-      // 2. Create Claude Code client with configuration
-      let claudeClient = try! ClaudeCodeClient(configuration: config)
-      
-      // 3. Create dependencies (following ClaudeCodeContainer pattern)
-      let sessionStorage = NoOpSessionStorage()
-      let settingsStorage = SettingsStorageManager()
-      let globalPreferences = GlobalPreferencesStorage()
-      let permissionService = DefaultCustomPermissionService()
-      
-      // 4. Create ChatViewModel with all dependencies
-      let chatViewModel = ChatViewModel(
-        claudeClient: claudeClient,
-        sessionStorage: sessionStorage,
-        settingsStorage: settingsStorage,
-        globalPreferences: globalPreferences,
-        customPermissionService: permissionService,
-        systemPromptPrefix: nil,
-        shouldManageSessions: false,
-        onSessionChange: nil,
-        onUserMessageSent: nil
-      )
-      
-      // 5. Set permission mode from settings
-      let permissionMode: ClaudeCodeSDK.PermissionMode = (settingsManager.bypassPermissions == true) ? .bypassPermissions : .default
-      chatViewModel.permissionMode = permissionMode
-      // 6. Set working directory in view model (following ClaudeCodeContainer pattern)
-      let workingDir = settingsManager.workingDirectory ?? ""
-      chatViewModel.projectPath = config.workingDirectory ?? ""
-      return chatViewModel
-    }
-  }
-}
-
-
-// MARK: - Voice Mode Picker View
-
-/// Picker view for selecting voice mode, shown on long-press of voice button
-struct VoiceModePickerView: View {
-  @Binding var selectedMode: VoiceMode
-  @Environment(\.dismiss) private var dismiss
-  
-  var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      Text("Voice Mode")
-        .font(.headline)
-        .padding(.bottom, 4)
-      
-      ForEach(VoiceMode.allCases, id: \.self) { mode in
-        Button {
-          selectedMode = mode
-          dismiss()
-        } label: {
-          HStack {
-            Image(systemName: iconForMode(mode))
-              .frame(width: 24)
-            VStack(alignment: .leading) {
-              Text(titleForMode(mode))
-                .font(.body)
-              Text(descriptionForMode(mode))
-                .font(.caption)
-                .foregroundColor(.secondary)
-            }
-            Spacer()
-            if selectedMode == mode {
-              Image(systemName: "checkmark")
-                .foregroundColor(.accentColor)
-            }
-          }
-        }
-        .buttonStyle(.plain)
-        .padding(.vertical, 4)
-      }
-    }
-    .padding()
-    .frame(width: 280)
-  }
-  
-  private func iconForMode(_ mode: VoiceMode) -> String {
-    switch mode {
-    case .stt: return "mic.fill"
-    case .sttWithTTS: return "mic.and.signal.meter.fill"
-    case .realtime: return "waveform"
-    }
-  }
-  
-  private func titleForMode(_ mode: VoiceMode) -> String {
-    switch mode {
-    case .stt: return "Speech to Text"
-    case .sttWithTTS: return "Voice Chat"
-    case .realtime: return "Realtime Voice"
-    }
-  }
-  
-  private func descriptionForMode(_ mode: VoiceMode) -> String {
-    switch mode {
-    case .stt: return "Transcribe speech to text"
-    case .sttWithTTS: return "Speak input, hear responses"
-    case .realtime: return "Full bidirectional voice"
-    }
-  }
 }
 
