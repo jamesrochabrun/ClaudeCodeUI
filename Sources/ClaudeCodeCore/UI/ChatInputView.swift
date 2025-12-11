@@ -257,7 +257,7 @@ extension ChatInputView {
     CodeWhisperButton(
       chatInterface: voiceModeAdapter,
       executor: ChatViewModelAdapter(chatViewModel: viewModel),
-      configuration: .sttOnly,
+      configuration: uiConfiguration.availableVoiceModes.toCodeWhisperConfiguration,
       isRealtimeSessionActive: $isRealtimeSessionActive
     )
     .padding(.trailing, 2)
@@ -1095,6 +1095,22 @@ extension ChatInputView {
     commandSearchRange = nil
     commandSearchViewModel?.clearSearch()
   }
-  
+
+}
+
+// MARK: - VoiceModeOption to CodeWhisperConfiguration Mapping
+
+extension Array where Element == VoiceModeOption {
+  /// Converts an array of VoiceModeOption to CodeWhisperConfiguration
+  var toCodeWhisperConfiguration: CodeWhisperConfiguration {
+    let voiceModes = self.map { option -> VoiceMode in
+      switch option {
+      case .stt: return .stt
+      case .sttWithTTS: return .sttWithTTS
+      case .realtime: return .realtime
+      }
+    }
+    return CodeWhisperConfiguration(availableVoiceModes: voiceModes)
+  }
 }
 

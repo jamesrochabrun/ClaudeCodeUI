@@ -7,6 +7,21 @@
 
 import Foundation
 
+// MARK: - VoiceModeOption
+
+/// Voice mode options for CodeWhisper configuration
+/// Mirrors CodeWhisper.VoiceMode but avoids direct dependency in UIConfiguration
+public enum VoiceModeOption: String, CaseIterable, Sendable {
+  /// Speech-to-text only - tap to toggle recording, outputs transcription
+  case stt = "stt"
+  /// Combined STT + TTS - user speaks (STT), callback fires, parent triggers TTS for response
+  case sttWithTTS = "stt_with_tts"
+  /// Bidirectional realtime voice
+  case realtime = "realtime"
+}
+
+// MARK: - UIConfiguration
+
 /// Configuration for UI customization in ClaudeCodeCore
 public struct UIConfiguration {
   /// The name of the application to display in the UI
@@ -42,6 +57,9 @@ public struct UIConfiguration {
 
   /// Whether to show the voice mode button (requires OpenAI API key for CodeWhisper)
   public let showVoiceModeButton: Bool
+
+  /// Available voice modes for CodeWhisperButton (requires showVoiceModeButton to be true)
+  public let availableVoiceModes: [VoiceModeOption]
   
   /// Default configuration for ClaudeCodeUI app
   public static var `default`: UIConfiguration {
@@ -56,7 +74,8 @@ public struct UIConfiguration {
       showSystemPromptFields: false,
       showAdditionalSystemPromptField: true,
       initialAdditionalSystemPromptPrefix: nil,
-      showVoiceModeButton: false
+      showVoiceModeButton: false,
+      availableVoiceModes: Array(VoiceModeOption.allCases)
     )
   }
 
@@ -73,7 +92,8 @@ public struct UIConfiguration {
       showSystemPromptFields: false,
       showAdditionalSystemPromptField: true,
       initialAdditionalSystemPromptPrefix: nil,
-      showVoiceModeButton: false
+      showVoiceModeButton: false,
+      availableVoiceModes: Array(VoiceModeOption.allCases)
     )
   }
   
@@ -89,7 +109,8 @@ public struct UIConfiguration {
     showSystemPromptFields: Bool = false,
     showAdditionalSystemPromptField: Bool = true,
     initialAdditionalSystemPromptPrefix: String? = nil,
-    showVoiceModeButton: Bool = false
+    showVoiceModeButton: Bool = false,
+    availableVoiceModes: [VoiceModeOption]
   ) {
     self.appName = appName
     self.showSettingsInNavBar = showSettingsInNavBar
@@ -102,5 +123,6 @@ public struct UIConfiguration {
     self.showAdditionalSystemPromptField = showAdditionalSystemPromptField
     self.initialAdditionalSystemPromptPrefix = initialAdditionalSystemPromptPrefix
     self.showVoiceModeButton = showVoiceModeButton
+    self.availableVoiceModes = availableVoiceModes.isEmpty ? Array(VoiceModeOption.allCases) : availableVoiceModes
   }
 }

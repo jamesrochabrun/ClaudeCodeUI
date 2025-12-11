@@ -77,7 +77,21 @@ public final class ChatViewModelAdapter: ClaudeCodeExecutor {
     get { chatViewModel.projectPath }
     set { chatViewModel.projectPath = newValue ?? "" }
   }
-  
+
+  public var permissionMode: CodeWhisper.ExecutorPermissionMode {
+    get {
+      switch chatViewModel.permissionMode {
+      case .bypassPermissions:
+        return .bypassPermissions
+      default:
+        return .default
+      }
+    }
+    set {
+      chatViewModel.permissionMode = newValue == .bypassPermissions ? .bypassPermissions : .default
+    }
+  }
+
   // MARK: - Initialization
   
   public init(chatViewModel: ChatViewModel) {
