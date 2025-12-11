@@ -14,6 +14,7 @@ import CCTerminalServiceInterface
 import KeyboardShortcuts
 import CCCustomPermissionServiceInterface
 import CCCustomPermissionService
+import CodeWhisper
 
 /// Main chat interface view that displays the conversation and input controls.
 /// 

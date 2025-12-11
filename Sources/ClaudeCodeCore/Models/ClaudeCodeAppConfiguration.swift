@@ -42,10 +42,12 @@ public struct ClaudeCodeAppConfiguration {
   }
   
   /// Convenience initializer with just app name
-  public init(appName: String) {
+  public init(
+    appName: String,
+    availableVoiceModes: [VoiceModeOption]) {
     self.init(
       claudeCodeConfiguration: .default,
-      uiConfiguration: UIConfiguration(appName: appName)
+      uiConfiguration: UIConfiguration(appName: appName, availableVoiceModes: availableVoiceModes)
     )
   }
   
@@ -53,6 +55,7 @@ public struct ClaudeCodeAppConfiguration {
   public init(
     appName: String,
     showSettingsInNavBar: Bool,
+    availableVoiceModes: [VoiceModeOption],
     showRiskData: Bool = true,
     initialAdditionalSystemPromptPrefix: String? = nil
   ) {
@@ -62,7 +65,8 @@ public struct ClaudeCodeAppConfiguration {
         appName: appName,
         showSettingsInNavBar: showSettingsInNavBar,
         showRiskData: showRiskData,
-        initialAdditionalSystemPromptPrefix: initialAdditionalSystemPromptPrefix
+        initialAdditionalSystemPromptPrefix: initialAdditionalSystemPromptPrefix,
+        availableVoiceModes: availableVoiceModes
       )
     )
   }
@@ -70,19 +74,21 @@ public struct ClaudeCodeAppConfiguration {
   /// Convenience initializer with app name and working directory
   public init(
     appName: String,
+    availableVoiceModes: [VoiceModeOption],
     workingDirectory: String? = nil
   ) {
     var config = ClaudeCodeConfiguration.default
     config.workingDirectory = workingDirectory
     self.init(
       claudeCodeConfiguration: config,
-      uiConfiguration: UIConfiguration(appName: appName)
+      uiConfiguration: UIConfiguration(appName: appName, availableVoiceModes: availableVoiceModes)
     )
   }
   
   /// Convenience initializer with app name, working directory, and settings visibility
   public init(
     appName: String,
+    availableVoiceModes: [VoiceModeOption],
     workingDirectory: String? = nil,
     showSettingsInNavBar: Bool,
     showRiskData: Bool = true,
@@ -96,7 +102,7 @@ public struct ClaudeCodeAppConfiguration {
         appName: appName,
         showSettingsInNavBar: showSettingsInNavBar,
         showRiskData: showRiskData,
-        initialAdditionalSystemPromptPrefix: initialAdditionalSystemPromptPrefix
+        initialAdditionalSystemPromptPrefix: initialAdditionalSystemPromptPrefix, availableVoiceModes: availableVoiceModes
       )
     )
   }
