@@ -92,7 +92,7 @@ public struct FileInfo: Equatable, Identifiable, Codable {
 }
 
 /// Represents a text selection in a file
-public struct TextSelection: Equatable, Identifiable, Codable {
+public struct TextSelection: Equatable, Identifiable, Codable, Sendable {
   public let id: UUID
   
   /// Path to the file containing the selection

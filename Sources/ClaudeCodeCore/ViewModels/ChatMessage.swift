@@ -12,7 +12,7 @@ import Foundation
 /// This struct maintains the state of which diffs have been applied or rejected,
 /// along with timestamps for each action. It enables auto-collapsing diffs in the UI
 /// to improve performance in long sessions.
-public struct DiffLifecycleState: Codable, Equatable {
+public struct DiffLifecycleState: Codable, Equatable, Sendable {
   /// Set of diff group IDs that have been applied
   public var appliedDiffGroupIDs: Set<String>
 
@@ -47,7 +47,7 @@ public struct DiffLifecycleState: Codable, Equatable {
 ///
 /// ChatMessage encapsulates all the information needed to display and manage
 /// messages in the chat interface, including tool interactions and streaming states.
-public struct ChatMessage: Identifiable, Equatable, Codable {
+public struct ChatMessage: Identifiable, Equatable, Codable, Sendable {
   /// Unique identifier for the message
   public var id: UUID
   
@@ -157,7 +157,7 @@ public struct ChatMessage: Identifiable, Equatable, Codable {
 }
 
 /// Defines the type of content in a message
-public enum MessageType: String, Codable {
+public enum MessageType: String, Codable, Sendable {
   /// Regular text message from user or assistant
   case text
   /// Tool invocation message showing tool name and parameters
@@ -177,7 +177,7 @@ public enum MessageType: String, Codable {
 }
 
 /// Defines who sent the message or what generated it
-public enum MessageRole: String, Codable {
+public enum MessageRole: String, Codable, Sendable {
   /// Message from the user
   case user
   /// Message from Claude assistant
@@ -209,7 +209,7 @@ public enum MessageRole: String, Codable {
 ///
 /// Example: For a TodoWrite tool with 5 todos (2 completed), instead of showing
 /// the raw JSON, it displays "TodoWrite(2/5 completed)" in the header.
-public struct ToolInputData: Equatable, Codable {
+public struct ToolInputData: Equatable, Codable, Sendable {
   /// Simplified key-value representation of tool parameters
   /// - Note: Complex nested structures are flattened to strings for display
   public let parameters: [String: String]
@@ -272,14 +272,14 @@ public struct ToolInputData: Equatable, Codable {
 }
 
 /// Status of plan approval for ExitPlanMode tool messages
-public enum PlanApprovalStatus: String, Codable {
+public enum PlanApprovalStatus: String, Codable, Sendable {
   case approved
   case approvedWithAutoAccept
   case denied
 }
 
 /// Simplified attachment data for storage
-public struct StoredAttachment: Codable, Equatable, Identifiable {
+public struct StoredAttachment: Codable, Equatable, Identifiable, Sendable {
   public let id: UUID
   public let fileName: String
   public let filePath: String

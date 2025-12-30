@@ -2,6 +2,7 @@ import Foundation
 
 public protocol SimplifiedSessionManagerProtocol {
 
+  @MainActor
   func startNewSession(chatViewModel: ChatViewModel, workingDirectory: String?)
 
   func restoreSession(session: StoredSession, chatViewModel: ChatViewModel) async

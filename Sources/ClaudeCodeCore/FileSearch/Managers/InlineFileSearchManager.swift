@@ -78,7 +78,7 @@ final class InlineFileSearchManager: InlineFileSearchProtocol {
         observer = NotificationCenter.default.addObserver(
           forName: .NSMetadataQueryDidFinishGathering,
           object: queryObject,
-          queue: nil
+          queue: .main
         ) { [weak self] notification in
             guard let self else {
               if !isContinuationResumed {
@@ -98,12 +98,14 @@ final class InlineFileSearchManager: InlineFileSearchProtocol {
             }
             
             query.disableUpdates()
-            let results = self.processQueryResults(query, existingFiles: existingFiles, maxResults: maxResults)
-            
-            self.cleanup()
-            if !isContinuationResumed {
-              isContinuationResumed = true
-              continuation?.resume(returning: results)
+            MainActor.assumeIsolated {
+              let results = self.processQueryResults(query, existingFiles: existingFiles, maxResults: maxResults)
+
+              self.cleanup()
+              if !isContinuationResumed {
+                isContinuationResumed = true
+                continuation?.resume(returning: results)
+              }
             }
         }
         
@@ -176,7 +178,7 @@ final class InlineFileSearchManager: InlineFileSearchProtocol {
         observer = NotificationCenter.default.addObserver(
           forName: .NSMetadataQueryDidFinishGathering,
           object: queryObject,
-          queue: nil
+          queue: .main
         ) { [weak self] notification in
             guard let self else {
               if !isContinuationResumed {
@@ -196,17 +198,19 @@ final class InlineFileSearchManager: InlineFileSearchProtocol {
             }
             
             query.disableUpdates()
-            let results = self.processQueryResultsWithContent(
-              query,
-              existingFiles: existingFiles,
-              maxResults: maxResults,
-              queryString: trimmedQuery
-            )
-            
-            self.cleanup()
-            if !isContinuationResumed {
-              isContinuationResumed = true
-              continuation?.resume(returning: results)
+            MainActor.assumeIsolated {
+              let results = self.processQueryResultsWithContent(
+                query,
+                existingFiles: existingFiles,
+                maxResults: maxResults,
+                queryString: trimmedQuery
+              )
+
+              self.cleanup()
+              if !isContinuationResumed {
+                isContinuationResumed = true
+                continuation?.resume(returning: results)
+              }
             }
         }
         
