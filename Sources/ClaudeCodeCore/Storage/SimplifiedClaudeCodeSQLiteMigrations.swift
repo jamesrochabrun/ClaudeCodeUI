@@ -198,7 +198,6 @@ public actor SimplifiedClaudeCodeSQLiteMigrationManager {
 
   /// Create a backup of the database
   private func createBackup() async throws {
-    let fileManager = FileManager.default
     let backupPath = databasePath + ".backup_\(Date().timeIntervalSince1970)"
 
     print("[Migration] Creating backup at: \(backupPath)")

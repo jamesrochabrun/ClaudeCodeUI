@@ -103,10 +103,6 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
   public func updateSessionMessages(id: String, messages: [ChatMessage]) async throws {
     try await initializeDatabaseIfNeeded()
 
-    // Delete existing messages for this session (foreign key constraints will cascade to attachments)
-    let deleteMessages = messagesTable.filter(messageSessionIdColumn == id)
-    let deletedCount = try database.run(deleteMessages.delete())
-
     // Insert new messages
     for (_, message) in messages.enumerated() {
       let insertMessage = messagesTable.insert(
@@ -169,12 +165,6 @@ public actor SimplifiedClaudeCodeSQLiteStorage: SessionStorageProtocol {
       isWorktreeColumn <- oldSessionRow[isWorktreeColumn]
     )
     try database.run(insertNewSession)
-
-    // Now update message session IDs (foreign key constraint satisfied)
-    let messages = messagesTable.filter(messageSessionIdColumn == oldId)
-    let updateMessages = messages.update(messageSessionIdColumn <- newId)
-    let messagesUpdated = try database.run(updateMessages)
-
     // Finally, delete the old session record
     let deleteOldSession = sessionsTable.filter(sessionIdColumn == oldId)
     try database.run(deleteOldSession.delete())

@@ -347,10 +347,10 @@ public struct ClaudeCodeContainer: View {
       var sessions = try await sessionManager.loadAvailableSessions()
       
       // Check if current session exists and update its message count from in-memory store
-      if let currentId = await MainActor.run { currentSessionId } {
+      if let currentId = await MainActor.run(body: { currentSessionId }) {
         if let index = sessions.firstIndex(where: { $0.id == currentId }) {
           // Update the message count for current session from MessageStore
-          if let viewModel = await MainActor.run { chatViewModel } {
+          if let viewModel = await MainActor.run(body: { chatViewModel }) {
             let currentMessages = await MainActor.run { viewModel.getCurrentMessages() }
             var updatedSession = sessions[index]
             updatedSession.messages = currentMessages
@@ -358,7 +358,7 @@ public struct ClaudeCodeContainer: View {
           }
         } else {
           // Current session not in database yet, create placeholder
-          if let viewModel = await MainActor.run { chatViewModel } {
+          if let viewModel = await MainActor.run(body: { chatViewModel }) {
             let currentMessages = await MainActor.run { viewModel.getCurrentMessages() }
             let firstMessage = currentMessages.first?.content ?? "Current Session"
             let currentSession = StoredSession(
