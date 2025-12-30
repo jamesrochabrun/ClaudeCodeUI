@@ -83,7 +83,7 @@ public final class DefaultAccessibilityService: AccessibilityService {
     if let cacheKey {
       let cachedElement = lock.withLock { $0[element] }
       if let els = cachedElement?[cacheKey] {
-        if els.allSatisfy { $0.isValid } {
+        if els.allSatisfy({ $0.isValid }) {
           return els
         }
       }
