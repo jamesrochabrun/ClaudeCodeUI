@@ -19,20 +19,7 @@ struct QuestionCardView: View {
   
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
-      // Header chip
-      HStack {
-        Text(question.header)
-          .font(.system(size: 11, weight: .medium))
-          .foregroundColor(.white)
-          .padding(.horizontal, 8)
-          .padding(.vertical, 4)
-          .background(Color.blue)
-          .cornerRadius(4)
-        
-        Spacer()
-      }
-      
-      // Question text
+      // Question text (header is now shown in step navigation)
       Text(question.question)
         .font(.system(size: 14, weight: .medium))
         .foregroundColor(.primary)
@@ -97,12 +84,12 @@ struct QuestionCardView: View {
           // Checkbox for multi-select
           Image(systemName: isSelected ? "checkmark.square.fill" : "square")
             .font(.system(size: 16))
-            .foregroundColor(isSelected ? .blue : .secondary)
+            .foregroundColor(isSelected ? .brandPrimary : .secondary)
         } else {
           // Radio button for single-select
           Image(systemName: isSelected ? "circle.fill" : "circle")
             .font(.system(size: 16))
-            .foregroundColor(isSelected ? .blue : .secondary)
+            .foregroundColor(isSelected ? .brandPrimary : .secondary)
         }
         
         VStack(alignment: .leading, spacing: 4) {
@@ -127,7 +114,7 @@ struct QuestionCardView: View {
     .cornerRadius(8)
     .overlay(
       RoundedRectangle(cornerRadius: 8)
-        .stroke(isSelected ? Color.blue.opacity(0.5) : Color.clear, lineWidth: 1.5)
+        .stroke(isSelected ? Color.brandPrimary.opacity(0.5) : Color.clear, lineWidth: 1.5)
     )
   }
   
@@ -160,8 +147,8 @@ struct QuestionCardView: View {
   
   private var selectionBackground: Color {
     colorScheme == .dark
-    ? Color.blue.opacity(0.15)
-    : Color.blue.opacity(0.08)
+      ? Color.brandPrimary.opacity(0.15)
+      : Color.brandPrimary.opacity(0.08)
   }
   
   private var borderColor: Color {

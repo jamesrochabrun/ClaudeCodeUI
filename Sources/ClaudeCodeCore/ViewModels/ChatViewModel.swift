@@ -36,7 +36,10 @@ public final class ChatViewModel {
   
   /// Service for handling custom tool permission requests and user approvals
   var customPermissionService: CustomPermissionService
-  
+
+  /// Bridge for MCP approval IPC - used to complete AskUserQuestion requests
+  private weak var approvalBridge: ApprovalBridge?
+
   /// Optional callback invoked when session changes, used for external state synchronization
   private let onSessionChange: ((String) -> Void)?
 
@@ -373,6 +376,7 @@ EOF
     settingsStorage: SettingsStorage,
     globalPreferences: GlobalPreferencesStorage,
     customPermissionService: CustomPermissionService,
+    approvalBridge: ApprovalBridge? = nil,
     systemPromptPrefix: String? = nil,
     shouldManageSessions: Bool = true,
     onSessionChange: ((String) -> Void)? = nil,
@@ -383,6 +387,7 @@ EOF
     self.settingsStorage = settingsStorage
     self.globalPreferences = globalPreferences
     self.customPermissionService = customPermissionService
+    self.approvalBridge = approvalBridge
     self.systemPromptPrefix = systemPromptPrefix
     self.shouldManageSessions = shouldManageSessions
     self.onSessionChange = onSessionChange
@@ -1502,6 +1507,18 @@ EOF
 
   /// Submits answers to user questions and continues the conversation
   public func submitQuestionAnswers(toolUseId: String, answers: [QuestionAnswer], messageId: UUID) {
+    // Try to complete via ApprovalBridge (IPC to MCP server)
+    // This is the correct flow when the approval server is configured
+    if let bridge = approvalBridge, bridge.hasPendingAskUserQuestion(toolUseId: toolUseId) {
+      logger.info("Completing AskUserQuestion via ApprovalBridge IPC for toolUseId: \(toolUseId)")
+      bridge.completeAskUserQuestion(toolUseId: toolUseId, answers: answers)
+      return
+    }
+
+    // Fallback: send as user message when approval server is not configured
+    // or when there's no pending IPC request for this toolUseId
+    logger.info("Completing AskUserQuestion via user message fallback for toolUseId: \(toolUseId)")
+
     // Format answers into the expected response format
     var formattedAnswers: [String: String] = [:]
 
@@ -1536,9 +1553,6 @@ EOF
 
       // Send the message to continue the conversation
       sendMessage(answerMessage)
-
-      // Mark the question message as resolved
-      // (We could add a resolution status to ChatMessage similar to planApprovalStatus)
     }
   }
 }

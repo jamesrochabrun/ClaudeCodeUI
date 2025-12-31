@@ -86,7 +86,8 @@ public final class DefaultCustomPermissionService: CustomPermissionService {
     }
 
     // Check if auto-approval is enabled
-    if autoApproveToolCalls {
+    // IMPORTANT: Never auto-approve AskUserQuestion - user must provide actual answers
+    if autoApproveToolCalls && request.toolName != "AskUserQuestion" {
       return ApprovalResponse(
         behavior: .allow,
         updatedInput: request.inputAsAny,
