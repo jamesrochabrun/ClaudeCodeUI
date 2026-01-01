@@ -19,20 +19,24 @@ public final class MCPApprovalTool: @unchecked Sendable {
     private let permissionService: CustomPermissionService
     private let toolName: String
     private let serverProvider: ApprovalServerProvider
+    private let instanceId: String?
 
     /// Initialize the MCP approval tool
     /// - Parameters:
     ///   - permissionService: The permission service to handle approval requests
     ///   - toolName: The name of the MCP tool (typically "approval_prompt")
     ///   - serverProvider: Provider for the approval server executable path
+    ///   - instanceId: The unique app instance identifier for multi-instance support
     public init(
         permissionService: CustomPermissionService,
         toolName: String = "approval_prompt",
-        serverProvider: ApprovalServerProvider? = nil
+        serverProvider: ApprovalServerProvider? = nil,
+        instanceId: String? = nil
     ) {
         self.permissionService = permissionService
         self.toolName = toolName
         self.serverProvider = serverProvider ?? BundleApprovalServerProvider()
+        self.instanceId = instanceId
     }
     
     /// Configure the MCP approval tool with ClaudeCodeSDK options
@@ -56,9 +60,17 @@ public final class MCPApprovalTool: @unchecked Sendable {
         }
 
         // Configure the approval server to use our Swift MCP executable
+        // Pass the instance ID via environment variable for multi-instance support
+        var env: [String: String] = [:]
+        if let instanceId = instanceId {
+            env["CLAUDE_CODE_UI_INSTANCE_ID"] = instanceId
+            print("[MCPApprovalTool] Configuring for instance: \(instanceId)")
+        }
+
         options.mcpServers?["approval_server"] = .stdio(McpStdioServerConfig(
             command: approvalServerPath,
-            args: []
+            args: [],
+            env: env.isEmpty ? nil : env
         ))
         print("[MCPApprovalTool] Configured approval server at: \(approvalServerPath)")
 
@@ -83,12 +95,19 @@ public final class MCPApprovalTool: @unchecked Sendable {
             // Return empty config if server not available
             return ["mcpServers": [:]]
         }
+
+        // Include instance ID in environment for multi-instance support
+        var env: [String: String] = [:]
+        if let instanceId = instanceId {
+            env["CLAUDE_CODE_UI_INSTANCE_ID"] = instanceId
+        }
+
         return [
             "mcpServers": [
                 "approval_server": [
                     "command": approvalServerPath,
                     "args": [],
-                    "env": [:]
+                    "env": env
                 ]
             ]
         ]
@@ -150,43 +169,51 @@ extension MCPApprovalTool {
 /// Helper for creating approval-enabled MCP configurations
 public struct ApprovalMCPHelper {
     private let permissionService: CustomPermissionService
-    
-    public init(permissionService: CustomPermissionService) {
+    private let instanceId: String?
+
+    public init(permissionService: CustomPermissionService, instanceId: String? = nil) {
         self.permissionService = permissionService
+        self.instanceId = instanceId
     }
-    
+
     /// Create a complete MCP configuration that includes approval functionality
     /// - Parameter existingServers: Any existing MCP server configurations
     /// - Returns: Complete MCP configuration dictionary
     public func createCompleteMCPConfig(existingServers: [String: Any] = [:]) -> [String: Any] {
-        let approvalTool = MCPApprovalTool(permissionService: permissionService)
+        let approvalTool = MCPApprovalTool(
+            permissionService: permissionService,
+            instanceId: instanceId
+        )
         let approvalConfig = approvalTool.createMCPConfiguration()
-        
+
         var mcpServers = existingServers
-        
+
         // Add approval server configuration
         if let approvalServers = approvalConfig["mcpServers"] as? [String: Any] {
             for (key, value) in approvalServers {
                 mcpServers[key] = value
             }
         }
-        
+
         return [
             "mcpServers": mcpServers
         ]
     }
-    
+
     /// Configure ClaudeCodeOptions with approval support and existing MCP servers
     /// - Parameters:
     ///   - options: Options to configure
     public func configureOptions(_ options: inout ClaudeCodeOptions) {
-        let approvalTool = MCPApprovalTool(permissionService: permissionService)
-        
+        let approvalTool = MCPApprovalTool(
+            permissionService: permissionService,
+            instanceId: instanceId
+        )
+
         // Initialize mcpServers if needed
         if options.mcpServers == nil {
             options.mcpServers = [:]
         }
-        
+
         // Add approval tool configuration
         approvalTool.configure(options: &options)
     }

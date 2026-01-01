@@ -12,15 +12,23 @@ public final class ApprovalBridge: ObservableObject {
   private let logger = Logger(subsystem: "com.claudecodeui", category: "ApprovalBridge")
   private let permissionService: CustomPermissionService
   private let notificationCenter = DistributedNotificationCenter.default()
-  
-  // Notification names for IPC
-  private static let approvalRequestNotification = "ClaudeCodeUIApprovalRequest"
-  private static let approvalResponseNotification = "ClaudeCodeUIApprovalResponse"
-  
-  public init(permissionService: CustomPermissionService) {
+  private let instanceIdentifier: AppInstanceIdentifier
+
+  /// Instance-specific notification name for approval requests
+  private var approvalRequestNotificationName: String {
+    instanceIdentifier.approvalRequestNotificationName
+  }
+
+  /// Instance-specific notification name for approval responses
+  private var approvalResponseNotificationName: String {
+    instanceIdentifier.approvalResponseNotificationName
+  }
+
+  public init(permissionService: CustomPermissionService, instanceIdentifier: AppInstanceIdentifier) {
     self.permissionService = permissionService
+    self.instanceIdentifier = instanceIdentifier
     setupNotificationListeners()
-    logger.info("ApprovalBridge initialized and ready for IPC requests")
+    logger.info("ApprovalBridge initialized for instance \(instanceIdentifier.instanceId)")
   }
   
   deinit {
@@ -32,15 +40,18 @@ public final class ApprovalBridge: ObservableObject {
     // IMPORTANT: Use .deliverImmediately to ensure notifications are received even when
     // the ClaudeCodeUI app is in the background or not the active app. Without this,
     // ICP approval requests would be suspended until the user manually activates the app.
+    //
+    // NOTE: We use instance-specific notification names to support multiple app instances.
+    // Each instance only listens for notifications targeted at its unique instance ID.
     notificationCenter.addObserver(
       self,
       selector: #selector(handleApprovalRequest(_:)),
-      name: NSNotification.Name(Self.approvalRequestNotification),
+      name: NSNotification.Name(approvalRequestNotificationName),
       object: nil,
       suspensionBehavior: .deliverImmediately
     )
-    
-    logger.info("ApprovalBridge ApprovalBridge listening for approval requests")
+
+    logger.info("ApprovalBridge listening for: \(self.approvalRequestNotificationName)")
   }
   
   /// Handle incoming approval request from MCP server
@@ -183,17 +194,18 @@ public final class ApprovalBridge: ObservableObject {
     do {
       let encoder = JSONEncoder()
       let responseData = try encoder.encode(response)
-      
+
       let userInfo = ["response": responseData]
-      
+
+      // Use instance-specific notification name for responses
       notificationCenter.post(
-        name: NSNotification.Name(Self.approvalResponseNotification),
+        name: NSNotification.Name(approvalResponseNotificationName),
         object: nil,
         userInfo: userInfo
       )
-      
-      logger.info("ApprovalBridge Sent approval response for \(response.toolUseId): \(response.behavior)")
-      
+
+      logger.info("ApprovalBridge Sent response for \(response.toolUseId) via \(self.approvalResponseNotificationName)")
+
     } catch {
       logger.error("ApprovalBridge Failed to send approval response: \(error)")
     }

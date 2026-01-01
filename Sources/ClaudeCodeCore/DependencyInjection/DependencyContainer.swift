@@ -51,7 +51,11 @@ public final class DependencyContainer {
   
   // Custom permission service
   public let customPermissionService: CustomPermissionService
-  
+
+  /// Unique identifier for this app instance.
+  /// Used for multi-instance support to ensure notifications are routed correctly.
+  public let appInstanceIdentifier: AppInstanceIdentifier
+
   // Approval bridge for MCP IPC
   public let approvalBridge: ApprovalBridge
   
@@ -89,12 +93,19 @@ public final class DependencyContainer {
     
     // Initialize accessibility service
     self.accessibilityService = DefaultAccessibilityService()
-    
+
     // Initialize custom permission service
     self.customPermissionService = DefaultCustomPermissionService()
-    
-    // Initialize approval bridge for MCP IPC
-    self.approvalBridge = ApprovalBridge(permissionService: customPermissionService)
+
+    // Generate unique instance identifier for multi-instance support
+    self.appInstanceIdentifier = AppInstanceIdentifier()
+    print("[DependencyContainer] App instance ID: \(appInstanceIdentifier.instanceId)")
+
+    // Initialize approval bridge for MCP IPC with instance-specific notifications
+    self.approvalBridge = ApprovalBridge(
+      permissionService: customPermissionService,
+      instanceIdentifier: appInstanceIdentifier
+    )
     
     // Initialize XcodeObserver with dependencies
     self.xcodeObserver = DefaultXcodeObserver(
@@ -145,6 +156,7 @@ public final class DependencyContainer {
       settingsStorage: settingsStorage,
       globalPreferences: globalPreferences,
       customPermissionService: customPermissionService,
+      appInstanceId: appInstanceIdentifier.instanceId,
       shouldManageSessions: false, // Disable session management for direct usage
       onSessionChange: nil
     )

@@ -36,7 +36,10 @@ public final class ChatViewModel {
   
   /// Service for handling custom tool permission requests and user approvals
   var customPermissionService: CustomPermissionService
-  
+
+  /// Unique identifier for this app instance (used for multi-instance support)
+  private let appInstanceId: String?
+
   /// Optional callback invoked when session changes, used for external state synchronization
   private let onSessionChange: ((String) -> Void)?
 
@@ -345,6 +348,8 @@ EOF
   ///                           Set to false when using ChatScreen directly without session management needs.
   ///   - onSessionChange: Optional callback when session changes
   /// Convenience initializer for simple integration (uses defaults)
+  /// Note: For multi-instance support, prefer using DependencyContainer which
+  /// ensures the same instance ID is shared between ApprovalBridge and ChatViewModel.
   public convenience init() {
     // Create Claude Code client with default configuration
     // This will use the Claude CLI as a subprocess - no API key needed
@@ -353,6 +358,7 @@ EOF
     let settingsStorage = SettingsStorageManager()
     let globalPreferences = GlobalPreferencesStorage()
     let permissionService = DefaultCustomPermissionService()
+    let instanceIdentifier = AppInstanceIdentifier()
 
     self.init(
       claudeClient: claudeClient,
@@ -360,6 +366,7 @@ EOF
       settingsStorage: settingsStorage,
       globalPreferences: globalPreferences,
       customPermissionService: permissionService,
+      appInstanceId: instanceIdentifier.instanceId,
       systemPromptPrefix: nil,
       shouldManageSessions: false,
       onSessionChange: nil,
@@ -373,6 +380,7 @@ EOF
     settingsStorage: SettingsStorage,
     globalPreferences: GlobalPreferencesStorage,
     customPermissionService: CustomPermissionService,
+    appInstanceId: String? = nil,
     systemPromptPrefix: String? = nil,
     shouldManageSessions: Bool = true,
     onSessionChange: ((String) -> Void)? = nil,
@@ -383,6 +391,7 @@ EOF
     self.settingsStorage = settingsStorage
     self.globalPreferences = globalPreferences
     self.customPermissionService = customPermissionService
+    self.appInstanceId = appInstanceId
     self.systemPromptPrefix = systemPromptPrefix
     self.shouldManageSessions = shouldManageSessions
     self.onSessionChange = onSessionChange
@@ -1245,7 +1254,11 @@ EOF
     }
     
     // Configure MCP with custom permission service integration
-    let mcpHelper = ApprovalMCPHelper(permissionService: customPermissionService)
+    // Pass the app instance ID for multi-instance notification support
+    let mcpHelper = ApprovalMCPHelper(
+      permissionService: customPermissionService,
+      instanceId: appInstanceId
+    )
     
     if !globalPreferences.mcpConfigPath.isEmpty {
       if isDebugEnabled {

@@ -114,10 +114,11 @@ public final class ChatViewModelAdapter: ClaudeCodeExecutor {
     let settingsStorage = SettingsStorageManager()
     let globalPreferences = GlobalPreferencesStorage()
     let permissionService = DefaultCustomPermissionService()
-    
+    let instanceIdentifier = AppInstanceIdentifier()
+
     // MCP server configuration is handled separately in ClaudeCodeUI
     // Not setting it here to avoid conflicts
-    
+
     // Create ChatViewModel
     let viewModel = ChatViewModel(
       claudeClient: claudeClient,
@@ -125,6 +126,7 @@ public final class ChatViewModelAdapter: ClaudeCodeExecutor {
       settingsStorage: settingsStorage,
       globalPreferences: globalPreferences,
       customPermissionService: permissionService,
+      appInstanceId: instanceIdentifier.instanceId,
       systemPromptPrefix: configuration.systemPromptPrefix,
       shouldManageSessions: false,
       onSessionChange: nil,
