@@ -16,7 +16,18 @@ public final class ApprovalBridge: ObservableObject {
   // Notification names for IPC
   private static let approvalRequestNotification = "ClaudeCodeUIApprovalRequest"
   private static let approvalResponseNotification = "ClaudeCodeUIApprovalResponse"
-  
+
+  // Storage for pending AskUserQuestion requests
+  // These are held until the user submits their answers via the AskUserQuestionView UI
+  private var pendingAskUserQuestionRequests: [String: PendingAskUserQuestion] = [:]
+
+  /// Stores a pending AskUserQuestion IPC request
+  private struct PendingAskUserQuestion {
+    let toolUseId: String
+    let input: [String: Any]
+    let receivedAt: Date
+  }
+
   public init(permissionService: CustomPermissionService) {
     self.permissionService = permissionService
     setupNotificationListeners()
@@ -73,13 +84,38 @@ public final class ApprovalBridge: ObservableObject {
   }
   
   private func processApprovalRequest(_ ipcRequest: IPCRequest) async {
+    // Special handling for AskUserQuestion tool
+    // Don't show approval toast - the AskUserQuestionView in chat IS the approval mechanism
+    // Store the request and wait for user to submit answers via the UI
+    if ipcRequest.toolName == "AskUserQuestion" {
+      logger.info("ApprovalBridge Storing AskUserQuestion request for later completion: \(ipcRequest.toolUseId)")
+
+      // Store the request - it will be completed when user submits answers
+      pendingAskUserQuestionRequests[ipcRequest.toolUseId] = PendingAskUserQuestion(
+        toolUseId: ipcRequest.toolUseId,
+        input: ipcRequest.input,
+        receivedAt: Date()
+      )
+
+      // Activate the app so user can see and interact with the AskUserQuestionView
+      NSRunningApplication.current.activate()
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        if let keyWindow = NSApplication.shared.keyWindow ?? NSApplication.shared.windows.first {
+          keyWindow.makeKeyAndOrderFront(nil)
+        }
+      }
+
+      // Don't send response yet - wait for user to submit answers
+      return
+    }
+
     do {
       // IMPORTANT: Activate the app to ensure toast visibility when triggered via notifications.
       // When ICP requests come via DistributedNotificationCenter from background processes,
       // the app may not be active/focused, so the toast alerts won't be visible to the user.
       // This activation strategy mirrors the cmd+i shortcut behavior in KeyboardShortcutManager.
       NSRunningApplication.current.activate()
-      
+
       // Ensure window comes to front after a brief delay
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
         // Find and activate the key window to ensure proper focus
@@ -87,7 +123,7 @@ public final class ApprovalBridge: ObservableObject {
           keyWindow.makeKeyAndOrderFront(nil)
         }
       }
-      
+
       // Create ApprovalRequest from IPC request
       let approvalRequest = ApprovalRequest(
         toolName: ipcRequest.toolName,
@@ -95,10 +131,10 @@ public final class ApprovalBridge: ObservableObject {
         toolUseId: ipcRequest.toolUseId,
         context: createContext(for: ipcRequest.toolName, input: ipcRequest.input)
       )
-      
+
       // Request approval through the permission service (this will show UI)
       let response = try await permissionService.requestApproval(for: approvalRequest)
-      
+
       // Send response back to MCP server
       let ipcResponse = IPCResponse(
         toolUseId: ipcRequest.toolUseId,
@@ -106,21 +142,21 @@ public final class ApprovalBridge: ObservableObject {
         updatedInput: response.updatedInputAsAny ?? ipcRequest.input,
         message: response.message ?? "Processed by ApprovalBridge"
       )
-      
+
       sendApprovalResponse(ipcResponse)
-      
-      logger.info("ApprovalBridge Approval request processed successfully for \\(ipcRequest.toolUseId)")
-      
+
+      logger.info("ApprovalBridge Approval request processed successfully for \(ipcRequest.toolUseId)")
+
     } catch {
       logger.error("ApprovalBridge Failed to process approval request for \(ipcRequest.toolUseId): \(error)")
-      
+
       let errorResponse = IPCResponse(
         toolUseId: ipcRequest.toolUseId,
         behavior: "deny",
         updatedInput: ipcRequest.input,
         message: "Approval processing failed: \(error.localizedDescription)"
       )
-      
+
       sendApprovalResponse(errorResponse)
     }
   }
@@ -207,8 +243,85 @@ public final class ApprovalBridge: ObservableObject {
       updatedInput: [:],
       message: message
     )
-    
+
     sendApprovalResponse(errorResponse)
+  }
+
+  // MARK: - AskUserQuestion Completion
+
+  /// Completes a pending AskUserQuestion request with the user's answers
+  /// Called by ChatViewModel when the user submits their answers via AskUserQuestionView
+  /// - Parameters:
+  ///   - toolUseId: The tool use ID of the AskUserQuestion request
+  ///   - answers: The user's answers to the questions
+  public func completeAskUserQuestion(toolUseId: String, answers: [QuestionAnswer]) {
+    guard pendingAskUserQuestionRequests.removeValue(forKey: toolUseId) != nil else {
+      logger.warning("ApprovalBridge No pending AskUserQuestion request for toolUseId: \(toolUseId)")
+      return
+    }
+
+    logger.info("ApprovalBridge Completing AskUserQuestion for toolUseId: \(toolUseId)")
+
+    // Format answers directly into updatedInput (no nesting)
+    // The IPCResponse encoder only handles primitive types, so nested dicts get dropped!
+    var updatedInput: [String: Any] = [:]
+    var messageParts: [String] = []
+
+    for answer in answers {
+      let key = "question_\(answer.questionIndex)"
+      var value = answer.selectedLabels.joined(separator: ", ")
+      if let otherText = answer.otherText, !otherText.isEmpty {
+        if value.isEmpty {
+          value = "Other: \(otherText)"
+        } else {
+          value += " (Other: \(otherText))"
+        }
+      }
+      updatedInput[key] = value
+      messageParts.append("\(key): \(value)")
+    }
+
+    // Include answers in the message so Claude can see them
+    let answerSummary = messageParts.joined(separator: "; ")
+
+    // Build the response with answers included in updatedInput
+    // The MCP server will pass these back to Claude as the tool result
+    let ipcResponse = IPCResponse(
+      toolUseId: toolUseId,
+      behavior: "allow",
+      updatedInput: updatedInput,
+      message: "User answers: \(answerSummary)"
+    )
+
+    sendApprovalResponse(ipcResponse)
+    logger.info("ApprovalBridge Sent AskUserQuestion response for \(toolUseId): \(answerSummary)")
+  }
+
+  /// Cancels a pending AskUserQuestion request (user dismissed without answering)
+  /// - Parameter toolUseId: The tool use ID of the AskUserQuestion request
+  public func cancelAskUserQuestion(toolUseId: String) {
+    guard pendingAskUserQuestionRequests.removeValue(forKey: toolUseId) != nil else {
+      logger.warning("ApprovalBridge No pending AskUserQuestion request to cancel for toolUseId: \(toolUseId)")
+      return
+    }
+
+    logger.info("ApprovalBridge Cancelling AskUserQuestion for toolUseId: \(toolUseId)")
+
+    let ipcResponse = IPCResponse(
+      toolUseId: toolUseId,
+      behavior: "deny",
+      updatedInput: [:],
+      message: "User cancelled without answering questions"
+    )
+
+    sendApprovalResponse(ipcResponse)
+  }
+
+  /// Checks if there's a pending AskUserQuestion request for the given toolUseId
+  /// - Parameter toolUseId: The tool use ID to check
+  /// - Returns: True if there's a pending request
+  public func hasPendingAskUserQuestion(toolUseId: String) -> Bool {
+    return pendingAskUserQuestionRequests[toolUseId] != nil
   }
 }
 

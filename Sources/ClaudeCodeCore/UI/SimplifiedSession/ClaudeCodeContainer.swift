@@ -171,6 +171,7 @@ public struct ClaudeCodeContainer: View {
       settingsStorage: deps.settingsStorage,
       globalPreferences: globalPrefs,
       customPermissionService: deps.customPermissionService,
+      approvalBridge: deps.approvalBridge,
       systemPromptPrefix: uiConfiguration.initialAdditionalSystemPromptPrefix,
       onSessionChange: { newSessionId in
         Task { @MainActor in

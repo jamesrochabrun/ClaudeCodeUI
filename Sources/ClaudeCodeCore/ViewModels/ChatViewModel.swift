@@ -36,7 +36,10 @@ public final class ChatViewModel {
   
   /// Service for handling custom tool permission requests and user approvals
   var customPermissionService: CustomPermissionService
-  
+
+  /// Bridge for MCP approval IPC - used to complete AskUserQuestion requests
+  private weak var approvalBridge: ApprovalBridge?
+
   /// Optional callback invoked when session changes, used for external state synchronization
   private let onSessionChange: ((String) -> Void)?
 
@@ -373,6 +376,7 @@ EOF
     settingsStorage: SettingsStorage,
     globalPreferences: GlobalPreferencesStorage,
     customPermissionService: CustomPermissionService,
+    approvalBridge: ApprovalBridge? = nil,
     systemPromptPrefix: String? = nil,
     shouldManageSessions: Bool = true,
     onSessionChange: ((String) -> Void)? = nil,
@@ -383,6 +387,7 @@ EOF
     self.settingsStorage = settingsStorage
     self.globalPreferences = globalPreferences
     self.customPermissionService = customPermissionService
+    self.approvalBridge = approvalBridge
     self.systemPromptPrefix = systemPromptPrefix
     self.shouldManageSessions = shouldManageSessions
     self.onSessionChange = onSessionChange
@@ -1496,6 +1501,59 @@ EOF
   /// Updates the plan approval status for a specific message
   public func updatePlanApprovalStatus(messageId: UUID, status: PlanApprovalStatus) {
     messageStore.updatePlanApprovalStatus(id: messageId, status: status)
+  }
+
+  // MARK: - AskUserQuestion
+
+  /// Submits answers to user questions and continues the conversation
+  public func submitQuestionAnswers(toolUseId: String, answers: [QuestionAnswer], messageId: UUID) {
+    // Try to complete via ApprovalBridge (IPC to MCP server)
+    // This is the correct flow when the approval server is configured
+    if let bridge = approvalBridge, bridge.hasPendingAskUserQuestion(toolUseId: toolUseId) {
+      logger.info("Completing AskUserQuestion via ApprovalBridge IPC for toolUseId: \(toolUseId)")
+      bridge.completeAskUserQuestion(toolUseId: toolUseId, answers: answers)
+      return
+    }
+
+    // Fallback: send as user message when approval server is not configured
+    // or when there's no pending IPC request for this toolUseId
+    logger.info("Completing AskUserQuestion via user message fallback for toolUseId: \(toolUseId)")
+
+    // Format answers into the expected response format
+    var formattedAnswers: [String: String] = [:]
+
+    for answer in answers {
+      // Use the question index as the key (or could use question text)
+      let key = "question_\(answer.questionIndex)"
+
+      // Combine selected options and other text
+      var value = answer.selectedLabels.joined(separator: ", ")
+
+      if let otherText = answer.otherText, !otherText.isEmpty {
+        if !value.isEmpty {
+          value += " (Other: \(otherText))"
+        } else {
+          value = "Other: \(otherText)"
+        }
+      }
+
+      formattedAnswers[key] = value
+    }
+
+    // Convert to JSON string for the tool result
+    if let jsonData = try? JSONSerialization.data(withJSONObject: formattedAnswers, options: [.prettyPrinted]),
+       let jsonString = String(data: jsonData, encoding: .utf8) {
+
+      // Send as a hidden message that will be formatted as a tool result
+      // The format should match what Claude expects for AskUserQuestion tool results
+      let answerMessage = """
+      User answers to questions:
+      \(jsonString)
+      """
+
+      // Send the message to continue the conversation
+      sendMessage(answerMessage)
+    }
   }
 }
 

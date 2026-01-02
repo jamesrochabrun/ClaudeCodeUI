@@ -156,12 +156,12 @@ struct MessageContentView: View {
   
   /// Determines if the message type should be displayed in a collapsible format.
   /// Tool-related messages (toolUse, toolResult, toolError, toolDenied, thinking, webSearch, codeExecution) are collapsible,
-  /// while plain text messages are not.
+  /// while plain text messages and askUserQuestion messages are not.
   private var isCollapsible: Bool {
     switch message.messageType {
     case .toolUse, .toolResult, .toolError, .toolDenied, .thinking, .webSearch, .codeExecution:
       return true
-    case .text:
+    case .text, .askUserQuestion:
       return false
     }
   }
@@ -228,6 +228,17 @@ struct MessageContentView: View {
   private var contentView: some View {
     if isCollapsible {
       collapsibleContent
+    } else if message.messageType == .askUserQuestion,
+              let questionSet = message.questionSet,
+              let viewModel = viewModel {
+      // Render AskUserQuestion UI
+      AskUserQuestionView(
+        messageId: message.id,
+        questionSet: questionSet,
+        viewModel: viewModel,
+        isResolved: false // TODO: Track resolution state
+      )
+      .padding(.horizontal, horizontalPadding)
     } else if message.role == .assistant && message.messageType == .text {
       // Use formatted text for assistant messages
       MessageTextFormatterView(

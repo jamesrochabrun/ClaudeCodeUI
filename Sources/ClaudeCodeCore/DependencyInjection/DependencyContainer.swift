@@ -145,6 +145,7 @@ public final class DependencyContainer {
       settingsStorage: settingsStorage,
       globalPreferences: globalPreferences,
       customPermissionService: customPermissionService,
+      approvalBridge: approvalBridge,
       shouldManageSessions: false, // Disable session management for direct usage
       onSessionChange: nil
     )

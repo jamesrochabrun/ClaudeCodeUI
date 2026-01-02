@@ -49,6 +49,8 @@ public final class ChatViewModelAdapter: ClaudeCodeExecutor {
         messageType = .toolDenied
       case .codeExecution:
         messageType = .codeExecution
+      case .askUserQuestion:
+        messageType = .text  // Map to text for voice mode display
       }
       
       let messageRole: CodeWhisper.MessageRole
