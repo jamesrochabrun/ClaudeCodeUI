@@ -18,6 +18,8 @@ public struct AskUserQuestionView: View {
   @State private var currentQuestionIndex: Int = 0
   @State private var isSubmitting = false
   @State private var isExpanded = true
+  @State private var focusedOptionIndex: Int = 0
+  @FocusState private var isFocused: Bool
 
   @Environment(\.colorScheme) private var colorScheme
 
@@ -87,6 +89,17 @@ public struct AskUserQuestionView: View {
     )
     .animation(.easeInOut(duration: 0.2), value: isExpanded)
     .animation(.easeInOut(duration: 0.2), value: currentQuestionIndex)
+    .disabled(isSubmitting)
+    .opacity(isSubmitting ? 0.5 : 1.0)
+    .allowsHitTesting(!isSubmitting)
+    .focusable()
+    .focused($isFocused)
+    .onKeyPress { key in
+      handleArrowKeyPress(key)
+    }
+    .onAppear {
+      isFocused = true
+    }
   }
 
   // MARK: - Main Header
@@ -199,37 +212,70 @@ public struct AskUserQuestionView: View {
     .opacity(canNavigate ? 1.0 : 0.5)
   }
 
+  private var isOnSubmitStep: Bool {
+    currentQuestionIndex == questionSet.questions.count
+  }
+
   private var submitStepIndicator: some View {
-    let canSubmit = allQuestionsAnswered
+    let canNavigateToSubmit = allQuestionsAnswered
 
-    return HStack(spacing: 6) {
-      Image(systemName: canSubmit ? "checkmark" : "arrow.right.circle")
-        .font(.system(size: 11))
-        .foregroundColor(canSubmit ? .brandTertiary : .secondary.opacity(0.6))
+    return Button(action: {
+      if canNavigateToSubmit {
+        navigateToSubmitStep()
+      }
+    }) {
+      HStack(spacing: 6) {
+        Image(systemName: canNavigateToSubmit ? "checkmark" : "arrow.right.circle")
+          .font(.system(size: 11))
+          .foregroundColor(canNavigateToSubmit ? .brandTertiary : .secondary.opacity(0.6))
 
-      Text("Submit")
-        .font(.system(size: 12, weight: .regular, design: .monospaced))
-        .foregroundColor(.secondary)
+        Text("Submit")
+          .font(.system(size: 12, weight: isOnSubmitStep ? .semibold : .regular, design: .monospaced))
+          .foregroundColor(isOnSubmitStep ? .primary : .secondary)
+      }
+      .padding(.horizontal, 10)
+      .padding(.vertical, 6)
+      .background(isOnSubmitStep ? Color.brandPrimary.opacity(0.15) : Color.clear)
+      .cornerRadius(6)
+      .overlay(
+        RoundedRectangle(cornerRadius: 6)
+          .stroke(isOnSubmitStep ? Color.brandPrimary.opacity(0.4) : Color.clear, lineWidth: 1)
+      )
     }
-    .padding(.horizontal, 10)
-    .padding(.vertical, 6)
-    .opacity(0.7)
+    .buttonStyle(.plain)
+    .disabled(!canNavigateToSubmit)
+    .opacity(canNavigateToSubmit ? 1.0 : 0.5)
+  }
+
+  private func navigateToSubmitStep() {
+    withAnimation(.easeInOut(duration: 0.25)) {
+      currentQuestionIndex = questionSet.questions.count
+    }
   }
 
   // MARK: - Question Content
 
   private var questionContent: some View {
     VStack(alignment: .leading, spacing: 0) {
-      if currentQuestionIndex < questionSet.questions.count {
+      if isOnSubmitStep {
+        submitStepContent
+          .padding(16)
+          .id("submit")
+          .transition(.asymmetric(
+            insertion: .move(edge: .trailing).combined(with: .opacity),
+            removal: .move(edge: .leading).combined(with: .opacity)
+          ))
+      } else if currentQuestionIndex < questionSet.questions.count {
         let question = questionSet.questions[currentQuestionIndex]
         QuestionCardView(
           question: question,
           questionIndex: currentQuestionIndex,
           selectedOptions: binding(for: currentQuestionIndex, keyPath: \.selectedOptions),
-          otherText: binding(for: currentQuestionIndex, keyPath: \.otherText)
+          otherText: binding(for: currentQuestionIndex, keyPath: \.otherText),
+          focusedOptionIndex: $focusedOptionIndex
         )
         .padding(16)
-        .id(currentQuestionIndex) // Force view recreation for animation
+        .id(currentQuestionIndex)
         .transition(.asymmetric(
           insertion: .move(edge: .trailing).combined(with: .opacity),
           removal: .move(edge: .leading).combined(with: .opacity)
@@ -238,6 +284,45 @@ public struct AskUserQuestionView: View {
     }
     .background(contentBackground)
     .clipped()
+  }
+
+  private var submitStepContent: some View {
+    VStack(alignment: .leading, spacing: 16) {
+      Text("Review your answers")
+        .font(.system(size: 14, weight: .medium))
+        .foregroundColor(.primary)
+
+      // Summary of answers
+      VStack(alignment: .leading, spacing: 10) {
+        ForEach(Array(questionSet.questions.enumerated()), id: \.offset) { index, question in
+          if let answerState = answers[index] {
+            HStack(alignment: .top, spacing: 8) {
+              Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 12))
+                .foregroundColor(.brandTertiary)
+
+              VStack(alignment: .leading, spacing: 2) {
+                Text(question.header)
+                  .font(.system(size: 12, weight: .medium))
+                  .foregroundColor(.primary)
+
+                let answerText = formatAnswer(answerState)
+                Text(answerText)
+                  .font(.system(size: 11))
+                  .foregroundColor(.secondary)
+              }
+            }
+          }
+        }
+      }
+      .padding(12)
+      .background(Color(NSColor.controlBackgroundColor))
+      .cornerRadius(8)
+
+      Text("Press Return to submit or use arrow keys to go back and edit.")
+        .font(.system(size: 11))
+        .foregroundColor(.secondary)
+    }
   }
 
   // MARK: - Footer Controls
@@ -259,31 +344,30 @@ public struct AskUserQuestionView: View {
       Spacer()
 
       // Progress indicator
-      Text("\(currentQuestionIndex + 1) of \(questionSet.questions.count)")
-        .font(.system(size: 11, design: .monospaced))
-        .foregroundColor(.secondary)
+      if isOnSubmitStep {
+        Text("Ready to submit")
+          .font(.system(size: 11, design: .monospaced))
+          .foregroundColor(.secondary)
+      } else {
+        Text("\(currentQuestionIndex + 1) of \(questionSet.questions.count)")
+          .font(.system(size: 11, design: .monospaced))
+          .foregroundColor(.secondary)
+      }
 
       Spacer()
 
       // Next or Submit button
-      if currentQuestionIndex == questionSet.questions.count - 1 {
-        // Submit button (only enabled if all questions answered)
+      if isOnSubmitStep {
+        // Submit button on submit step
         Button(action: handleSubmit) {
-          HStack(spacing: 6) {
-            if isSubmitting {
-              ProgressView()
-                .controlSize(.small)
-                .scaleEffect(0.8)
-            }
-            Text(isSubmitting ? "Submitting..." : "Submit")
-              .font(.system(size: 13, weight: .medium))
-          }
+          Text("Submit")
+            .font(.system(size: 13, weight: .medium))
         }
         .buttonStyle(.borderedProminent)
         .tint(.brandPrimary)
-        .disabled(!allQuestionsAnswered || isSubmitting)
+        .disabled(isSubmitting)
       } else {
-        // Next button
+        // Next button (goes to submit step from last question)
         Button(action: goToNextQuestion) {
           HStack(spacing: 4) {
             Text("Next")
@@ -381,9 +465,14 @@ public struct AskUserQuestionView: View {
   }
 
   private func goToNextQuestion() {
-    if currentQuestionIndex < questionSet.questions.count - 1 && canAdvanceFromCurrent {
+    // Can advance to next question or to submit step (index = questions.count)
+    if currentQuestionIndex < questionSet.questions.count && canAdvanceFromCurrent {
       withAnimation(.easeInOut(duration: 0.25)) {
         currentQuestionIndex += 1
+      }
+      // Only sync focus if not on submit step
+      if currentQuestionIndex < questionSet.questions.count {
+        syncFocusToSelection()
       }
     }
   }
@@ -393,6 +482,21 @@ public struct AskUserQuestionView: View {
       withAnimation(.easeInOut(duration: 0.25)) {
         currentQuestionIndex -= 1
       }
+      syncFocusToSelection()
+    }
+  }
+
+  /// Syncs focusedOptionIndex to the currently selected option (if any)
+  private func syncFocusToSelection() {
+    guard currentQuestionIndex < questionSet.questions.count else { return }
+    let question = questionSet.questions[currentQuestionIndex]
+    let selected = answers[currentQuestionIndex]?.selectedOptions ?? []
+
+    if let firstSelected = selected.first,
+       let index = question.options.firstIndex(where: { $0.label == firstSelected }) {
+      focusedOptionIndex = index
+    } else {
+      focusedOptionIndex = 0
     }
   }
 
@@ -441,6 +545,98 @@ public struct AskUserQuestionView: View {
 
   // MARK: - Action Handlers
 
+  private func handleArrowKeyPress(_ key: KeyPress) -> KeyPress.Result {
+    guard isExpanded && !isSubmitting else { return .ignored }
+
+    // Handle submit step separately
+    if isOnSubmitStep {
+      switch key.key {
+      case .leftArrow:
+        goToPreviousQuestion()
+        return .handled
+      case .return:
+        handleSubmit()
+        return .handled
+      default:
+        return .ignored
+      }
+    }
+
+    // Handle question steps
+    guard currentQuestionIndex < questionSet.questions.count else { return .ignored }
+
+    let currentQuestion = questionSet.questions[currentQuestionIndex]
+    let optionCount = currentQuestion.options.count
+
+    switch key.key {
+    case .leftArrow:
+      goToPreviousQuestion()
+      return .handled
+    case .rightArrow:
+      if canAdvanceFromCurrent {
+        goToNextQuestion()
+        return .handled
+      }
+      return .ignored
+    case .upArrow:
+      // Wrap around: if at first option, go to last
+      focusedOptionIndex = focusedOptionIndex > 0 ? focusedOptionIndex - 1 : optionCount - 1
+      // For single-select, clear selection so only focus indicator shows
+      if !currentQuestion.multiSelect {
+        answers[currentQuestionIndex]?.selectedOptions.removeAll()
+      }
+      return .handled
+    case .downArrow:
+      // Wrap around: if at last option, go to first
+      focusedOptionIndex = focusedOptionIndex < optionCount - 1 ? focusedOptionIndex + 1 : 0
+      // For single-select, clear selection so only focus indicator shows
+      if !currentQuestion.multiSelect {
+        answers[currentQuestionIndex]?.selectedOptions.removeAll()
+      }
+      return .handled
+    case .return:
+      return handleReturnKey(currentQuestion: currentQuestion)
+    default:
+      return .ignored
+    }
+  }
+
+  private func handleReturnKey(currentQuestion: Question) -> KeyPress.Result {
+    let optionCount = currentQuestion.options.count
+
+    // If we have a valid focused option, select it
+    if focusedOptionIndex < optionCount {
+      let option = currentQuestion.options[focusedOptionIndex]
+      toggleOption(option.label, for: currentQuestion)
+
+      // For single-select, auto-advance to next question (or to submit step)
+      if !currentQuestion.multiSelect {
+        goToNextQuestion()
+      }
+      return .handled
+    }
+
+    return .ignored
+  }
+
+  private func toggleOption(_ label: String, for question: Question) {
+    // Clear "Other" text when selecting an option
+    answers[currentQuestionIndex]?.otherText = ""
+
+    if question.multiSelect {
+      // Multi-select: toggle the option
+      if answers[currentQuestionIndex]?.selectedOptions.contains(label) == true {
+        answers[currentQuestionIndex]?.selectedOptions.remove(label)
+      } else {
+        answers[currentQuestionIndex]?.selectedOptions.insert(label)
+      }
+    } else {
+      // Single-select: replace selection
+      answers[currentQuestionIndex]?.selectedOptions.removeAll()
+      answers[currentQuestionIndex]?.selectedOptions.insert(label)
+    }
+  }
+
   private func handleSubmit() {
     isSubmitting = true
 
@@ -475,11 +671,5 @@ public struct AskUserQuestionView: View {
       answers: questionAnswers,
       messageId: messageId
     )
-
-    // The submission will trigger a continuation of the conversation
-    // Reset submitting state after a brief delay
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-      isSubmitting = false
-    }
   }
 }

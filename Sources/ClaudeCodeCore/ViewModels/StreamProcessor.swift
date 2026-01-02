@@ -95,6 +95,10 @@ final class StreamProcessor {
     // Reset the continuation resumed flag for this new stream
     continuationResumed = false
 
+    // Reset AskUserQuestion state for this new stream
+    skipNextToolResult = false
+    pendingQuestionToolId = nil
+
     await withCheckedContinuation { continuation in
       // Store the continuation for cancellation handling
       self.activeContinuation = continuation
@@ -186,6 +190,10 @@ final class StreamProcessor {
                 let finalMessageId = state.currentLocalMessageId ?? messageId
                 self.messageStore.removeMessage(id: finalMessageId)
               }
+
+              // Notify that stream is fully complete (loading can stop)
+              onResultReceived?()
+
             case .failure(let error):
               self.logger.error("Stream failed with error: \(error.localizedDescription)")
               
@@ -615,8 +623,8 @@ final class StreamProcessor {
     // Update cost
     onCostUpdate?(resultMessage.totalCostUsd)
 
-    // Notify that result has been received (content is complete)
-    onResultReceived?()
+    // Note: onResultReceived is called in the stream completion handler (.finished case)
+    // to ensure loading state is only cleared after the entire stream completes
   }
   
   /// Checks if an assistant message contains text content

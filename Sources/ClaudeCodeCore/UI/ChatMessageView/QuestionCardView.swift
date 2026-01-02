@@ -13,7 +13,8 @@ struct QuestionCardView: View {
   let questionIndex: Int
   @Binding var selectedOptions: Set<String>
   @Binding var otherText: String
-  
+  @Binding var focusedOptionIndex: Int
+
   @Environment(\.colorScheme) private var colorScheme
   @State private var isOtherSelected = false
   
@@ -27,8 +28,8 @@ struct QuestionCardView: View {
       
       // Options
       VStack(alignment: .leading, spacing: 8) {
-        ForEach(question.options) { option in
-          optionView(option)
+        ForEach(Array(question.options.enumerated()), id: \.element.id) { index, option in
+          optionView(option, index: index)
         }
       }
       
@@ -72,11 +73,12 @@ struct QuestionCardView: View {
   }
   
   @ViewBuilder
-  private func optionView(_ option: QuestionOption) -> some View {
+  private func optionView(_ option: QuestionOption, index: Int) -> some View {
     let isSelected = selectedOptions.contains(option.label)
-    
+    let isFocused = index == focusedOptionIndex
+
     Button(action: {
-      toggleOption(option.label)
+      toggleOption(option.label, index: index)
     }) {
       HStack(alignment: .top, spacing: 12) {
         // Selection indicator
@@ -91,38 +93,59 @@ struct QuestionCardView: View {
             .font(.system(size: 16))
             .foregroundColor(isSelected ? .brandPrimary : .secondary)
         }
-        
+
         VStack(alignment: .leading, spacing: 4) {
           Text(option.label)
             .font(.system(size: 13, weight: .medium))
             .foregroundColor(.primary)
             .fixedSize(horizontal: false, vertical: true)
-          
+
           Text(option.description)
             .font(.system(size: 12))
             .foregroundColor(.secondary)
             .fixedSize(horizontal: false, vertical: true)
         }
-        
+
         Spacer()
       }
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
     .padding(10)
-    .background(isSelected ? selectionBackground : Color.clear)
+    .background(optionBackground(isSelected: isSelected, isFocused: isFocused))
     .cornerRadius(8)
     .overlay(
       RoundedRectangle(cornerRadius: 8)
-        .stroke(isSelected ? Color.brandPrimary.opacity(0.5) : Color.clear, lineWidth: 1.5)
+        .stroke(optionBorderColor(isSelected: isSelected, isFocused: isFocused), lineWidth: isFocused ? 2 : 1.5)
     )
   }
+
+  private func optionBackground(isSelected: Bool, isFocused: Bool) -> Color {
+    if isSelected {
+      return selectionBackground
+    } else if isFocused {
+      return focusBackground
+    }
+    return Color.clear
+  }
+
+  private func optionBorderColor(isSelected: Bool, isFocused: Bool) -> Color {
+    if isSelected {
+      return Color.brandPrimary.opacity(0.5)
+    } else if isFocused {
+      return Color.brandPrimary.opacity(0.3)
+    }
+    return Color.clear
+  }
   
-  private func toggleOption(_ label: String) {
+  private func toggleOption(_ label: String, index: Int) {
+    // Update focus to match the clicked option
+    focusedOptionIndex = index
+
     // Clear "Other" text when selecting an option
     otherText = ""
     isOtherSelected = false
-    
+
     if question.multiSelect {
       // Multi-select: toggle the option
       if selectedOptions.contains(label) {
@@ -150,7 +173,13 @@ struct QuestionCardView: View {
       ? Color.brandPrimary.opacity(0.15)
       : Color.brandPrimary.opacity(0.08)
   }
-  
+
+  private var focusBackground: Color {
+    colorScheme == .dark
+      ? Color.brandPrimary.opacity(0.08)
+      : Color.brandPrimary.opacity(0.04)
+  }
+
   private var borderColor: Color {
     colorScheme == .dark
     ? Color(white: 0.25)
