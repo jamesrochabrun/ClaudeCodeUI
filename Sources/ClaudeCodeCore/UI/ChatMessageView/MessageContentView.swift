@@ -349,15 +349,13 @@ struct MessageContentView: View {
     if shouldCollapseDiff {
       guard let diffStore = diffStateManager else { return nil }
       let diffState = diffStore.getState(for: message.id)
-      guard !diffState.diffGroups.isEmpty else { return nil }
+      guard diffState.hasContent else { return nil }
 
+      // Mark as applied/collapsed since user has moved on
       var autoCollapseState = DiffLifecycleState()
-      for group in diffState.diffGroups {
-        let groupIDString = group.id.uuidString
-        // Mark as applied - changes have been reviewed
-        autoCollapseState.appliedDiffGroupIDs.insert(groupIDString)
-        autoCollapseState.appliedTimestamps[groupIDString] = Date()
-      }
+      let diffID = message.id.uuidString
+      autoCollapseState.appliedDiffGroupIDs.insert(diffID)
+      autoCollapseState.appliedTimestamps[diffID] = Date()
       autoCollapseState.lastModified = Date()
       return autoCollapseState
     }

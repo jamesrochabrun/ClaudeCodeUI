@@ -22,7 +22,6 @@ public struct DiffModalView: View {
 
   let onDismiss: () -> Void
   
-  @State private var viewMode: ClaudeCodeEditsView.DiffViewMode = .grouped
   @Environment(\.colorScheme) private var colorScheme
   
   // MARK: - Initialization

@@ -1,0 +1,1 @@
+{"version":3,"file":"getFiletypeFromFileName.d.ts","names":["EXTENSION_TO_FILE_FORMAT: ExtensionFormatMap"],"sources":["../../src/utils/getFiletypeFromFileName.ts"],"sourcesContent":[],"mappings":";;;cAEaA,0BAA0B;iBA0UvB,uBAAA,oBAA2C;AA1U9CA,iBA8VG,mBAAA,CA9VuB,GAAA,EA8VE,kBA9VF,CAAA,EAAA,IAAA"}

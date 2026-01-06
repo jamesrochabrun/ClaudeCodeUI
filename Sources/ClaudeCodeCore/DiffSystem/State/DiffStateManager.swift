@@ -13,54 +13,52 @@ import SwiftUI
 
 @Observable
 public final class DiffStateManager {
-  
+
   // MARK: Lifecycle
-  
+
   init(terminalService: TerminalService) {
-    processor = DiffProcessor(terminalService: terminalService)
+    // TerminalService kept for API compatibility
   }
-  
+
   // MARK: Internal
-  
+
   var stateCount: Int {
     states.count
   }
-  
+
   /// Get state for a message
   func getState(for messageID: UUID) -> DiffState {
     states[messageID] ?? .empty
   }
-  
+
   @MainActor
   func process(diffs: [DiffResult], for messageID: UUID) async {
-    guard !diffs.isEmpty, let firstResult = diffs.first else { 
-      return 
+    guard !diffs.isEmpty, let firstResult = diffs.first else {
+      return
     }
-    
+
+    // Skip if we already have the same content
     if
       let existingState = states[messageID],
-      existingState.diffResult.diff == firstResult.diff,
-      existingState.diffResult.original == firstResult.original
+      existingState.diffResult.original == firstResult.original,
+      existingState.diffResult.updated == firstResult.updated
     {
       return
     }
-    
-    let newState = await processor.processState(diffResult: firstResult)
-    
-    states[messageID] = newState
+
+    // Store the DiffResult - @pierre/diffs handles all rendering
+    states[messageID] = DiffState(diffResult: firstResult)
   }
-  
+
   func removeState(for messageID: UUID) {
     states.removeValue(forKey: messageID)
   }
-  
+
   func clearAllStates() {
     states.removeAll()
   }
-  
+
   // MARK: Private
-  
+
   private var states: [UUID: DiffState] = [:]
-  
-  private let processor: DiffProcessor
 }

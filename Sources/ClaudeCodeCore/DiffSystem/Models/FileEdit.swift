@@ -17,13 +17,13 @@ struct FileEdit: Codable {
     case oldString = "old_string"
     case replaceAll = "replace_all"
   }
-  
+
   let filePath: String
   let edits: [Edit]?
   let newString: String?
   let oldString: String?
   let replaceAll: Bool?
-  
+
   var allEdits: [Edit] {
     if let edits {
       return edits
@@ -32,38 +32,19 @@ struct FileEdit: Codable {
     }
     return []
   }
-  
-  /// XML representation of all edits for diffing purposes
-  var xmlDiff: String {
-    allEdits.map { $0.xmlDiff }.joined(separator: "\n")
-  }
 }
 
 // MARK: - Edit
 
 struct Edit: Codable {
-  
+
   let newString: String
   let oldString: String
   let replaceAll: Bool
-  let id = UUID()
-  
+
   enum CodingKeys: String, CodingKey {
     case newString = "new_string"
     case oldString = "old_string"
     case replaceAll = "replace_all"
-  }
-  
-  var xmlDiff: String {
-    """
-      <DIFF id="\(id.uuidString)">
-      <SEARCH>
-      \(oldString)
-      </SEARCH>
-      <REPLACE>
-      \(newString)
-      </REPLACE>
-      </DIFF>
-    """
   }
 }

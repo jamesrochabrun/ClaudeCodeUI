@@ -137,7 +137,8 @@ let package = Package(
                 "ClaudeCodeUI.entitlements"
             ],
             resources: [
-                .process("Assets.xcassets")
+                .process("Assets.xcassets"),
+                .copy("DiffSystem/WebView/Resources")
             ],
             swiftSettings: [
                 .swiftLanguageMode(.v5)

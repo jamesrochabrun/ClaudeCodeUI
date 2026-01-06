@@ -9,37 +9,16 @@ import Foundation
 
 // MARK: - DiffState
 
-/// Immutable state struct that's safe for SwiftUI
+/// Immutable state struct that's safe for SwiftUI.
+/// Contains the diff result for WebView-based rendering via @pierre/diffs.
 struct DiffState: Equatable {
-  static let empty = DiffState(
-    xmlDiffs: [],
-    diffGroups: [],
-    diffToGroupIDMap: [:],
-    groupIDToDiffMap: [:],
-    appliedDiffGroupIDs: [],
-    diffResult: .initial
-  )
-  
-  /// Array of code differences parsed from XML format
-  let xmlDiffs: [CodeDiff]
-  
-  /// Groups of related diffs organized by the DiffTerminalService
-  let diffGroups: [DiffTerminalService.DiffGroup]
-  
-  /// Maps individual diff identifiers to their corresponding group IDs
-  let diffToGroupIDMap: [String: UUID]
-  
-  /// Maps group IDs back to their diff identifiers
-  let groupIDToDiffMap: [UUID: String]
-  
-  /// Set of group IDs that have been applied to the file
-  let appliedDiffGroupIDs: Set<UUID>
-  
-  /// The result of the diff operation (initial, success, or failure)
+  static let empty = DiffState(diffResult: .initial)
+
+  /// The result of the diff operation
   let diffResult: DiffResult
-  
-  /// Computed property indicating if all changes have been applied
-  var areAllChangesApplied: Bool {
-    !diffGroups.isEmpty && appliedDiffGroupIDs.count == diffGroups.count
+
+  /// Whether this state has actual content to display
+  var hasContent: Bool {
+    !diffResult.isInitial && (!diffResult.original.isEmpty || !diffResult.updated.isEmpty)
   }
 }

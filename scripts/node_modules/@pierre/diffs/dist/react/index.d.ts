@@ -1,0 +1,17 @@
+import { AnnotationLineMap, AnnotationSide, AnnotationSpan, BaseCodeOptions, BaseDiffOptions, BundledLanguage, ChangeContent, ChangeHunk, ChangeTypes, CodeToHastOptions, ContextContent, DecorationItem, DiffLineAnnotation, DiffLineEventBaseProps, DiffsHighlighter, DiffsThemeNames, ExpansionDirections, ExtensionFormatMap, FileContents, FileDiffMetadata, GapSpan, Hunk, HunkData, HunkLineType, HunkSeparators, LanguageRegistration, LineAnnotation, LineDiffTypes, LineEventBaseProps, LineInfo, LineSpans, LineTypes, ObservedAnnotationNodes, ObservedGridNodes, ParsedPatch, PrePropertiesConfig, RenderDiffFilesResult, RenderDiffHunksResult, RenderDiffOptions, RenderDiffResult, RenderFileMetadata, RenderFileOptions, RenderFileResult, RenderHeaderMetadataCallback, RenderHeaderMetadataProps, RenderedDiffASTCache, RenderedFileASTCache, SharedRenderState, ShikiTransformer, SupportedLanguages, ThemeRegistrationResolved, ThemeTypes, ThemedDiffResult, ThemedFileResult, ThemedToken, ThemesType } from "../types.js";
+import { WorkerInitializationRenderOptions, WorkerPoolOptions } from "../worker/types.js";
+import { FileOptions } from "../components/File.js";
+import { DiffBasePropsReact, FileProps } from "./types.js";
+import { File } from "./File.js";
+import { FileDiff, FileDiffProps } from "./FileDiff.js";
+import { MultiFileDiff, MultiFileDiffProps } from "./MultiFileDiff.js";
+import { PatchDiff, PatchDiffProps } from "./PatchDiff.js";
+import { WorkerPoolContext, WorkerPoolContextProvider, useWorkerPool } from "./WorkerPoolContext.js";
+import { HoverSlotStyles } from "./constants.js";
+import { renderDiffChildren } from "./utils/renderDiffChildren.js";
+import { renderFileChildren } from "./utils/renderFileChildren.js";
+import { templateRender } from "./utils/templateRender.js";
+import { useFileDiffInstance } from "./utils/useFileDiffInstance.js";
+import { useFileInstance } from "./utils/useFileInstance.js";
+import { useStableCallback } from "./utils/useStableCallback.js";
+export { AnnotationLineMap, AnnotationSide, AnnotationSpan, BaseCodeOptions, BaseDiffOptions, BundledLanguage, ChangeContent, ChangeHunk, ChangeTypes, CodeToHastOptions, ContextContent, DecorationItem, DiffBasePropsReact, DiffLineAnnotation, DiffLineEventBaseProps, DiffsHighlighter, DiffsThemeNames, ExpansionDirections, ExtensionFormatMap, File, FileContents, FileDiff, FileDiffMetadata, FileDiffProps, FileOptions, FileProps, GapSpan, HoverSlotStyles, Hunk, HunkData, HunkLineType, HunkSeparators, LanguageRegistration, LineAnnotation, LineDiffTypes, LineEventBaseProps, LineInfo, LineSpans, LineTypes, MultiFileDiff, MultiFileDiffProps, ObservedAnnotationNodes, ObservedGridNodes, ParsedPatch, PatchDiff, PatchDiffProps, PrePropertiesConfig, RenderDiffFilesResult, RenderDiffHunksResult, RenderDiffOptions, RenderDiffResult, RenderFileMetadata, RenderFileOptions, RenderFileResult, RenderHeaderMetadataCallback, RenderHeaderMetadataProps, RenderedDiffASTCache, RenderedFileASTCache, SharedRenderState, ShikiTransformer, SupportedLanguages, ThemeRegistrationResolved, ThemeTypes, ThemedDiffResult, ThemedFileResult, ThemedToken, ThemesType, WorkerInitializationRenderOptions, WorkerPoolContext, WorkerPoolContextProvider, WorkerPoolOptions, renderDiffChildren, renderFileChildren, templateRender, useFileDiffInstance, useFileInstance, useStableCallback, useWorkerPool };

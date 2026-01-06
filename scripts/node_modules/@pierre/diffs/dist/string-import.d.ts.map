@@ -1,0 +1,1 @@
+{"version":3,"file":"string-import.d.ts","names":[],"sources":["../src/string-import.d.ts"],"sourcesContent":["declare module '*.css' {\n  const file: string;\n  export default file;\n}\n"],"mappings":""}

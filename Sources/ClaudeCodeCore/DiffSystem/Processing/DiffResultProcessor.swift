@@ -57,19 +57,20 @@ struct DiffResultProcessor {
         in: [fileEdit.filePath],
         maxTasks: 3
       ).values.first
-      
+
       guard let contentOfFile else {
         AppLogger.error("Error: Unable to find content for \(fileEdit.filePath)")
         return nil
       }
-      
+
+      // Apply edits to get the updated content for diff display
+      let updatedContent = applyEdits(fileEdit.allEdits, to: contentOfFile)
+
       let diffResult = DiffResult(
         filePath: fileEdit.filePath,
         fileName: fileEdit.filePath,
         original: contentOfFile,
-        updated: "",
-        diff: fileEdit.xmlDiff,
-        storage: contentOfFile
+        updated: updatedContent
       )
       return [diffResult]
     } catch {
@@ -100,18 +101,11 @@ struct DiffResultProcessor {
         ).values.first
       {
         // Existing file - create diff
-        let xmlDiff = createXMLDiff(
-          original: contentOfFile,
-          replacement: fileContent.content
-        )
-        
         let diffResult = DiffResult(
           filePath: fileContent.filePath,
           fileName: fileContent.filePath,
           original: contentOfFile,
-          updated: "",
-          diff: xmlDiff,
-          storage: fileContent.content
+          updated: fileContent.content
         )
         return [diffResult]
       } else {
@@ -132,51 +126,37 @@ struct DiffResultProcessor {
   /// - Parameters:
   ///   - filePath: The path where the new file will be created
   ///   - content: The content of the new file
-  /// - Returns: A `MergeResult` object representing the new file
+  /// - Returns: A `DiffResult` object representing the new file
   private func createNewFileDiffResult(
     filePath: String,
     content: String
   ) -> DiffResult {
-    // For new files, create a special XML diff with no SEARCH section
-    // This ensures only additions are shown, not removals
-    let xmlDiff = """
-    <DIFF id="\(UUID().uuidString)">
-    <SEARCH></SEARCH>
-    <REPLACE>
-    \(content)
-    </REPLACE>
-    </DIFF>
-    """
-    
-    return .init(
+    .init(
       filePath: filePath,
       fileName: filePath,
       original: "",      // Empty since file doesn't exist
-      updated: content,  // The new content to be created
-      diff: xmlDiff,     // XML diff showing only additions
-      storage: content   // Storage remains the same
+      updated: content   // The new content to be created
     )
   }
-  
-  /// Creates an XML diff string representing the difference between two strings.
+
+  /// Applies a list of edits to the original content.
   ///
   /// - Parameters:
-  ///   - original: The original content
-  ///   - replacement: The new content that will replace the original
-  /// - Returns: An XML string representing the diff
-  private func createXMLDiff(
-    original: String,
-    replacement: String
-  ) -> String {
-    """
-    <DIFF id="\(UUID().uuidString)">
-    <SEARCH>
-    \(original)
-    </SEARCH>
-    <REPLACE>
-    \(replacement)
-    </REPLACE>
-    </DIFF>
-    """
+  ///   - edits: The list of edits to apply
+  ///   - content: The original content to modify
+  /// - Returns: The content with all edits applied
+  private func applyEdits(_ edits: [Edit], to content: String) -> String {
+    var result = content
+    for edit in edits {
+      if edit.replaceAll {
+        result = result.replacingOccurrences(of: edit.oldString, with: edit.newString)
+      } else {
+        // Replace only first occurrence
+        if let range = result.range(of: edit.oldString) {
+          result = result.replacingCharacters(in: range, with: edit.newString)
+        }
+      }
+    }
+    return result
   }
 }

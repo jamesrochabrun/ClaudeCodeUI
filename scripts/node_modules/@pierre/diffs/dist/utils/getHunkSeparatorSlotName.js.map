@@ -1,0 +1,1 @@
+{"version":3,"file":"getHunkSeparatorSlotName.js","names":[],"sources":["../../src/utils/getHunkSeparatorSlotName.ts"],"sourcesContent":["export function getHunkSeparatorSlotName(\n  type: 'unified' | 'additions' | 'deletions',\n  hunkIndex: number\n) {\n  return `hunk-separator-${type}-${hunkIndex}`;\n}\n"],"mappings":";AAAA,SAAgB,yBACd,MACA,WACA;AACA,QAAO,kBAAkB,KAAK,GAAG"}

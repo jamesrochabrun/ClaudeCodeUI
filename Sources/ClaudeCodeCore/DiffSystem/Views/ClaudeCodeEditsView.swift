@@ -19,19 +19,23 @@ private enum ParameterKeys {
   static let content = "content"
 }
 
+/// A view that displays code edits using the @pierre/diffs JavaScript library.
+///
+/// This view renders diffs in a WebView with rich syntax highlighting,
+/// split/unified view modes, and inline word-level change highlighting.
 public struct ClaudeCodeEditsView: View {
-  
-  // MARK: - Constants
+
+  // MARK: - Properties
 
   let messageID: UUID
   let editTool: EditTool
   let toolParameters: [String: String]
   let terminalService: TerminalService
   let projectPath: String?
-  
+
   /// Optional callback for when user wants to expand to full-screen
   var onExpandRequest: (() -> Void)?
-  
+
   /// Shared diff store from parent - required to avoid duplicate processing
   let diffStore: DiffStateManager?
 
@@ -40,8 +44,8 @@ public struct ClaudeCodeEditsView: View {
 
   @State private var isProcessing = false
   @State private var processingError: String?
-  @State private var viewMode: DiffViewMode = .grouped
-  
+  @State private var diffStyle: DiffStyle = .unified
+
   /// Get the active diff store - prefer shared, create local only if necessary
   private var activeDiffStore: DiffStateManager {
     if let shared = diffStore {
@@ -50,15 +54,9 @@ public struct ClaudeCodeEditsView: View {
     // This should rarely happen since parent should provide store
     return DiffStateManager(terminalService: terminalService)
   }
-  
-  /// Display modes for presenting code differences.
-  enum DiffViewMode {
-    /// Shows changes in grouped sections with context
-    case grouped
-    /// Shows old and new versions side by side
-    case split
-  }
-  
+
+  // MARK: - Initialization
+
   public init(
     messageID: UUID,
     editTool: EditTool,
@@ -78,7 +76,9 @@ public struct ClaudeCodeEditsView: View {
     self.diffStore = diffStore
     self.diffLifecycleState = diffLifecycleState
   }
-  
+
+  // MARK: - Body
+
   public var body: some View {
     Group {
       if isProcessing {
@@ -88,16 +88,22 @@ public struct ClaudeCodeEditsView: View {
         ErrorView(error: error)
           .transition(.opacity)
       } else {
-        DiffContentView(
-          state: activeDiffStore.getState(for: messageID),
-          viewMode: $viewMode,
-          toolParameters: toolParameters,
-          onExpandRequest: onExpandRequest,
-          diffLifecycleState: diffLifecycleState)
+        let state = activeDiffStore.getState(for: messageID)
+        if state == .empty {
+          EmptyStateView()
+        } else {
+          PierreDiffContentView(
+            state: state,
+            diffStyle: $diffStyle,
+            filePath: toolParameters[ParameterKeys.filePath],
+            onExpandRequest: onExpandRequest,
+            diffLifecycleState: diffLifecycleState
+          )
           .transition(.asymmetric(
             insertion: .opacity.combined(with: .move(edge: .top)),
             removal: .opacity
           ))
+        }
       }
     }
     .animation(.easeInOut(duration: 0.25), value: isProcessing)
@@ -105,7 +111,7 @@ public struct ClaudeCodeEditsView: View {
     .onAppear {
       let currentState = activeDiffStore.getState(for: messageID)
       let isEmpty = currentState == .empty
-      
+
       // Only process if we don't have a shared store or if the state is empty
       if diffStore == nil || isEmpty {
         Task {
@@ -123,19 +129,19 @@ private struct LoadingView: View {
     VStack(spacing: 12) {
       ProgressView()
         .controlSize(.small)
-        .frame(width: 20, height: 20) // Explicit size constraints
+        .frame(width: 20, height: 20)
       Text("Processing diff...")
         .font(.caption)
         .foregroundStyle(.secondary)
     }
     .frame(maxWidth: .infinity, minHeight: 100, idealHeight: 120)
-    .fixedSize(horizontal: false, vertical: true) // Prevent vertical compression
+    .fixedSize(horizontal: false, vertical: true)
   }
 }
 
 private struct ErrorView: View {
   let error: String
-  
+
   var body: some View {
     VStack {
       Image(systemName: "exclamationmark.triangle")
@@ -149,79 +155,62 @@ private struct ErrorView: View {
   }
 }
 
-private struct DiffContentView: View {
+private struct EmptyStateView: View {
+  var body: some View {
+    Text("No changes to display")
+      .foregroundStyle(.secondary)
+      .padding()
+      .frame(maxWidth: .infinity, minHeight: 100)
+  }
+}
+
+/// Content view that renders diffs using PierreDiffView (WKWebView + @pierre/diffs)
+private struct PierreDiffContentView: View {
   let state: DiffState
-  @Binding var viewMode: ClaudeCodeEditsView.DiffViewMode
-  let toolParameters: [String: String]
+  @Binding var diffStyle: DiffStyle
+  @State private var overflowMode: OverflowMode = .wrap
+  let filePath: String?
   let onExpandRequest: (() -> Void)?
   let diffLifecycleState: DiffLifecycleState?
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
-      HeaderView(
-        filePath: toolParameters[ParameterKeys.filePath],
-        viewMode: $viewMode,
-        onExpandRequest: onExpandRequest
-      )
-      
-      if state.diffGroups.isEmpty {
-        Text("No changes to display")
-          .foregroundStyle(.secondary)
-          .padding()
-      } else {
-        ScrollView {
-          LazyVStack(spacing: 16) { // Changed to LazyVStack for better performance
-            ForEach(state.diffGroups) { group in
-              diffGroupContent(for: group)
-            }
+      // Header with file info and controls
+      headerView
+
+      // Check if diff has been reviewed (collapsed state)
+      if let lifecycle = diffLifecycleState,
+         !lifecycle.appliedDiffGroupIDs.isEmpty {
+        CompactDiffStatusView(
+          fileName: filePath ?? "Unknown file",
+          timestamp: lifecycle.appliedTimestamps.values.first,
+          onTapToExpand: {
+            onExpandRequest?()
           }
-          .padding(.vertical, 8) // Add vertical padding to the container
-        }
+        )
+        .padding()
+      } else {
+        // Render diff using WebView
+        PierreDiffView(
+          oldContent: state.diffResult.original,
+          newContent: state.diffResult.updated,
+          fileName: state.diffResult.fileName,
+          diffStyle: $diffStyle,
+          overflowMode: $overflowMode,
+          onLineClick: { lineNumber, side in
+            AppLogger.info("Line clicked: \(lineNumber) on \(side)")
+          },
+          onExpandRequest: onExpandRequest
+        )
+        .frame(minHeight: 200)
       }
     }
   }
 
-  @ViewBuilder
-  private func diffGroupContent(for group: DiffTerminalService.DiffGroup) -> some View {
-    let groupIDString = group.id.uuidString
-
-    // Check if this diff has been reviewed (collapsed)
-    if let lifecycle = diffLifecycleState,
-       lifecycle.appliedDiffGroupIDs.contains(groupIDString) {
-      // Show compact reviewed view
-      CompactDiffStatusView(
-        fileName: toolParameters[ParameterKeys.filePath] ?? "Unknown file",
-        timestamp: lifecycle.appliedTimestamps[groupIDString],
-        onTapToExpand: {
-          // Expand to show full diff in modal
-          onExpandRequest?()
-        }
-      )
-      .padding(.horizontal)
-      .id(group.id)
-    } else {
-      // Show full diff (pending or no lifecycle state)
-      DiffGroupView(
-        group: group,
-        state: state,
-        viewMode: viewMode,
-        toolParameters: toolParameters
-      )
-      .padding(.horizontal)
-      .id(group.id) // Ensure proper view identity
-    }
-  }
-}
-
-private struct HeaderView: View {
-  let filePath: String?
-  @Binding var viewMode: ClaudeCodeEditsView.DiffViewMode
-  let onExpandRequest: (() -> Void)?
-  
-  var body: some View {
+  private var headerView: some View {
     VStack(alignment: .leading) {
       HStack {
-        if let filePath = filePath {
+        if let filePath {
           HStack {
             Image(systemName: "doc.text.fill")
               .foregroundStyle(.blue)
@@ -230,21 +219,31 @@ private struct HeaderView: View {
           }
         }
         Spacer()
-        
-        HStack(spacing: 12) {
-          
-          // View mode picker
-          Picker("", selection: $viewMode) {
-            Text("Grouped").tag(ClaudeCodeEditsView.DiffViewMode.grouped)
-            Text("Split").tag(ClaudeCodeEditsView.DiffViewMode.split)
+
+        HStack(spacing: 8) {
+          // Split/Unified toggle button
+          Button {
+            diffStyle = diffStyle == .split ? .unified : .split
+          } label: {
+            Image(systemName: diffStyle == .split ? "rectangle.split.2x1" : "rectangle.stack")
+              .font(.system(size: 14))
           }
-          .pickerStyle(.segmented)
-          .frame(width: 200)
+          .buttonStyle(.plain)
+          .help(diffStyle == .split ? "Switch to unified view" : "Switch to split view")
+
+          // Wrap toggle button
+          Button {
+            overflowMode = overflowMode == .scroll ? .wrap : .scroll
+          } label: {
+            Image(systemName: overflowMode == .wrap ? "text.justify" : "arrow.left.and.right")
+              .font(.system(size: 14))
+          }
+          .buttonStyle(.plain)
+          .help(overflowMode == .wrap ? "Disable word wrap" : "Enable word wrap")
+
           // Expand button
-          if let onExpandRequest = onExpandRequest {
-            Button(action: {
-              onExpandRequest()
-            }) {
+          if let onExpandRequest {
+            Button(action: onExpandRequest) {
               Image(systemName: "arrow.up.left.and.arrow.down.right")
                 .font(.system(size: 14))
             }
@@ -253,7 +252,7 @@ private struct HeaderView: View {
           }
         }
       }
-      if let filePath = filePath {
+      if let filePath {
         Text(filePath)
           .font(.caption)
           .foregroundStyle(.secondary)
@@ -264,47 +263,12 @@ private struct HeaderView: View {
   }
 }
 
-private struct DiffGroupView: View {
-  let group: DiffTerminalService.DiffGroup
-  let state: DiffState
-  let viewMode: ClaudeCodeEditsView.DiffViewMode
-  let toolParameters: [String: String]
-  
-  private var isApplied: Bool {
-    state.appliedDiffGroupIDs.contains(group.id)
-  }
-  
-  @ViewBuilder
-  var body: some View {
-    switch viewMode {
-    case .split:
-      TwoSideReviewPanel(
-        group: group,
-        isApplied: isApplied)
-      
-    case .grouped:
-      DiffContainerView(
-        group: group,
-        filePath: toolParameters[ParameterKeys.filePath] ?? "",
-        isApplied: isApplied,
-        slotContent: {
-          VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(group.lines.enumerated()), id: \.offset) { _, line in
-              LineView(line: line)
-            }
-          }
-        }
-      )
-    }
-  }
-}
-
 // MARK: - Processing
 
 extension ClaudeCodeEditsView {
-  
+
   /// Processes the tool response based on the tool type (edit, multiEdit, or write).
-  /// 
+  ///
   /// This method coordinates the processing of different tool types, creating diff results
   /// and updating the diff store with the processed changes.
   private func processTool() async {
@@ -312,38 +276,32 @@ extension ClaudeCodeEditsView {
     defer {
       isProcessing = false
     }
-    
+
     let processor = DiffResultProcessor(
       fileDataReader: DefaultFileDataReader(projectPath: projectPath)
     )
-    
+
     let diffResults: [DiffResult]?
-    
+
     switch editTool {
     case .edit:
       diffResults = await processEditTool(processor: processor)
-      
+
     case .multiEdit:
       diffResults = await processMultiEditTool(processor: processor)
-      
+
     case .write:
       diffResults = await processWriteTool(processor: processor)
     }
-    
+
     if let diffResults {
       await activeDiffStore.process(diffs: diffResults, for: messageID)
     } else if processingError == nil {
       processingError = "Failed to process tool response"
     }
   }
-  
+
   /// Processes an Edit tool response to generate diff results.
-  ///
-  /// Extracts the required parameters (file_path, old_string, new_string) from the tool
-  /// parameters and creates a FileEdit object for processing.
-  ///
-  /// - Parameter processor: The DiffResultProcessor used to process the edit.
-  /// - Returns: An array of DiffResult objects if successful, nil if parameters are missing or invalid.
   private func processEditTool(processor: DiffResultProcessor) async -> [DiffResult]? {
     guard
       let filePath = toolParameters[ParameterKeys.filePath],
@@ -353,7 +311,7 @@ extension ClaudeCodeEditsView {
       processingError = "Missing required parameters for Edit tool"
       return nil
     }
-    
+
     let fileEdit = FileEdit(
       filePath: filePath,
       edits: nil,
@@ -361,7 +319,7 @@ extension ClaudeCodeEditsView {
       oldString: oldString,
       replaceAll: toolParameters[ParameterKeys.replaceAll] == "true"
     )
-    
+
     guard
       let jsonData = try? JSONEncoder().encode(fileEdit),
       let jsonString = String(data: jsonData, encoding: .utf8)
@@ -369,20 +327,14 @@ extension ClaudeCodeEditsView {
       processingError = "Failed to encode Edit parameters"
       return nil
     }
-    
+
     return await processor.processEditTool(
       response: jsonString,
       tool: .edit
     )
   }
-  
+
   /// Processes a MultiEdit tool response to generate diff results.
-  ///
-  /// Extracts the file path and edits array from the tool parameters, parses the edits
-  /// into structured Edit objects, and creates a FileEdit object for processing.
-  ///
-  /// - Parameter processor: The DiffResultProcessor used to process the edits.
-  /// - Returns: An array of DiffResult objects if successful, nil if parameters are missing or invalid.
   private func processMultiEditTool(processor: DiffResultProcessor) async -> [DiffResult]? {
     guard
       let filePath = toolParameters[ParameterKeys.filePath],
@@ -392,7 +344,7 @@ extension ClaudeCodeEditsView {
       processingError = "Missing or invalid parameters for MultiEdit tool"
       return nil
     }
-    
+
     let edits = editsArray.map { dict in
       Edit(
         newString: dict[ParameterKeys.newString] ?? "",
@@ -400,7 +352,7 @@ extension ClaudeCodeEditsView {
         replaceAll: dict[ParameterKeys.replaceAll] == "true"
       )
     }
-    
+
     let fileEdit = FileEdit(
       filePath: filePath,
       edits: edits,
@@ -408,7 +360,7 @@ extension ClaudeCodeEditsView {
       oldString: nil,
       replaceAll: nil
     )
-    
+
     guard
       let jsonData = try? JSONEncoder().encode(fileEdit),
       let jsonString = String(data: jsonData, encoding: .utf8)
@@ -416,20 +368,14 @@ extension ClaudeCodeEditsView {
       processingError = "Failed to encode MultiEdit parameters"
       return nil
     }
-    
+
     return await processor.processEditTool(
       response: jsonString,
       tool: .multiEdit
     )
   }
-  
+
   /// Processes a Write tool response to generate diff results.
-  ///
-  /// Extracts the file path and content from the tool parameters and creates
-  /// a FileContent object for processing. This handles creating or overwriting files.
-  ///
-  /// - Parameter processor: The DiffResultProcessor used to process the write operation.
-  /// - Returns: An array of DiffResult objects if successful, nil if parameters are missing or invalid.
   private func processWriteTool(processor: DiffResultProcessor) async -> [DiffResult]? {
     guard
       let filePath = toolParameters[ParameterKeys.filePath],
@@ -438,9 +384,9 @@ extension ClaudeCodeEditsView {
       processingError = "Missing required parameters for Write tool"
       return nil
     }
-    
+
     let fileContent = FileContent(content: content, filePath: filePath)
-    
+
     guard
       let jsonData = try? JSONEncoder().encode(fileContent),
       let jsonString = String(data: jsonData, encoding: .utf8)
@@ -448,23 +394,15 @@ extension ClaudeCodeEditsView {
       processingError = "Failed to encode Write parameters"
       return nil
     }
-    
+
     return await processor.processEditTool(
       response: jsonString,
       tool: .write
     )
   }
-  
+
   /// Parses a JSON string containing multiple edit operations into a dictionary array.
-  ///
-  /// Converts a JSON string representing an array of edit objects into a Swift array
-  /// of dictionaries. Handles both string and boolean values, converting booleans to
-  /// string representations ("true"/"false").
-  ///
-  /// - Parameter editsString: A JSON string containing an array of edit objects.
-  /// - Returns: An array of dictionaries with string keys and values, or nil if parsing fails.
   private func parseMultiEditEdits(from editsString: String) -> [[String: String]]? {
-    // Try to parse as JSON array first
     if let data = editsString.data(using: .utf8),
        let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
       return json.compactMap { dict in
@@ -479,8 +417,7 @@ extension ClaudeCodeEditsView {
         return result.isEmpty ? nil : result
       }
     }
-    
+
     return nil
   }
 }
-

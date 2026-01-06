@@ -1,0 +1,16 @@
+{
+  "name": "claude-code-ui-diff-bundle",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node bundle.js",
+    "watch": "node bundle.js --watch"
+  },
+  "dependencies": {
+    "@pierre/diffs": "latest"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}
