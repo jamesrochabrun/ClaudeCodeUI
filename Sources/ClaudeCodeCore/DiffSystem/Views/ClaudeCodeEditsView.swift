@@ -202,7 +202,7 @@ private struct PierreDiffContentView: View {
           },
           onExpandRequest: onExpandRequest
         )
-        .frame(minHeight: 200)
+        .frame(minHeight: 500)
       }
     }
   }
@@ -235,8 +235,9 @@ private struct PierreDiffContentView: View {
           Button {
             overflowMode = overflowMode == .scroll ? .wrap : .scroll
           } label: {
-            Image(systemName: overflowMode == .wrap ? "text.justify" : "arrow.left.and.right")
+            Image(systemName: "text.alignleft")
               .font(.system(size: 14))
+              .foregroundStyle(overflowMode == .wrap ? .primary : .secondary)
           }
           .buttonStyle(.plain)
           .help(overflowMode == .wrap ? "Disable word wrap" : "Enable word wrap")
