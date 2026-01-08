@@ -225,8 +225,8 @@ struct ChatMessageView: View {
             .frame(maxWidth: .infinity)
         }
         
-        // For ExitPlanMode, don't use ScrollView to show full content with action buttons
-        if message.toolName == "ExitPlanMode" || message.toolName == "exit_plan_mode" {
+        // Edit tools and ExitPlanMode handle their own scrolling, don't wrap in ScrollView
+        if isEditTool || message.toolName == "ExitPlanMode" || message.toolName == "exit_plan_mode" {
           messageContentView
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(contentBackgroundColor)
