@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 import Down
 import CCTerminalServiceInterface
+import PierreDiffsSwift
 
 struct ChatMessageView: View {
   
