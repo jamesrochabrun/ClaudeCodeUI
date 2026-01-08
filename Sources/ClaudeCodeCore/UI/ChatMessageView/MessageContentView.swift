@@ -1,5 +1,6 @@
 import SwiftUI
 import CCTerminalServiceInterface
+import PierreDiffsSwift
 
 // MARK: - JSON Keys
 private enum JSONKeys {
@@ -198,7 +199,6 @@ struct MessageContentView: View {
           messageID: data.messageID,
           editTool: data.tool,
           toolParameters: data.params,
-          terminalService: terminalService,
           projectPath: projectPath,
           diffStore: diffStateManager,
           diffLifecycleState: nil,
@@ -220,7 +220,7 @@ struct MessageContentView: View {
       return
     }
     
-    diffStateManager = DiffStateManager(terminalService: terminalService)
+    diffStateManager = DiffStateManager()
     isDiffManagerInitialized = true
   }
   
@@ -318,11 +318,10 @@ struct MessageContentView: View {
   private func diffView(editTool: EditTool, rawParams: [String: String]) -> some View {
     Group {
       if let diffStore = diffStateManager {
-        ClaudeCodeEditsView(
+        DiffEditsView(
           messageID: message.id,
           editTool: editTool,
           toolParameters: rawParams,
-          terminalService: terminalService,
           projectPath: projectPath,
           onExpandRequest: {
             modalDiffData = DiffModalData(messageID: message.id, tool: editTool, params: rawParams)
