@@ -17,6 +17,7 @@ let package = Package(
     ],
     dependencies: [
         // External dependencies
+        .package(url: "https://github.com/jamesrochabrun/PierreDiffsSwift", exact: "1.0.0"),
         .package(url: "https://github.com/jamesrochabrun/ClaudeCodeSDK", exact: "1.2.4"),
         .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic", exact: "2.2.0"),
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.3.0"),
@@ -117,6 +118,7 @@ let package = Package(
                 .product(name: "MCP", package: "swift-sdk"),
                 .product(name: "SQLite", package: "SQLite.swift"),
                 .product(name: "CodeWhisper", package: "CodeWhisper"),
+                .product(name: "PierreDiffsSwift", package: "PierreDiffsSwift"),
 
                 // Internal module dependencies
                 "CCAccessibilityFoundation",
