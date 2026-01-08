@@ -1,5 +1,6 @@
 import SwiftUI
 import CCTerminalServiceInterface
+import PierreDiffsSwift
 
 // MARK: - JSON Keys
 private enum JSONKeys {
@@ -198,7 +199,6 @@ struct MessageContentView: View {
           messageID: data.messageID,
           editTool: data.tool,
           toolParameters: data.params,
-          terminalService: terminalService,
           projectPath: projectPath,
           diffStore: diffStateManager,
           diffLifecycleState: nil,
@@ -220,7 +220,7 @@ struct MessageContentView: View {
       return
     }
     
-    diffStateManager = DiffStateManager(terminalService: terminalService)
+    diffStateManager = DiffStateManager()
     isDiffManagerInitialized = true
   }
   
@@ -318,11 +318,10 @@ struct MessageContentView: View {
   private func diffView(editTool: EditTool, rawParams: [String: String]) -> some View {
     Group {
       if let diffStore = diffStateManager {
-        ClaudeCodeEditsView(
+        DiffEditsView(
           messageID: message.id,
           editTool: editTool,
           toolParameters: rawParams,
-          terminalService: terminalService,
           projectPath: projectPath,
           onExpandRequest: {
             modalDiffData = DiffModalData(messageID: message.id, tool: editTool, params: rawParams)
@@ -349,15 +348,13 @@ struct MessageContentView: View {
     if shouldCollapseDiff {
       guard let diffStore = diffStateManager else { return nil }
       let diffState = diffStore.getState(for: message.id)
-      guard !diffState.diffGroups.isEmpty else { return nil }
+      guard diffState.hasContent else { return nil }
 
+      // Mark as applied/collapsed since user has moved on
       var autoCollapseState = DiffLifecycleState()
-      for group in diffState.diffGroups {
-        let groupIDString = group.id.uuidString
-        // Mark as applied - changes have been reviewed
-        autoCollapseState.appliedDiffGroupIDs.insert(groupIDString)
-        autoCollapseState.appliedTimestamps[groupIDString] = Date()
-      }
+      let diffID = message.id.uuidString
+      autoCollapseState.appliedDiffGroupIDs.insert(diffID)
+      autoCollapseState.appliedTimestamps[diffID] = Date()
       autoCollapseState.lastModified = Date()
       return autoCollapseState
     }
