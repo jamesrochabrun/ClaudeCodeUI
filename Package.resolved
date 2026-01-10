@@ -1,5 +1,5 @@
 {
-  "originHash" : "c56df42602d8d1206b416f7260b67596efb86511536d41b5d6b4f57f88997d28",
+  "originHash" : "3373d5d3201d2ffa836449e25bbc66937ef04a95876ec37c84ae14a5f1c404bf",
   "pins" : [
     {
       "identity" : "async-http-client",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/jamesrochabrun/CodeWhisper",
       "state" : {
-        "revision" : "c1cfa9aeec2867d577437b4a803f29eb82dd76c5",
-        "version" : "1.1.3"
+        "revision" : "8205fa3b0dc19d66cc63619642fa19aa440d69a0",
+        "version" : "1.1.7"
       }
     },
     {
@@ -69,8 +69,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/jamesrochabrun/PierreDiffsSwift",
       "state" : {
-        "revision" : "1ce04d3105212eb11c07cd4375c058ecb151fd32",
-        "version" : "1.0.0"
+        "revision" : "95037c9cd24e33af149ed081387a68d5091f46d0",
+        "version" : "1.1.3"
       }
     },
     {

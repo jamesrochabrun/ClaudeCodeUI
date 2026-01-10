@@ -196,12 +196,14 @@ struct MessageContentView: View {
     contentView
       .sheet(item: $modalDiffData) { data in
         DiffModalView(
-          messageID: data.messageID,
-          editTool: data.tool,
-          toolParameters: data.params,
-          projectPath: projectPath,
-          diffStore: diffStateManager,
-          diffLifecycleState: nil,
+          input: .tool(
+            messageID: data.messageID,
+            editTool: data.tool,
+            toolParameters: data.params,
+            projectPath: projectPath,
+            diffStore: diffStateManager,
+            diffLifecycleState: nil
+          ),
           onDismiss: {
             modalDiffData = nil
           }
@@ -319,15 +321,17 @@ struct MessageContentView: View {
     Group {
       if let diffStore = diffStateManager {
         DiffEditsView(
-          messageID: message.id,
-          editTool: editTool,
-          toolParameters: rawParams,
-          projectPath: projectPath,
+          input: .tool(
+            messageID: message.id,
+            editTool: editTool,
+            toolParameters: rawParams,
+            projectPath: projectPath,
+            diffStore: diffStore,
+            diffLifecycleState: effectiveDiffLifecycleState
+          ),
           onExpandRequest: {
             modalDiffData = DiffModalData(messageID: message.id, tool: editTool, params: rawParams)
-          },
-          diffStore: diffStore,
-          diffLifecycleState: effectiveDiffLifecycleState
+          }
         )
         .id(message.id) // Force view recreation on message change
         .transition(.asymmetric(

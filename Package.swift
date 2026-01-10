@@ -17,7 +17,7 @@ let package = Package(
     ],
     dependencies: [
         // External dependencies
-        .package(url: "https://github.com/jamesrochabrun/PierreDiffsSwift", exact: "1.0.0"),
+        .package(url: "https://github.com/jamesrochabrun/PierreDiffsSwift", exact: "1.1.3"),
         .package(url: "https://github.com/jamesrochabrun/ClaudeCodeSDK", exact: "1.2.4"),
         .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic", exact: "2.2.0"),
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.3.0"),
@@ -25,7 +25,7 @@ let package = Package(
         .package(url: "https://github.com/appstefan/highlightswift", from: "1.1.0"),
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk", from: "0.9.0"),
         .package(url: "https://github.com/stephencelis/SQLite.swift", from: "0.15.3"),
-        .package(url: "https://github.com/jamesrochabrun/CodeWhisper", exact: "1.1.6"),
+        .package(url: "https://github.com/jamesrochabrun/CodeWhisper", exact: "1.1.7"),
     ],
     targets: [
         // Foundation modules (no dependencies)
