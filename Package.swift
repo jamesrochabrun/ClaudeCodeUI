@@ -17,7 +17,7 @@ let package = Package(
     ],
     dependencies: [
         // External dependencies
-        .package(url: "https://github.com/jamesrochabrun/PierreDiffsSwift", exact: "1.0.0"),
+        .package(url: "https://github.com/jamesrochabrun/PierreDiffsSwift", exact: "1.1.3"),
         .package(url: "https://github.com/jamesrochabrun/ClaudeCodeSDK", exact: "1.2.4"),
         .package(url: "https://github.com/jamesrochabrun/SwiftAnthropic", exact: "2.2.0"),
         .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.3.0"),
