@@ -17,6 +17,8 @@ struct CLIRepositoryTreeView: View {
   let onToggleWorktreeExpanded: (WorktreeBranch) -> Void
   let onConnectSession: (CLISession) -> Void
   let onCopySessionId: (CLISession) -> Void
+  var fileWatcher: SessionFileWatcher?
+  var showLastMessage: Bool = false
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
@@ -31,7 +33,9 @@ struct CLIRepositoryTreeView: View {
             isExpanded: worktree.isExpanded,
             onToggleExpanded: { onToggleWorktreeExpanded(worktree) },
             onConnectSession: onConnectSession,
-            onCopySessionId: onCopySessionId
+            onCopySessionId: onCopySessionId,
+            fileWatcher: fileWatcher,
+            showLastMessage: showLastMessage
           )
           .padding(.leading, 12)
         }
@@ -152,7 +156,8 @@ struct CLIRepositoryTreeView: View {
       onToggleExpanded: { print("Toggle repo") },
       onToggleWorktreeExpanded: { _ in print("Toggle worktree") },
       onConnectSession: { _ in print("Connect") },
-      onCopySessionId: { _ in print("Copy") }
+      onCopySessionId: { _ in print("Copy") },
+      fileWatcher: nil
     )
 
     // Collapsed repository
@@ -173,7 +178,8 @@ struct CLIRepositoryTreeView: View {
       onToggleExpanded: { print("Toggle repo") },
       onToggleWorktreeExpanded: { _ in print("Toggle worktree") },
       onConnectSession: { _ in print("Connect") },
-      onCopySessionId: { _ in print("Copy") }
+      onCopySessionId: { _ in print("Copy") },
+      fileWatcher: nil
     )
   }
   .padding()

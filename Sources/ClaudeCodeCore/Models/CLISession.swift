@@ -19,6 +19,7 @@ public struct CLISession: Identifiable, Sendable, Equatable, Hashable, Codable {
   public var messageCount: Int
   public var isActive: Bool                // Whether a process is currently running
   public var firstMessage: String?         // First user message for context
+  public var lastMessage: String?          // Last user message for context
 
   public init(
     id: String,
@@ -28,7 +29,8 @@ public struct CLISession: Identifiable, Sendable, Equatable, Hashable, Codable {
     lastActivityAt: Date = Date(),
     messageCount: Int = 0,
     isActive: Bool = false,
-    firstMessage: String? = nil
+    firstMessage: String? = nil,
+    lastMessage: String? = nil
   ) {
     self.id = id
     self.projectPath = projectPath
@@ -38,6 +40,7 @@ public struct CLISession: Identifiable, Sendable, Equatable, Hashable, Codable {
     self.messageCount = messageCount
     self.isActive = isActive
     self.firstMessage = firstMessage
+    self.lastMessage = lastMessage
   }
 
   /// Returns the first 8 characters of the session ID for display

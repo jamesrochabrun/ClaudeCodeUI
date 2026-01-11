@@ -31,6 +31,16 @@ public final class CLISessionsViewModel {
   public private(set) var loadingState: CLILoadingState = .idle
   public private(set) var error: Error?
 
+  /// Whether to show the last message instead of the first message in session rows
+  public var showLastMessage: Bool {
+    didSet {
+      UserDefaults.standard.set(showLastMessage, forKey: "CLISessionsShowLastMessage")
+    }
+  }
+
+  /// File watcher for real-time session monitoring
+  public let fileWatcher: SessionFileWatcher
+
   // MARK: - Private
 
   private var subscriptionTask: Task<Void, Never>?
@@ -42,6 +52,8 @@ public final class CLISessionsViewModel {
     print("[CLISessionsVM] init called")
     self.monitorService = monitorService
     self.claudeClient = claudeClient
+    self.fileWatcher = SessionFileWatcher()
+    self.showLastMessage = UserDefaults.standard.bool(forKey: "CLISessionsShowLastMessage")
     setupSubscriptions()
     restorePersistedRepositories()
     print("[CLISessionsVM] init completed")

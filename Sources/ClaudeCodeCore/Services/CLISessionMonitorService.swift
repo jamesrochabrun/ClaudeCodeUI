@@ -145,9 +145,10 @@ public actor CLISessionMonitorService {
             process.command.contains(sessionId) || process.command.contains(firstEntry.project)
           }
 
-          // Get the first message (oldest entry by timestamp)
+          // Get the first and last message (sorted by timestamp)
           let sortedEntries = entries.sorted { $0.timestamp < $1.timestamp }
           let firstMessage = sortedEntries.first?.display
+          let lastMessage = sortedEntries.last?.display
 
           let session = CLISession(
             id: sessionId,
@@ -157,7 +158,8 @@ public actor CLISessionMonitorService {
             lastActivityAt: entries.map { $0.date }.max() ?? Date(),
             messageCount: entries.count,
             isActive: isActive,
-            firstMessage: firstMessage
+            firstMessage: firstMessage,
+            lastMessage: lastMessage
           )
 
           sessions.append(session)

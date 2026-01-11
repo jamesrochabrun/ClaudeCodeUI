@@ -17,6 +17,8 @@ struct CLIWorktreeBranchRow: View {
   let onToggleExpanded: () -> Void
   let onConnectSession: (CLISession) -> Void
   let onCopySessionId: (CLISession) -> Void
+  var fileWatcher: SessionFileWatcher?
+  var showLastMessage: Bool = false
 
   /// Truncates a path from the middle if too long
   private func truncatedPath(_ path: String, maxLength: Int = 45) -> String {
@@ -94,7 +96,9 @@ struct CLIWorktreeBranchRow: View {
             CLISessionRow(
               session: session,
               onConnect: { onConnectSession(session) },
-              onCopyId: { onCopySessionId(session) }
+              onCopyId: { onCopySessionId(session) },
+              fileWatcher: fileWatcher,
+              showLastMessage: showLastMessage
             )
             .padding(.leading, 20)
           }
@@ -129,7 +133,8 @@ struct CLIWorktreeBranchRow: View {
       isExpanded: true,
       onToggleExpanded: {},
       onConnectSession: { _ in },
-      onCopySessionId: { _ in }
+      onCopySessionId: { _ in },
+      fileWatcher: nil
     )
 
     Divider()
@@ -155,7 +160,8 @@ struct CLIWorktreeBranchRow: View {
       isExpanded: false,
       onToggleExpanded: {},
       onConnectSession: { _ in },
-      onCopySessionId: { _ in }
+      onCopySessionId: { _ in },
+      fileWatcher: nil
     )
 
     Divider()
@@ -171,7 +177,8 @@ struct CLIWorktreeBranchRow: View {
       isExpanded: true,
       onToggleExpanded: {},
       onConnectSession: { _ in },
-      onCopySessionId: { _ in }
+      onCopySessionId: { _ in },
+      fileWatcher: nil
     )
   }
   .padding()

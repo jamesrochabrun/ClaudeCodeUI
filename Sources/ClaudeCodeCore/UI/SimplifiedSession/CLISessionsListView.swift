@@ -29,6 +29,12 @@ struct CLISessionsListView: View {
         repositoriesList
       }
     }
+    .onAppear {
+      // Auto-refresh sessions when view appears
+      if viewModel.hasRepositories {
+        viewModel.refresh()
+      }
+    }
   }
 
   // MARK: - Loading View
@@ -68,7 +74,9 @@ struct CLISessionsListView: View {
             },
             onCopySessionId: { session in
               viewModel.copySessionId(session)
-            }
+            },
+            fileWatcher: viewModel.fileWatcher,
+            showLastMessage: viewModel.showLastMessage
           )
         }
       }
@@ -115,10 +123,29 @@ struct CLISessionsListView: View {
 
         Spacer()
 
+        // First/Last message toggle
+        Button(action: { viewModel.showLastMessage.toggle() }) {
+          HStack(spacing: 4) {
+            Image(systemName: viewModel.showLastMessage ? "arrow.down.to.line" : "arrow.up.to.line")
+            Text(viewModel.showLastMessage ? "Last" : "First")
+          }
+          .font(.subheadline)
+          .foregroundColor(.secondary)
+          .padding(.horizontal, 8)
+          .padding(.vertical, 4)
+          .background(Color.gray.opacity(0.1))
+          .cornerRadius(4)
+        }
+        .buttonStyle(.plain)
+        .help(viewModel.showLastMessage ? "Showing last message" : "Showing first message")
+
         // Refresh button
         Button(action: viewModel.refresh) {
           Image(systemName: "arrow.clockwise")
-            .font(.caption)
+            .font(.subheadline)
+            .padding(6)
+            .background(Color.gray.opacity(0.1))
+            .cornerRadius(4)
         }
         .buttonStyle(.plain)
         .disabled(viewModel.isLoading)
