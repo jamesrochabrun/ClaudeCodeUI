@@ -86,6 +86,10 @@ public struct ClaudeCodeContainer: View {
   @State private var deleteAllError: Error?
   @State private var showDeleteAllError = false
   @State private var initializationError: Error?
+
+  // CLI Session Monitoring
+  @State private var cliSessionMonitorService: CLISessionMonitorService?
+  @State private var cliSessionsViewModel: CLISessionsViewModel?
   
   private func initializeClaudeCodeUI() async throws {
     
@@ -188,13 +192,19 @@ public struct ClaudeCodeContainer: View {
     // Apply stored claudePath from preferences to ensure it persists across app restarts
     viewModel.updateClaudeCommand(from: globalPrefs)
     
+    // Initialize CLI session monitoring
+    let monitorService = CLISessionMonitorService()
+    let cliViewModel = CLISessionsViewModel(monitorService: monitorService, claudeClient: claudeClient)
+
     await MainActor.run {
       chatViewModel = viewModel
       globalPreferences = globalPrefs
       claudeCodeDeps = deps
+      cliSessionMonitorService = monitorService
+      cliSessionsViewModel = cliViewModel
       isInitialized = true
     }
-    
+
     await loadAvailableSessions()
   }
   
@@ -227,6 +237,7 @@ public struct ClaudeCodeContainer: View {
       availableSessions: availableSessions,
       currentSessionId: currentSessionId,
       globalPreferences: globalPreferences,
+      cliSessionsViewModel: cliSessionsViewModel,
       onCancel: {
         showSessionPicker = false
       },

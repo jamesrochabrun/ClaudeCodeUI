@@ -11,6 +11,7 @@ struct SessionPickerView: View {
   let availableSessions: [StoredSession]
   let currentSessionId: String?
   let globalPreferences: GlobalPreferencesStorage?
+  let cliSessionsViewModel: CLISessionsViewModel?
   let onCancel: () -> Void
   let onTryAgain: () -> Void
   let onStartNewSession: (String?) -> Void
@@ -32,10 +33,11 @@ struct SessionPickerView: View {
         availableSessions: availableSessions,
         currentSessionId: currentSessionId,
         globalPreferences: globalPreferences,
+        cliSessionsViewModel: cliSessionsViewModel,
         onTryAgain: onTryAgain,
         onStartNewSession: onStartNewSession,
         onRestoreSession: onRestoreSession,
-        onDeleteSession: onDeleteSession,
+        onDeleteSession: onDeleteSession
       )
     }
     .background(Color(NSColor.windowBackgroundColor))
