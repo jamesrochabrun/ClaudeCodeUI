@@ -123,6 +123,33 @@ struct CLISessionsListView: View {
 
         Spacer()
 
+        // Approval timeout picker
+        Menu {
+          ForEach([3, 5, 10, 15, 30], id: \.self) { seconds in
+            Button(action: { viewModel.approvalTimeoutSeconds = seconds }) {
+              HStack {
+                Text("\(seconds)s")
+                if viewModel.approvalTimeoutSeconds == seconds {
+                  Image(systemName: "checkmark")
+                }
+              }
+            }
+          }
+        } label: {
+          HStack(spacing: 4) {
+            Image(systemName: "bell")
+            Text("\(viewModel.approvalTimeoutSeconds)s")
+          }
+          .font(.subheadline)
+          .foregroundColor(.secondary)
+          .padding(.horizontal, 8)
+          .padding(.vertical, 4)
+          .background(Color.gray.opacity(0.1))
+          .cornerRadius(4)
+        }
+        .menuStyle(.borderlessButton)
+        .help("Alert sound delay: \(viewModel.approvalTimeoutSeconds) seconds")
+
         // First/Last message toggle
         Button(action: { viewModel.showLastMessage.toggle() }) {
           HStack(spacing: 4) {

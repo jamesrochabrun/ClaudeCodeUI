@@ -96,7 +96,10 @@ public struct SessionJSONLParser {
   // MARK: - Public API
 
   /// Parse an entire session file and return aggregated state
-  public static func parseSessionFile(at path: String) -> ParseResult {
+  /// - Parameters:
+  ///   - path: Path to the session JSONL file
+  ///   - approvalTimeoutSeconds: Seconds to wait before considering a tool as awaiting approval (default: 5)
+  public static func parseSessionFile(at path: String, approvalTimeoutSeconds: Int = 5) -> ParseResult {
     print("[SessionJSONLParser] parseSessionFile: \(path)")
     var result = ParseResult()
 
@@ -116,20 +119,24 @@ public struct SessionJSONLParser {
     }
 
     // Determine current status from pending tools
-    updateCurrentStatus(&result)
+    updateCurrentStatus(&result, approvalTimeoutSeconds: approvalTimeoutSeconds)
 
     print("[SessionJSONLParser] Result: \(result.messageCount) msgs, \(result.inputTokens) input, \(result.outputTokens) output, \(result.pendingToolUses.count) pending")
     return result
   }
 
   /// Parse new lines from a session file (for incremental updates)
-  public static func parseNewLines(_ lines: [String], into result: inout ParseResult) {
+  /// - Parameters:
+  ///   - lines: New lines to parse
+  ///   - result: Parse result to update
+  ///   - approvalTimeoutSeconds: Seconds to wait before considering a tool as awaiting approval (default: 5)
+  public static func parseNewLines(_ lines: [String], into result: inout ParseResult, approvalTimeoutSeconds: Int = 5) {
     for line in lines where !line.isEmpty {
       if let entry = parseEntry(line) {
         processEntry(entry, into: &result)
       }
     }
-    updateCurrentStatus(&result)
+    updateCurrentStatus(&result, approvalTimeoutSeconds: approvalTimeoutSeconds)
   }
 
   /// Parse a single JSONL line
@@ -279,7 +286,10 @@ public struct SessionJSONLParser {
   }
 
   /// Re-evaluate current status based on time elapsed since last activity
-  public static func updateCurrentStatus(_ result: inout ParseResult) {
+  /// - Parameters:
+  ///   - result: The parse result to update
+  ///   - approvalTimeoutSeconds: Seconds to wait before considering a tool as awaiting approval (default: 5)
+  public static func updateCurrentStatus(_ result: inout ParseResult, approvalTimeoutSeconds: Int = 5) {
     // State machine with timeout-based detection
     // Based on Kyle Mathews' claude-code-ui approach
     guard let lastActivity = result.recentActivities.last else {
@@ -297,9 +307,11 @@ public struct SessionJSONLParser {
 
     switch lastActivity.type {
     case .toolUse(let name):
-      // Tool requested - check if likely waiting for approval
-      // After 5 seconds without result, probably needs approval
-      if timeSince > 5 {
+      // Task tool runs in background, doesn't need approval
+      if name == "Task" {
+        result.currentStatus = .executingTool(name: name)
+      } else if timeSince > Double(approvalTimeoutSeconds) {
+        // After configured seconds without result, probably needs approval
         result.currentStatus = .awaitingApproval(tool: name)
       } else {
         result.currentStatus = .executingTool(name: name)

@@ -38,6 +38,17 @@ public final class CLISessionsViewModel {
     }
   }
 
+  /// Seconds to wait before triggering approval alert sound (default: 5)
+  public var approvalTimeoutSeconds: Int {
+    didSet {
+      UserDefaults.standard.set(approvalTimeoutSeconds, forKey: "CLISessionsApprovalTimeout")
+      // Update the file watcher with the new timeout
+      Task {
+        await fileWatcher.setApprovalTimeout(approvalTimeoutSeconds)
+      }
+    }
+  }
+
   /// File watcher for real-time session monitoring
   public let fileWatcher: SessionFileWatcher
 
@@ -54,9 +65,27 @@ public final class CLISessionsViewModel {
     self.claudeClient = claudeClient
     self.fileWatcher = SessionFileWatcher()
     self.showLastMessage = UserDefaults.standard.bool(forKey: "CLISessionsShowLastMessage")
+
+    // Load approval timeout with default of 5 seconds
+    let savedTimeout = UserDefaults.standard.integer(forKey: "CLISessionsApprovalTimeout")
+    self.approvalTimeoutSeconds = savedTimeout > 0 ? savedTimeout : 5
+
     setupSubscriptions()
     restorePersistedRepositories()
+    requestNotificationPermissions()
+
+    // Set initial timeout on file watcher
+    Task {
+      await fileWatcher.setApprovalTimeout(approvalTimeoutSeconds)
+    }
+
     print("[CLISessionsVM] init completed")
+  }
+
+  private func requestNotificationPermissions() {
+    Task {
+      await ApprovalNotificationService.shared.requestPermission()
+    }
   }
 
   // MARK: - Subscriptions

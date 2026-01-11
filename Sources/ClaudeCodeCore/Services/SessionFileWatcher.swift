@@ -27,6 +27,9 @@ public actor SessionFileWatcher {
   private nonisolated let stateSubject = PassthroughSubject<StateUpdate, Never>()
   private let claudePath: String
 
+  /// Seconds to wait before considering a tool as awaiting approval
+  private var approvalTimeoutSeconds: Int = 5
+
   /// Publisher for state updates
   public nonisolated var statePublisher: AnyPublisher<StateUpdate, Never> {
     stateSubject.eraseToAnyPublisher()
@@ -37,6 +40,17 @@ public actor SessionFileWatcher {
   public init(claudePath: String = "~/.claude") {
     self.claudePath = NSString(string: claudePath).expandingTildeInPath
     print("[SessionFileWatcher] init with path: \(self.claudePath)")
+  }
+
+  /// Set the approval timeout in seconds
+  public func setApprovalTimeout(_ seconds: Int) {
+    self.approvalTimeoutSeconds = max(1, seconds)  // Minimum 1 second
+    print("[SessionFileWatcher] Approval timeout set to \(self.approvalTimeoutSeconds) seconds")
+  }
+
+  /// Get the current approval timeout in seconds
+  public func getApprovalTimeout() -> Int {
+    return approvalTimeoutSeconds
   }
 
   // MARK: - Public API
@@ -63,7 +77,7 @@ public actor SessionFileWatcher {
     print("[SessionFileWatcher] Found session file: \(filePath)")
 
     // Initial parse
-    var parseResult = SessionJSONLParser.parseSessionFile(at: filePath)
+    var parseResult = SessionJSONLParser.parseSessionFile(at: filePath, approvalTimeoutSeconds: approvalTimeoutSeconds)
     let initialState = buildMonitorState(from: parseResult)
 
     // Emit initial state
@@ -85,6 +99,9 @@ public actor SessionFileWatcher {
     // Track file position for incremental reading
     var filePosition = getFileSize(filePath)
 
+    // Capture timeout for use in closures
+    let timeout = approvalTimeoutSeconds
+
     source.setEventHandler { [weak self] in
       guard let self = self else { return }
 
@@ -95,7 +112,7 @@ public actor SessionFileWatcher {
       print("[SessionFileWatcher] \(sessionId): \(newLines.count) new lines")
 
       // Parse new lines
-      SessionJSONLParser.parseNewLines(newLines, into: &parseResult)
+      SessionJSONLParser.parseNewLines(newLines, into: &parseResult, approvalTimeoutSeconds: timeout)
       let updatedState = self.buildMonitorState(from: parseResult)
 
       // Emit update
@@ -121,10 +138,29 @@ public actor SessionFileWatcher {
       guard let self = self else { return }
 
       // Re-evaluate status based on current time
-      SessionJSONLParser.updateCurrentStatus(&parseResult)
+      let previousStatus = lastEmittedStatus
+      SessionJSONLParser.updateCurrentStatus(&parseResult, approvalTimeoutSeconds: timeout)
 
       // Only emit if status actually changed
       if parseResult.currentStatus != lastEmittedStatus {
+        // Detect transition TO awaitingApproval (for notification)
+        if case .awaitingApproval(let tool) = parseResult.currentStatus,
+           !self.isAwaitingApproval(previousStatus) {
+          // Get last user message for notification context
+          let lastMessage = parseResult.recentActivities
+            .last(where: { if case .userMessage = $0.type { return true }; return false })?
+            .description
+
+          // Send notification
+          ApprovalNotificationService.shared.sendApprovalNotification(
+            sessionId: sessionId,
+            toolName: tool,
+            projectPath: filePath,
+            model: parseResult.model,
+            lastMessage: lastMessage
+          )
+        }
+
         lastEmittedStatus = parseResult.currentStatus
         let updatedState = self.buildMonitorState(from: parseResult)
 
@@ -175,7 +211,7 @@ public actor SessionFileWatcher {
   public func refreshState(sessionId: String) {
     guard let info = watchedSessions[sessionId] else { return }
 
-    let parseResult = SessionJSONLParser.parseSessionFile(at: info.filePath)
+    let parseResult = SessionJSONLParser.parseSessionFile(at: info.filePath, approvalTimeoutSeconds: approvalTimeoutSeconds)
     watchedSessions[sessionId]?.parseResult = parseResult
 
     let state = buildMonitorState(from: parseResult)
@@ -288,6 +324,12 @@ public actor SessionFileWatcher {
       return pending.toolName
     }
     return nil
+  }
+
+  /// Check if a status is awaitingApproval
+  private nonisolated func isAwaitingApproval(_ status: SessionStatus) -> Bool {
+    if case .awaitingApproval = status { return true }
+    return false
   }
 }
 
