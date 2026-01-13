@@ -12,10 +12,10 @@ import ClaudeCodeSDK
 public struct ClaudeCodeAppConfiguration {
   /// Configuration for the ClaudeCode SDK (command, paths, etc.)
   public let claudeCodeConfiguration: ClaudeCodeConfiguration
-  
+
   /// Configuration for UI customization
   public let uiConfiguration: UIConfiguration
-  
+
   /// Default configuration for the main ClaudeCodeUI app
   public static var `default`: ClaudeCodeAppConfiguration {
     ClaudeCodeAppConfiguration(
@@ -23,7 +23,7 @@ public struct ClaudeCodeAppConfiguration {
       uiConfiguration: .default
     )
   }
-  
+
   /// Configuration for library consumers (minimal UI)
   public static var library: ClaudeCodeAppConfiguration {
     ClaudeCodeAppConfiguration(
@@ -31,7 +31,7 @@ public struct ClaudeCodeAppConfiguration {
       uiConfiguration: .library
     )
   }
-  
+
   /// Initialize with both configurations
   public init(
     claudeCodeConfiguration: ClaudeCodeConfiguration = .default,
@@ -40,22 +40,19 @@ public struct ClaudeCodeAppConfiguration {
     self.claudeCodeConfiguration = claudeCodeConfiguration
     self.uiConfiguration = uiConfiguration
   }
-  
+
   /// Convenience initializer with just app name
-  public init(
-    appName: String,
-    availableVoiceModes: [VoiceModeOption]) {
+  public init(appName: String) {
     self.init(
       claudeCodeConfiguration: .default,
-      uiConfiguration: UIConfiguration(appName: appName, availableVoiceModes: availableVoiceModes)
+      uiConfiguration: UIConfiguration(appName: appName)
     )
   }
-  
+
   /// Convenience initializer with app name and settings visibility
   public init(
     appName: String,
     showSettingsInNavBar: Bool,
-    availableVoiceModes: [VoiceModeOption],
     showRiskData: Bool = true,
     initialAdditionalSystemPromptPrefix: String? = nil
   ) {
@@ -65,30 +62,27 @@ public struct ClaudeCodeAppConfiguration {
         appName: appName,
         showSettingsInNavBar: showSettingsInNavBar,
         showRiskData: showRiskData,
-        initialAdditionalSystemPromptPrefix: initialAdditionalSystemPromptPrefix,
-        availableVoiceModes: availableVoiceModes
+        initialAdditionalSystemPromptPrefix: initialAdditionalSystemPromptPrefix
       )
     )
   }
-  
+
   /// Convenience initializer with app name and working directory
   public init(
     appName: String,
-    availableVoiceModes: [VoiceModeOption],
     workingDirectory: String? = nil
   ) {
     var config = ClaudeCodeConfiguration.default
     config.workingDirectory = workingDirectory
     self.init(
       claudeCodeConfiguration: config,
-      uiConfiguration: UIConfiguration(appName: appName, availableVoiceModes: availableVoiceModes)
+      uiConfiguration: UIConfiguration(appName: appName)
     )
   }
-  
+
   /// Convenience initializer with app name, working directory, and settings visibility
   public init(
     appName: String,
-    availableVoiceModes: [VoiceModeOption],
     workingDirectory: String? = nil,
     showSettingsInNavBar: Bool,
     showRiskData: Bool = true,
@@ -102,7 +96,7 @@ public struct ClaudeCodeAppConfiguration {
         appName: appName,
         showSettingsInNavBar: showSettingsInNavBar,
         showRiskData: showRiskData,
-        initialAdditionalSystemPromptPrefix: initialAdditionalSystemPromptPrefix, availableVoiceModes: availableVoiceModes
+        initialAdditionalSystemPromptPrefix: initialAdditionalSystemPromptPrefix
       )
     )
   }

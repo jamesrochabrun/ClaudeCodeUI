@@ -7,19 +7,6 @@
 
 import Foundation
 
-// MARK: - VoiceModeOption
-
-/// Voice mode options for CodeWhisper configuration
-/// Mirrors CodeWhisper.VoiceMode but avoids direct dependency in UIConfiguration
-public enum VoiceModeOption: String, CaseIterable, Sendable {
-  /// Speech-to-text only - tap to toggle recording, outputs transcription
-  case stt = "stt"
-  /// Combined STT + TTS - user speaks (STT), callback fires, parent triggers TTS for response
-  case sttWithTTS = "stt_with_tts"
-  /// Bidirectional realtime voice
-  case realtime = "realtime"
-}
-
 // MARK: - UIConfiguration
 
 /// Configuration for UI customization in ClaudeCodeCore
@@ -55,12 +42,6 @@ public struct UIConfiguration {
   /// This is not shown in the preferences UI and is set programmatically
   public let initialAdditionalSystemPromptPrefix: String?
 
-  /// Whether to show the voice mode button (requires OpenAI API key for CodeWhisper)
-  public let showVoiceModeButton: Bool
-
-  /// Available voice modes for CodeWhisperButton (requires showVoiceModeButton to be true)
-  public let availableVoiceModes: [VoiceModeOption]
-  
   /// Default configuration for ClaudeCodeUI app
   public static var `default`: UIConfiguration {
     UIConfiguration(
@@ -73,9 +54,7 @@ public struct UIConfiguration {
       appIconAssetName: nil,
       showSystemPromptFields: false,
       showAdditionalSystemPromptField: true,
-      initialAdditionalSystemPromptPrefix: nil,
-      showVoiceModeButton: false,
-      availableVoiceModes: Array(VoiceModeOption.allCases)
+      initialAdditionalSystemPromptPrefix: nil
     )
   }
 
@@ -91,12 +70,10 @@ public struct UIConfiguration {
       appIconAssetName: nil,
       showSystemPromptFields: false,
       showAdditionalSystemPromptField: true,
-      initialAdditionalSystemPromptPrefix: nil,
-      showVoiceModeButton: false,
-      availableVoiceModes: Array(VoiceModeOption.allCases)
+      initialAdditionalSystemPromptPrefix: nil
     )
   }
-  
+
   /// Initialize a custom UI configuration
   public init(
     appName: String,
@@ -108,9 +85,7 @@ public struct UIConfiguration {
     appIconAssetName: String? = nil,
     showSystemPromptFields: Bool = false,
     showAdditionalSystemPromptField: Bool = true,
-    initialAdditionalSystemPromptPrefix: String? = nil,
-    showVoiceModeButton: Bool = false,
-    availableVoiceModes: [VoiceModeOption]
+    initialAdditionalSystemPromptPrefix: String? = nil
   ) {
     self.appName = appName
     self.showSettingsInNavBar = showSettingsInNavBar
@@ -122,7 +97,5 @@ public struct UIConfiguration {
     self.showSystemPromptFields = showSystemPromptFields
     self.showAdditionalSystemPromptField = showAdditionalSystemPromptField
     self.initialAdditionalSystemPromptPrefix = initialAdditionalSystemPromptPrefix
-    self.showVoiceModeButton = showVoiceModeButton
-    self.availableVoiceModes = availableVoiceModes.isEmpty ? Array(VoiceModeOption.allCases) : availableVoiceModes
   }
 }
