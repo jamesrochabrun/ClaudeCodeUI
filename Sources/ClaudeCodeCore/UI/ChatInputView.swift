@@ -12,7 +12,6 @@ import CCXcodeObserverServiceInterface
 import CCAccessibilityFoundation
 import Combine
 import UniformTypeIdentifiers
-import CodeWhisper
 
 struct ChatInputView: View {
   
@@ -37,10 +36,6 @@ struct ChatInputView: View {
   @State private var isDragging = false
   @State private var showingFilePicker = false
 
-  // Voice mode adapter for CodeWhisperButton
-  @State private var voiceModeAdapter: ChatViewModelVoiceModeAdapter?
-  @State private var isRealtimeSessionActive = false
-  
   // File search properties
   @State private var showingFileSearch = false
   @State private var fileSearchRange: NSRange? = nil
@@ -156,16 +151,8 @@ struct ChatInputView: View {
           HStack(alignment: .center) {
             attachmentButton
             textEditor
-            // Show CodeWhisperButton when voice mode is enabled and text is empty
-            // Keep button visible during loading only when realtime session is active (to prevent sheet dismissal)
-            // For STT/STT+TTS modes, show action button during loading so user can cancel
-            if uiConfiguration.showVoiceModeButton && globalPreferences.enableVoiceMode && text.isEmpty && (!viewModel.isLoading || isRealtimeSessionActive) {
-              codeWhisperButton
-            } else {
-              actionButton
-            }
+            actionButton
           }
-          .animation(.easeInOut, value: text.isEmpty)
         }
         .background(Color(NSColor.controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -210,10 +197,6 @@ struct ChatInputView: View {
       if !viewModel.projectPath.isEmpty {
         fileSearchViewModel?.updateProjectPath(viewModel.projectPath)
       }
-      // Initialize voice mode adapter for CodeWhisperButton
-      if voiceModeAdapter == nil {
-        voiceModeAdapter = ChatViewModelVoiceModeAdapter(chatViewModel: viewModel)
-      }
     }
     .alert("No Working Directory Selected", isPresented: $showingProjectPathAlert) {
       workingDirectoryAlertButtons
@@ -251,18 +234,7 @@ extension ChatInputView {
     .padding(.leading, 8)
     .help("Attach files")
   }
-  
-  /// CodeWhisper button - tap to start voice mode, long-press to open settings
-  private var codeWhisperButton: some View {
-    CodeWhisperButton(
-      chatInterface: voiceModeAdapter,
-      executor: ChatViewModelAdapter(chatViewModel: viewModel),
-      configuration: uiConfiguration.availableVoiceModes.toCodeWhisperConfiguration,
-      isRealtimeSessionActive: $isRealtimeSessionActive
-    )
-    .padding(.trailing, 2)
-  }
-  
+
   /// Action button (send/cancel)
   private var actionButton: some View {
     Group {
@@ -1097,20 +1069,3 @@ extension ChatInputView {
   }
 
 }
-
-// MARK: - VoiceModeOption to CodeWhisperConfiguration Mapping
-
-extension Array where Element == VoiceModeOption {
-  /// Converts an array of VoiceModeOption to CodeWhisperConfiguration
-  var toCodeWhisperConfiguration: CodeWhisperConfiguration {
-    let voiceModes = self.map { option -> VoiceMode in
-      switch option {
-      case .stt: return .stt
-      case .sttWithTTS: return .sttWithTTS
-      case .realtime: return .realtime
-      }
-    }
-    return CodeWhisperConfiguration(availableVoiceModes: voiceModes)
-  }
-}
-
