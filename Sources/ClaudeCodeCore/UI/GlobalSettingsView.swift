@@ -418,8 +418,22 @@ struct GlobalSettingsView: View {
                 .stroke(hasCommandInfo ? Color.secondary.opacity(0.2) : Color.secondary.opacity(0.15), lineWidth: 1)
             )
 
-            HStack {
+            HStack(spacing: 8) {
               Spacer()
+
+              Button(action: {
+                runDoctor()
+              }) {
+                HStack(spacing: 4) {
+                  Image(systemName: "stethoscope")
+                  Text("Run Doctor")
+                }
+              }
+              .buttonStyle(.bordered)
+              .disabled(!hasCommandInfo)
+              .help(hasCommandInfo ? "Launch debugging session in Terminal" : "Send a message first to generate debug info")
+              .padding(.top, 8)
+
               Button(action: {
                 copyFullReportToClipboard()
               }) {
@@ -811,6 +825,44 @@ struct GlobalSettingsView: View {
     reportCopied = true
     DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
       reportCopied = false
+    }
+  }
+
+  private func runDoctor() {
+    guard let viewModel = chatViewModel,
+          let report = viewModel.fullDebugReport,
+          let reproCommand = viewModel.terminalReproductionCommand else { return }
+
+    // Create doctor system prompt (instructions only, no data)
+    let doctorPrompt = """
+    You are a ClaudeCodeUI Debug Doctor.
+
+    Your task:
+    1. Review the debug report and command execution output in the first message
+    2. Compare the command output with what's expected in the debug report
+    3. Look for discrepancies (PATH differences, executable location, errors, etc.)
+    4. If you find issues, create a plan to fix them in priority order
+    5. If everything works fine, explain that the app is working correctly
+
+    Work in plan mode - propose fixes before executing them.
+    """
+
+    // Launch Terminal with doctor session
+    Task {
+      if let error = await TerminalLauncher.launchDoctorByExecutingCommand(
+        reproductionCommand: reproCommand,
+        debugReport: report,
+        systemPrompt: doctorPrompt
+      ) {
+        await MainActor.run {
+          let alert = NSAlert()
+          alert.messageText = "Failed to Launch Doctor"
+          alert.informativeText = error.localizedDescription
+          alert.alertStyle = .warning
+          alert.addButton(withTitle: "OK")
+          alert.runModal()
+        }
+      }
     }
   }
 }
