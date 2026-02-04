@@ -42,6 +42,12 @@ public struct UIConfiguration {
   /// This is not shown in the preferences UI and is set programmatically
   public let initialAdditionalSystemPromptPrefix: String?
 
+  /// Whether to show Xcode integration settings (Accessibility permission, keyboard shortcut)
+  public let showXcodeIntegrationSettings: Bool
+
+  /// Whether to show Claude command/path settings in preferences
+  public let showClaudeCommandSettings: Bool
+
   /// Default configuration for ClaudeCodeUI app
   public static var `default`: UIConfiguration {
     UIConfiguration(
@@ -54,7 +60,9 @@ public struct UIConfiguration {
       appIconAssetName: nil,
       showSystemPromptFields: false,
       showAdditionalSystemPromptField: true,
-      initialAdditionalSystemPromptPrefix: nil
+      initialAdditionalSystemPromptPrefix: nil,
+      showXcodeIntegrationSettings: true,
+      showClaudeCommandSettings: true
     )
   }
 
@@ -70,7 +78,9 @@ public struct UIConfiguration {
       appIconAssetName: nil,
       showSystemPromptFields: false,
       showAdditionalSystemPromptField: true,
-      initialAdditionalSystemPromptPrefix: nil
+      initialAdditionalSystemPromptPrefix: nil,
+      showXcodeIntegrationSettings: true,
+      showClaudeCommandSettings: true
     )
   }
 
@@ -85,7 +95,9 @@ public struct UIConfiguration {
     appIconAssetName: String? = nil,
     showSystemPromptFields: Bool = false,
     showAdditionalSystemPromptField: Bool = true,
-    initialAdditionalSystemPromptPrefix: String? = nil
+    initialAdditionalSystemPromptPrefix: String? = nil,
+    showXcodeIntegrationSettings: Bool = true,
+    showClaudeCommandSettings: Bool = true
   ) {
     self.appName = appName
     self.showSettingsInNavBar = showSettingsInNavBar
@@ -97,5 +109,7 @@ public struct UIConfiguration {
     self.showSystemPromptFields = showSystemPromptFields
     self.showAdditionalSystemPromptField = showAdditionalSystemPromptField
     self.initialAdditionalSystemPromptPrefix = initialAdditionalSystemPromptPrefix
+    self.showXcodeIntegrationSettings = showXcodeIntegrationSettings
+    self.showClaudeCommandSettings = showClaudeCommandSettings
   }
 }
