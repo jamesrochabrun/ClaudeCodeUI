@@ -24,7 +24,7 @@ struct MCPConfiguration: Codable {
   init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     let serverDict = try container.decode([String: MCPServerConfig.ServerData].self, forKey: .mcpServers)
-    
+
     // Convert ServerData to MCPServerConfig with names
     self.mcpServers = serverDict.reduce(into: [:]) { result, pair in
       result[pair.key] = MCPServerConfig(
@@ -32,24 +32,24 @@ struct MCPConfiguration: Codable {
         command: pair.value.command ?? "",
         args: pair.value.args ?? [],
         env: pair.value.env,
-        url: nil  // URL is not decoded from MCP config
+        url: pair.value.url
       )
     }
   }
-  
+
   func encode(to encoder: Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
-    
+
     // Convert MCPServerConfig to ServerData for encoding
     let serverDict = mcpServers.reduce(into: [String: MCPServerConfig.ServerData]()) { result, pair in
       result[pair.key] = MCPServerConfig.ServerData(
         command: pair.value.command.isEmpty ? nil : pair.value.command,
         args: pair.value.args.isEmpty ? nil : pair.value.args,
-        env: pair.value.env
-        // Note: url is not encoded as it's not a valid MCP field
+        env: pair.value.env,
+        url: pair.value.url
       )
     }
-    
+
     try container.encode(serverDict, forKey: .mcpServers)
   }
 }
@@ -75,7 +75,7 @@ struct MCPServerConfig: Identifiable {
     let command: String?
     let args: [String]?
     let env: [String: String]?
-    // Note: url is not included in encoding/decoding as it's not a valid MCP field
+    let url: String?
   }
 }
 
@@ -87,6 +87,10 @@ extension MCPServerConfig {
       name: "XcodeBuildMCP",
       command: "npx",
       args: ["-y", "xcodebuildmcp@latest"]
+    ),
+    MCPServerConfig(
+      name: "FigmaRemoteMcp",
+      url: "http://mcp.figma.com/mcp"
     )
   ]
 }

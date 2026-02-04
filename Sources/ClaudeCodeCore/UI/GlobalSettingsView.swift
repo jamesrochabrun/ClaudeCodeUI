@@ -214,7 +214,7 @@ struct GlobalSettingsView: View {
     @Bindable var preferences = globalPreferences
     return VStack(spacing: 0) {
       Form {
-        if xcodeObservationViewModel != nil && permissionsService != nil {
+        if uiConfiguration.showXcodeIntegrationSettings && xcodeObservationViewModel != nil && permissionsService != nil {
           xcodeIntegrationSection
         }
         claudeCodeConfigurationSection
@@ -242,8 +242,10 @@ struct GlobalSettingsView: View {
   private var claudeCodeConfigurationSection: some View {
     Section("ClaudeCode Configuration") {
       defaultWorkingDirectoryRow
-      claudeCommandRow
-      claudePathRow
+      if uiConfiguration.showClaudeCommandSettings {
+        claudeCommandRow
+        claudePathRow
+      }
       if uiConfiguration.showSystemPromptFields {
         systemPromptRow
       }
